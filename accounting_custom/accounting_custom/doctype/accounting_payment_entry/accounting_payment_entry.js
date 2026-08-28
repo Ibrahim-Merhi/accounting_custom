@@ -21,9 +21,18 @@ frappe.ui.form.on("Accounting Payment Entry", {
 });
 
 frappe.ui.form.on("Accounting Payment Detail", {
+	cost_center(frm, cdt, cdn) {
+		refresh_payment_row(frm, locals[cdt][cdn]);
+	},
+
+	account(frm, cdt, cdn) {
+		refresh_payment_row(frm, locals[cdt][cdn]);
+	},
+
 	party_type(frm, cdt, cdn) {
 		frappe.model.set_value(cdt, cdn, "party", null);
 		frappe.model.set_value(cdt, cdn, "party_name", null);
+		refresh_payment_row(frm, locals[cdt][cdn]);
 	},
 
 	party(frm, cdt, cdn) {
@@ -79,9 +88,20 @@ function set_row_currency(frm, row) {
 		method: "accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.get_payment_currency",
 		args: { mode_of_payment: row.mode_of_payment, company: frm.doc.company },
 		callback(r) {
-			frappe.model.set_value(row.doctype, row.name, "currency", r.message);
+			frappe.model.set_value(row.doctype, row.name, "currency", r.message).then(() => {
+				refresh_payment_row(frm, row);
+			});
 		},
 	});
+}
+
+function refresh_payment_row(frm, row) {
+	setTimeout(() => {
+		const grid_row = frm.fields_dict.accounts.grid.grid_rows_by_docname[row.name];
+		if (!grid_row) return;
+		grid_row.refresh();
+		grid_row.toggle_editable_row(true);
+	}, 0);
 }
 
 function update_row_rate(frm, row) {
