@@ -1,7 +1,9 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "naming_series:naming_series",
+ "creation": "2026-08-28 10:15:55.110801",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -12,7 +14,8 @@
   "exchange_rate",
   "effective_date",
   "enabled",
-  "notes"
+  "notes",
+  "test"
  ],
  "fields": [
   {
@@ -71,13 +74,21 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "test",
+   "fieldtype": "Data",
+   "label": "test"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
+ "modified": "2026-08-28 10:26:23.083494",
+ "modified_by": "Administrator",
  "module": "Accounting Custom",
  "name": "Company Exchange Rate",
  "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
