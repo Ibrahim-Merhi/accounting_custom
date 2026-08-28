@@ -45,24 +45,15 @@ frappe.ui.form.on("Donation Payment Detail", {
 		set_payment_rate(frm, locals[cdt][cdn]);
 	},
 
-	mode_of_payment(frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-		if (!row.mode_of_payment || !frm.doc.company) return;
-		frappe.db.get_value("Mode of Payment Account", {
-			parent: row.mode_of_payment,
-			parenttype: "Mode of Payment",
-			company: frm.doc.company,
-		}, "default_account").then((r) => {
-			if (r.message?.default_account) {
-				frappe.model.set_value(cdt, cdn, "received_in_account", r.message.default_account);
-			}
-		});
-	},
 });
 
 function set_queries(frm) {
+	frm.donor_companies = frm.donor_companies || [];
+	frm.set_query("company", () => ({
+		filters: frm.donor_companies.length ? { name: ["in", frm.donor_companies] } : { name: ["=", ""] },
+	}));
 	frm.set_query("donor_account", () => account_query(frm.doc.company));
-	frm.set_query("project", () => ({ filters: { company: frm.doc.company } }));
+	frm.set_query("project", () => ({ filters: frm.doc.company ? { company: frm.doc.company } : { name: ["=", ""] } }));
 	frm.set_query("cost_center", "payments", () => ({
 		filters: { company: frm.doc.company, is_group: 0 },
 	}));
@@ -81,7 +72,8 @@ function load_donor_accounts(frm, auto_select = false) {
 	frappe.db.get_doc("Donor", frm.doc.donor).then((donor) => {
 		const rows = donor.custom_accounts || [];
 		const companies = [...new Set(rows.map((row) => row.company).filter(Boolean))];
-		frm.set_query("company", () => ({ filters: { name: ["in", companies] } }));
+		frm.donor_companies = companies;
+		set_queries(frm);
 		if (auto_select && companies.length === 1) frm.set_value("company", companies[0]);
 		const match = rows.find((row) => row.company === frm.doc.company);
 		if (match?.account) frm.set_value("donor_account", match.account);

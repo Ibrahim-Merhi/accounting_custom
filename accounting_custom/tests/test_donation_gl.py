@@ -18,25 +18,33 @@ class TestDonationGL(TestCase):
 		self.addCleanup(translation.stop)
 		self.doc = SimpleNamespace(
 			doctype="Donation Entry", name="DON-2026-00001", company="Itihad",
-			posting_date="2026-08-28", mode_of_payment="Cash", received_in_account="Income",
-			donor_account="Donor Account", donor="DONOR-1", cost_center="Main - ITHD",
-			project="Project 1", custom_company_currency="USD", currency="USD", donation_amount=200,
-			base_donation_amount=200, remarks="Donation",
+			posting_date="2026-08-28", donor_account="Donor Account", donor="DONOR-1",
+			project="Project 1", custom_company_currency="USD", remarks="Donation",
+			payments=[
+				SimpleNamespace(idx=1, mode_of_payment="Cash", received_in_account="Income",
+					cost_center="Main - ITHD", currency="USD", donation_amount=200, base_amount=200),
+				SimpleNamespace(idx=2, mode_of_payment="Bank", received_in_account="Income",
+					cost_center="North - ITHD", currency="LBP", donation_amount=8950000, base_amount=100),
+			],
 		)
 
-	@patch("accounting_custom.accounting.donation_gl.get_account_currency_amount", return_value=200)
 	@patch("accounting_custom.accounting.donation_gl.get_account_details")
-	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account", return_value="Cash Account")
-	def test_builds_exact_four_rows(self, _mode, details, _amount):
+	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account")
+	def test_builds_four_rows_per_payment(self, mode_account, details):
+		mode_account.side_effect = ["Cash Account", "Bank Account"]
 		details.return_value = frappe._dict(account_currency="USD")
 		rows = build_gl_entries(self.doc)
-		self.assertEqual(len(rows), 4)
-		self.assertEqual([(r.account, r.debit, r.credit) for r in rows], [
+		self.assertEqual(len(rows), 8)
+		self.assertEqual([(r.account, r.debit, r.credit) for r in rows[:4]], [
 			("Cash Account", 200, 0), ("Income", 0, 200),
 			("Donor Account", 200, 0), ("Donor Account", 0, 200),
 		])
-		self.assertTrue(all(r.cost_center == "Main - ITHD" for r in rows))
-		self.assertTrue(all(r.project == "Project 1" for r in rows))
+		self.assertEqual([(r.account, r.debit, r.credit) for r in rows[4:]], [
+			("Bank Account", 100, 0), ("Income", 0, 100),
+			("Donor Account", 100, 0), ("Donor Account", 0, 100),
+		])
+		self.assertTrue(all(row.cost_center == "Main - ITHD" for row in rows[:4]))
+		self.assertTrue(all(row.cost_center == "North - ITHD" for row in rows[4:]))
 		self.assertEqual(rows[2].party_type, "Donor")
 		self.assertEqual(rows[2].party, "DONOR-1")
 

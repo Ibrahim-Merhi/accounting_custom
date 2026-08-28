@@ -12,7 +12,7 @@ class TestDonationEntryMetadata(FrappeTestCase):
 			"donor", "company", "mode_of_payment", "base_donation_amount", "donor_account",
 			"cost_center", "currency", "custom_company_currency", "project", "donation_amount",
 			"exchange_rate", "received_in_account", "custom_hijri_date",
-			"custom_amount_in_words_arabic",
+			"custom_amount_in_words_arabic", "payments",
 		):
 			self.assertTrue(meta.has_field(fieldname), fieldname)
 

@@ -28,7 +28,10 @@ required_apps = ["erpnext", "non_profit"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Donor": "public/js/donor.js"}
+doctype_js = {
+	"Donor": "public/js/donor.js",
+	"Journal Entry": "public/js/journal_entry.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -125,9 +128,13 @@ after_install = "accounting_custom.install.after_install"
 doc_events = {
 	"Journal Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
+		"validate": "accounting_custom.accounting.branch.validate_journal_entry_branch",
 	},
 	"Payment Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_payment_entry_series",
+	},
+	"GL Entry": {
+		"before_insert": "accounting_custom.accounting.branch.set_gl_entry_branch",
 	},
 }
 

@@ -5,10 +5,12 @@ A source-controlled ERPNext/Frappe v15 extension for company-specific exchange r
 ## Included
 
 - App-owned `Company Exchange Rate` with direct/inverse lookup API
-- App-owned, submittable `Donation Entry`
+- App-owned, submittable `Donation Entry` with multi-currency payment rows
+- Balanced `Accounting Payment Entry` with debit/credit rows and supported parties
+- Company-scoped Branch tracking on Journal Entry and GL Entry
 - Donor/company account validation through `Donor.custom_accounts`
-- Supported four-row GL posting and immutable-ledger cancellation
-- USD/LBP Arabic amount in words
+- Supported four-row GL posting per donation payment and immutable-ledger cancellation
+- Combined USD/LBP receipt totals and Arabic amount in words
 - Browser Umm Al-Qura Hijri date behavior
 - Arabic `سند قبض` print format
 - Company-abbreviation naming for new Journal Entries and Payment Entries

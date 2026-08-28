@@ -6,7 +6,7 @@ CUSTOM_FIELDS = {
 	"Branch": [
 		{
 			"fieldname": "custom_company", "label": "Company", "fieldtype": "Link",
-			"options": "Company", "insert_after": "branch", "reqd": 1,
+			"options": "Company", "insert_after": "branch",
 		},
 	],
 	"Donor": [
@@ -22,7 +22,7 @@ CUSTOM_FIELDS = {
 	"Journal Entry": [
 		{
 			"fieldname": "custom_branch", "label": "Branch", "fieldtype": "Link",
-			"options": "Branch", "insert_after": "company", "reqd": 1,
+			"options": "Branch", "insert_after": "company",
 		},
 	],
 	"GL Entry": [

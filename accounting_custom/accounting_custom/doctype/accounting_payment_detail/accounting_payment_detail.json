@@ -14,8 +14,8 @@
   {"fieldname":"debit","fieldtype":"Currency","in_list_view":1,"label":"Debit","options":"currency"},
   {"fieldname":"credit","fieldtype":"Currency","in_list_view":1,"label":"Credit","options":"currency"},
   {"default":"1","fieldname":"exchange_rate","fieldtype":"Float","hidden":1,"label":"Exchange Rate","precision":"9","read_only":1},
-  {"fieldname":"base_debit","fieldtype":"Currency","hidden":1,"label":"Base Debit","options":"parent.company_currency","read_only":1},
-  {"fieldname":"base_credit","fieldtype":"Currency","hidden":1,"label":"Base Credit","options":"parent.company_currency","read_only":1}
+  {"fieldname":"base_debit","fieldtype":"Currency","hidden":1,"label":"Base Debit","options":"Company:company:default_currency","read_only":1},
+  {"fieldname":"base_credit","fieldtype":"Currency","hidden":1,"label":"Base Credit","options":"Company:company:default_currency","read_only":1}
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
