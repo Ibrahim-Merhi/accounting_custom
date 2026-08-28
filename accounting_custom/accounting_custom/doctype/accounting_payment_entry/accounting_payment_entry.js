@@ -8,6 +8,7 @@ frappe.ui.form.on("Accounting Payment Entry", {
 		if (frm.doc.posting_date) set_hijri_date(frm);
 		if (frm.is_new()) refresh_currency_totals(frm);
 		setTimeout(() => ensure_initial_payment_row(frm), 0);
+		add_accounting_buttons(frm);
 	},
 
 	company(frm) {
@@ -26,6 +27,55 @@ frappe.ui.form.on("Accounting Payment Entry", {
 		(frm.doc.custom_accounting_rows_copy || []).forEach((row) => update_row_rate(frm, row));
 	},
 });
+
+function add_accounting_buttons(frm) {
+	if (frm.is_new() || frm.doc.docstatus === 0) return;
+
+	frm.add_custom_button(
+		__("Ledger"),
+		() => {
+			frappe.route_options = {
+				company: frm.doc.company,
+				from_date: frm.doc.posting_date,
+				to_date: moment(frm.doc.modified).format("YYYY-MM-DD"),
+				voucher_no: frm.doc.name,
+				group_by: "",
+				show_cancelled_entries: frm.doc.docstatus === 2,
+			};
+			frappe.set_route("query-report", "General Ledger");
+		},
+		"fa fa-table"
+	);
+
+	if (frm.doc.docstatus === 1) {
+		frm.add_custom_button(
+			__("UnReconcile"),
+			() => show_unreconcile_result(frm),
+			__("Actions")
+		);
+	}
+}
+
+function show_unreconcile_result(frm) {
+	frappe.call({
+		method: "erpnext.accounts.doctype.unreconcile_payment.unreconcile_payment.doc_has_references",
+		args: {
+			doctype: frm.doc.doctype,
+			docname: frm.doc.name,
+		},
+		freeze: true,
+		callback(r) {
+			if (!r.message) {
+				frappe.msgprint(__("No reconciled allocations were found for this Accounting Payment Entry."));
+				return;
+			}
+
+			frappe.msgprint(
+				__("Unreconciliation is not available for Accounting Payment Entry allocations yet.")
+			);
+		},
+	});
+}
 
 frappe.ui.form.on("Accounting Payment Detail", {
 	cost_center(frm, cdt, cdn) {
