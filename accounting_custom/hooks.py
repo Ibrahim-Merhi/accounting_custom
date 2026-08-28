@@ -4,7 +4,7 @@ app_publisher = "Ibrahim Merhi"
 app_description = "Custom accounting and donation management extensions for ERPNext"
 app_email = "ibrahim.m.merhy@gmail.com"
 app_license = "mit"
-# required_apps = []
+required_apps = ["erpnext", "non_profit"]
 
 # Includes in <head>
 # ------------------
@@ -68,7 +68,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "accounting_custom.install.before_install"
-# after_install = "accounting_custom.install.after_install"
+after_install = "accounting_custom.install.after_install"
 
 # Uninstallation
 # ------------
@@ -122,13 +122,14 @@ app_license = "mit"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Journal Entry": {
+		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
+	},
+	"Payment Entry": {
+		"before_naming": "accounting_custom.naming.company_series.set_payment_entry_series",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
@@ -227,3 +228,13 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+
+
+after_migrate = "accounting_custom.install.after_migrate"
+
+fixtures = [
+	{
+		"dt": "Print Format",
+		"filters": [["name", "=", "سند قبض"], ["doc_type", "=", "Donation Entry"]],
+	}
+]
