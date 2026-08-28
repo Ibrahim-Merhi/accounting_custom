@@ -107,6 +107,7 @@ jobs:
         working-directory: /home/runner/frappe-bench
         run: |
           bench --site test_site set-config allow_tests true
+          bench --site test_site execute erpnext.setup.utils.insert_record --kwargs '{"records":[{"doctype":"Warehouse Type","name":"Transit"}]}'
           bench --site test_site run-tests --app accounting_custom
         env:
           TYPE: server
