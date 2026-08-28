@@ -4,7 +4,7 @@
  "autoname": "APE-.YYYY.-.#####",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["company","posting_date","custom_branch","column_break_1","custom_company_currency","remarks","accounts_section","totals_section","total_debit","total_credit","amended_from"],
+ "field_order": ["company","posting_date","custom_branch","column_break_1","custom_company_currency","remarks","accounts_section","accounting_rows","totals_section","total_debit","total_credit","amended_from"],
  "fields": [
   {"fieldname":"company","fieldtype":"Link","label":"Company","options":"Company","reqd":1},
   {"default":"Today","fieldname":"posting_date","fieldtype":"Date","label":"Posting Date","reqd":1},
@@ -13,6 +13,7 @@
   {"fieldname":"custom_company_currency","fieldtype":"Link","label":"Company Currency","options":"Currency","read_only":1},
   {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
   {"fieldname":"accounts_section","fieldtype":"Section Break","label":"Accounts"},
+  {"fieldname":"accounting_rows","fieldtype":"Table","label":"Accounting Rows","options":"Accounting Payment Detail","reqd":1},
   {"fieldname":"totals_section","fieldtype":"Section Break","label":"Totals"},
   {"fieldname":"total_debit","fieldtype":"Currency","label":"Total Debit","options":"custom_company_currency","read_only":1},
   {"fieldname":"total_credit","fieldtype":"Currency","label":"Total Credit","options":"custom_company_currency","read_only":1},
