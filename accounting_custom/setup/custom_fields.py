@@ -19,6 +19,13 @@ CUSTOM_FIELDS = {
 			"options": "Party Account", "insert_after": "custom_accounts_section",
 		},
 	],
+	"Accounting Payment Entry": [
+		{
+			"fieldname": "custom_accounting_rows_copy", "label": "Accounting Rows",
+			"fieldtype": "Table", "options": "Accounting Payment Detail",
+			"insert_after": "accounts_section", "reqd": 1,
+		},
+	],
 	"Journal Entry": [
 		{
 			"fieldname": "custom_branch", "label": "Branch (Legacy)", "fieldtype": "Link",
@@ -72,29 +79,20 @@ def migrate_journal_entry_branches():
 
 
 def migrate_accounting_payment_rows():
+	if not frappe.db.exists("Custom Field", "Accounting Payment Entry-custom_accounting_rows_copy"):
+		return
 	frappe.db.sql("""
 		update `tabAccounting Payment Detail`
-		set parentfield = 'accounting_rows'
+		set parentfield = 'custom_accounting_rows_copy'
 		where parenttype = 'Accounting Payment Entry'
-		and (parentfield = 'accounts' or parentfield like 'custom_accounting_rows_copy%')
+		and parentfield in ('accounts', 'accounting_rows')
 	""")
-	legacy_fields = frappe.get_all(
-		"Custom Field",
-		filters={
-			"dt": "Accounting Payment Entry",
-			"fieldname": ["like", "custom_accounting_rows_copy%"],
-			"fieldtype": "Table",
-		},
-		pluck="name",
+	frappe.db.set_value(
+		"Custom Field", "Accounting Payment Entry-custom_accounting_rows_copy",
+		{"hidden": 0, "reqd": 1, "label": "Accounting Rows"},
+		update_modified=False,
 	)
-	for field in legacy_fields:
-		frappe.db.set_value(
-			"Custom Field", field,
-			{"hidden": 1, "reqd": 0, "label": "Accounting Rows Copy (Legacy)"},
-			update_modified=False,
-		)
-	if legacy_fields:
-		frappe.clear_cache(doctype="Accounting Payment Entry")
+	frappe.clear_cache(doctype="Accounting Payment Entry")
 
 
 def ensure_donor_account_fields():

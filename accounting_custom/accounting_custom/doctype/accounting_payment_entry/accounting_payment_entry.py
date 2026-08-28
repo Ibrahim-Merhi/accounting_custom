@@ -26,11 +26,11 @@ class AccountingPaymentEntry(AccountsController):
 	def validate(self):
 		self.set_custom_company_currency()
 		validate_accounting_payment_branch(self)
-		if not self.accounting_rows:
+		if not self.custom_accounting_rows_copy:
 			frappe.throw(_("Add at least one Accounting Row."))
-		for row in self.accounting_rows:
+		for row in self.custom_accounting_rows_copy:
 			self.validate_row(row)
-		self.total_debit = sum(flt(row.base_amount) for row in self.accounting_rows)
+		self.total_debit = sum(flt(row.base_amount) for row in self.custom_accounting_rows_copy)
 		self.total_credit = self.total_debit
 		if self.total_debit <= 0:
 			frappe.throw(_("Accounting Payment Entry total must be greater than zero."))
@@ -75,7 +75,7 @@ class AccountingPaymentEntry(AccountsController):
 
 	def get_gl_entries(self):
 		entries = []
-		for row in self.accounting_rows:
+		for row in self.custom_accounting_rows_copy:
 			mode_account = get_mode_of_payment_account(row.mode_of_payment, self.company)
 			destination = get_account_details(row.account, self.company)
 			source = get_account_details(mode_account, self.company)
