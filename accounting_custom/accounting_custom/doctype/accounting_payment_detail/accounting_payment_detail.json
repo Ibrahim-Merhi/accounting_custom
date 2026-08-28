@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["account","cost_center","party_type","party","party_name","currency","debit","credit","exchange_rate","base_debit","base_credit"],
+ "fields": [
+  {"fieldname":"account","fieldtype":"Link","in_list_view":1,"label":"Account","options":"Account","reqd":1},
+  {"fieldname":"cost_center","fieldtype":"Link","in_list_view":1,"label":"Cost Center","options":"Cost Center","reqd":1},
+  {"fieldname":"party_type","fieldtype":"Select","in_list_view":1,"label":"Party Type","options":"\nEmployee\nSupplier\nInstitution\nBeneficiary"},
+  {"fieldname":"party","fieldtype":"Dynamic Link","in_list_view":1,"label":"Party","options":"party_type"},
+  {"fieldname":"party_name","fieldtype":"Data","in_list_view":1,"label":"Party Name","read_only":1},
+  {"fieldname":"currency","fieldtype":"Link","in_list_view":1,"label":"Currency","options":"Currency","reqd":1},
+  {"fieldname":"debit","fieldtype":"Currency","in_list_view":1,"label":"Debit","options":"currency"},
+  {"fieldname":"credit","fieldtype":"Currency","in_list_view":1,"label":"Credit","options":"currency"},
+  {"default":"1","fieldname":"exchange_rate","fieldtype":"Float","hidden":1,"label":"Exchange Rate","precision":"9","read_only":1},
+  {"fieldname":"base_debit","fieldtype":"Currency","hidden":1,"label":"Base Debit","options":"parent.company_currency","read_only":1},
+  {"fieldname":"base_credit","fieldtype":"Currency","hidden":1,"label":"Base Credit","options":"parent.company_currency","read_only":1}
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "module": "Accounting Custom",
+ "name": "Accounting Payment Detail",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

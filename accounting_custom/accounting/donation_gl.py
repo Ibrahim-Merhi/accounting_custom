@@ -4,8 +4,6 @@ from frappe.utils import flt
 
 from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 
-from accounting_custom.api.exchange_rate import get_company_exchange_rate
-
 
 def get_mode_of_payment_account(mode_of_payment, company):
 	account = frappe.db.get_value(
@@ -37,60 +35,65 @@ def get_account_details(account, company):
 	return details
 
 
-def get_account_currency_amount(doc, account_currency):
-	if account_currency == doc.custom_company_currency:
-		return flt(doc.base_donation_amount)
-	if account_currency == doc.currency:
-		return flt(doc.donation_amount)
-	rate = get_company_exchange_rate(
-		doc.company, doc.currency, account_currency, doc.posting_date
-	)
-	return flt(doc.donation_amount) * flt(rate["exchange_rate"])
-
-
 def build_gl_entries(doc):
-	mode_account = get_mode_of_payment_account(doc.mode_of_payment, doc.company)
-	accounts = {
-		mode_account: get_account_details(mode_account, doc.company),
-		doc.received_in_account: get_account_details(doc.received_in_account, doc.company),
-		doc.donor_account: get_account_details(doc.donor_account, doc.company),
-	}
-	base_amount = flt(doc.base_donation_amount)
+	entries = []
 	remarks = doc.remarks or _("Donation received from {0}").format(doc.donor)
-	common = {
-		"posting_date": doc.posting_date,
-		"company": doc.company,
-		"voucher_type": doc.doctype,
-		"voucher_no": doc.name,
-		"cost_center": doc.cost_center,
-		"project": doc.project,
-		"is_opening": "No",
-	}
+	donor_details = get_account_details(doc.donor_account, doc.company)
 
-	def entry(account, debit=0, credit=0, against=None, donor_history=False):
-		account_currency = accounts[account].account_currency or doc.custom_company_currency
-		account_amount = get_account_currency_amount(doc, account_currency)
-		row = frappe._dict(common)
-		row.update(
-			account=account,
-			account_currency=account_currency,
-			debit=debit,
-			credit=credit,
-			debit_in_account_currency=account_amount if debit else 0,
-			credit_in_account_currency=account_amount if credit else 0,
-			against=against,
-			remarks=(_("Donor activity - {0}").format(remarks) if donor_history else remarks),
+	for payment in doc.payments:
+		mode_account = get_mode_of_payment_account(payment.mode_of_payment, doc.company)
+		accounts = {
+			mode_account: get_account_details(mode_account, doc.company),
+			payment.received_in_account: get_account_details(payment.received_in_account, doc.company),
+			doc.donor_account: donor_details,
+		}
+		base_amount = flt(payment.base_amount)
+		common = {
+			"posting_date": doc.posting_date,
+			"company": doc.company,
+			"voucher_type": doc.doctype,
+			"voucher_no": doc.name,
+			"cost_center": payment.cost_center,
+			"project": doc.project,
+			"is_opening": "No",
+		}
+
+		def entry(account, debit=0, credit=0, against=None, donor_history=False):
+			account_currency = accounts[account].account_currency or doc.custom_company_currency
+			if account_currency == payment.currency:
+				account_amount = flt(payment.donation_amount)
+			elif account_currency == doc.custom_company_currency:
+				account_amount = base_amount
+			else:
+				frappe.throw(
+					_("Row {0}: Account {1} currency must be {2} or {3}.").format(
+						payment.idx, account, payment.currency, doc.custom_company_currency
+					)
+				)
+			row = frappe._dict(common)
+			row.update(
+				account=account,
+				account_currency=account_currency,
+				debit=debit,
+				credit=credit,
+				debit_in_account_currency=account_amount if debit else 0,
+				credit_in_account_currency=account_amount if credit else 0,
+				against=against,
+				remarks=(_("Donor activity - {0}").format(remarks) if donor_history else remarks),
+			)
+			if donor_history:
+				row.update(party_type="Donor", party=doc.donor)
+			return row
+
+		entries.extend(
+			[
+				entry(mode_account, debit=base_amount, against=payment.received_in_account),
+				entry(payment.received_in_account, credit=base_amount, against=mode_account),
+				entry(doc.donor_account, debit=base_amount, against=doc.donor_account, donor_history=True),
+				entry(doc.donor_account, credit=base_amount, against=doc.donor_account, donor_history=True),
+			]
 		)
-		if donor_history:
-			row.update(party_type="Donor", party=doc.donor)
-		return row
-
-	return [
-		entry(mode_account, debit=base_amount, against=doc.received_in_account),
-		entry(doc.received_in_account, credit=base_amount, against=mode_account),
-		entry(doc.donor_account, debit=base_amount, against=doc.donor_account, donor_history=True),
-		entry(doc.donor_account, credit=base_amount, against=doc.donor_account, donor_history=True),
-	]
+	return entries
 
 
 def post_gl_entries(doc):
