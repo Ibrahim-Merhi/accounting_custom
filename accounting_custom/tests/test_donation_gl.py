@@ -32,7 +32,7 @@ class TestDonationGL(TestCase):
 	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account")
 	def test_builds_four_rows_per_payment(self, mode_account, details):
 		mode_account.side_effect = ["Cash Account", "Bank Account"]
-		details.return_value = frappe._dict(account_currency="USD")
+		details.return_value = frappe._dict(account_currency="USD", account_type="")
 		rows = build_gl_entries(self.doc)
 		self.assertEqual(len(rows), 8)
 		self.assertEqual([(r.account, r.debit, r.credit) for r in rows[:4]], [
@@ -47,6 +47,22 @@ class TestDonationGL(TestCase):
 		self.assertTrue(all(row.cost_center == "North - ITHD" for row in rows[4:]))
 		self.assertEqual(rows[2].party_type, "Donor")
 		self.assertEqual(rows[2].party, "DONOR-1")
+
+	@patch("accounting_custom.accounting.donation_gl.get_account_details")
+	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account", return_value="Cash Account")
+	def test_sets_donor_party_on_receivable_received_account(self, _mode_account, details):
+		def account_details(account, _company):
+			return frappe._dict(
+				account_currency="USD",
+				account_type="Receivable" if account == "Income" else "",
+			)
+
+		details.side_effect = account_details
+		self.doc.payments = self.doc.payments[:1]
+		rows = build_gl_entries(self.doc)
+
+		self.assertEqual(rows[1].party_type, "Donor")
+		self.assertEqual(rows[1].party, "DONOR-1")
 
 	@patch("accounting_custom.accounting.donation_gl.make_gl_entries")
 	@patch("accounting_custom.accounting.donation_gl.build_gl_entries", return_value=[1, 2, 3, 4])

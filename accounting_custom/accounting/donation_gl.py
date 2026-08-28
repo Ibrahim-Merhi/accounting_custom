@@ -22,7 +22,10 @@ def get_mode_of_payment_account(mode_of_payment, company):
 
 def get_account_details(account, company):
 	details = frappe.db.get_value(
-		"Account", account, ["company", "account_currency", "is_group", "disabled"], as_dict=True
+		"Account",
+		account,
+		["company", "account_currency", "account_type", "is_group", "disabled"],
+		as_dict=True,
 	)
 	if not details:
 		frappe.throw(_("Account {0} was not found.").format(account))
@@ -58,7 +61,7 @@ def build_gl_entries(doc):
 			"is_opening": "No",
 		}
 
-		def entry(account, debit=0, credit=0, against=None, donor_history=False):
+		def entry(account, debit=0, credit=0, against=None, donor_history=False, donor_party=False):
 			account_currency = accounts[account].account_currency or doc.custom_company_currency
 			if account_currency == payment.currency:
 				account_amount = flt(payment.donation_amount)
@@ -81,14 +84,19 @@ def build_gl_entries(doc):
 				against=against,
 				remarks=(_("Donor activity - {0}").format(remarks) if donor_history else remarks),
 			)
-			if donor_history:
+			if donor_history or (donor_party and accounts[account].account_type == "Receivable"):
 				row.update(party_type="Donor", party=doc.donor)
 			return row
 
 		entries.extend(
 			[
 				entry(mode_account, debit=base_amount, against=payment.received_in_account),
-				entry(payment.received_in_account, credit=base_amount, against=mode_account),
+				entry(
+					payment.received_in_account,
+					credit=base_amount,
+					against=mode_account,
+					donor_party=True,
+				),
 				entry(doc.donor_account, debit=base_amount, against=doc.donor_account, donor_history=True),
 				entry(doc.donor_account, credit=base_amount, against=doc.donor_account, donor_history=True),
 			]
