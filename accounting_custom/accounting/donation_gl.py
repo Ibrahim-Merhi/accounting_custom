@@ -38,7 +38,7 @@ def get_account_details(account, company):
 
 
 def get_account_currency_amount(doc, account_currency):
-	if account_currency == doc.company_currency:
+	if account_currency == doc.custom_company_currency:
 		return flt(doc.base_donation_amount)
 	if account_currency == doc.currency:
 		return flt(doc.donation_amount)
@@ -68,7 +68,7 @@ def build_gl_entries(doc):
 	}
 
 	def entry(account, debit=0, credit=0, against=None, donor_history=False):
-		account_currency = accounts[account].account_currency or doc.company_currency
+		account_currency = accounts[account].account_currency or doc.custom_company_currency
 		account_amount = get_account_currency_amount(doc, account_currency)
 		row = frappe._dict(common)
 		row.update(

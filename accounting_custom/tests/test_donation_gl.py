@@ -20,7 +20,7 @@ class TestDonationGL(TestCase):
 			doctype="Donation Entry", name="DON-2026-00001", company="Itihad",
 			posting_date="2026-08-28", mode_of_payment="Cash", received_in_account="Income",
 			donor_account="Donor Account", donor="DONOR-1", cost_center="Main - ITHD",
-			project="Project 1", company_currency="USD", currency="USD", donation_amount=200,
+			project="Project 1", custom_company_currency="USD", currency="USD", donation_amount=200,
 			base_donation_amount=200, remarks="Donation",
 		)
 

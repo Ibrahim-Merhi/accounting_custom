@@ -17,7 +17,7 @@ from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
 class DonationEntry(AccountsController):
 	def validate(self):
-		self.set_company_currency()
+		self.set_custom_company_currency()
 		self.validate_positive_amount()
 		self.set_exchange_rate_and_base_amount()
 		self.set_arabic_amount_in_words()
@@ -25,7 +25,7 @@ class DonationEntry(AccountsController):
 
 	def before_submit(self):
 		self.validate_submission_fields()
-		self.set_company_currency()
+		self.set_custom_company_currency()
 		self.validate_donor_account()
 		self.validate_linked_companies(require_cost_center=True)
 		self.validate_mode_of_payment_account()
@@ -40,23 +40,23 @@ class DonationEntry(AccountsController):
 		self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
 		cancel_gl_entries(self)
 
-	def set_company_currency(self):
+	def set_custom_company_currency(self):
 		if not self.company:
 			return
-		company_currency = frappe.db.get_value("Company", self.company, "default_currency")
-		if not company_currency:
+		custom_company_currency = frappe.db.get_value("Company", self.company, "default_currency")
+		if not custom_company_currency:
 			frappe.throw(_("Default Currency is not configured for company {0}.").format(self.company))
-		self.company_currency = company_currency
+		self.custom_company_currency = custom_company_currency
 
 	def validate_positive_amount(self):
 		if self.donation_amount is not None and flt(self.donation_amount) <= 0:
 			frappe.throw(_("Donation Amount must be greater than zero."))
 
 	def set_exchange_rate_and_base_amount(self):
-		if not all((self.company, self.currency, self.company_currency, self.posting_date)):
+		if not all((self.company, self.currency, self.custom_company_currency, self.posting_date)):
 			return
 		rate = get_company_exchange_rate(
-			self.company, self.currency, self.company_currency, self.posting_date
+			self.company, self.currency, self.custom_company_currency, self.posting_date
 		)
 		self.exchange_rate = flt(rate["exchange_rate"])
 		self.base_donation_amount = flt(self.donation_amount) * self.exchange_rate

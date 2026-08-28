@@ -24,7 +24,7 @@
   "donor_account",
   "cost_center",
   "currency",
-  "company_currency",
+  "custom_company_currency",
   "reference_no",
   "column_break_mhab",
   "project",
@@ -114,7 +114,7 @@
    "fieldname": "base_donation_amount",
    "fieldtype": "Currency",
    "label": "Base Donation Amount",
-   "options": "company_currency",
+   "options": "custom_company_currency",
    "read_only": 1
   },
   {
@@ -155,7 +155,7 @@
    "options": "Currency"
   },
   {
-   "fieldname": "company_currency",
+   "fieldname": "custom_company_currency",
    "fieldtype": "Link",
    "label": "Company Currency",
    "options": "Currency",

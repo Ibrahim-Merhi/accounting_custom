@@ -30,7 +30,7 @@ frappe.ui.form.on('Donation Entry', {
         }
 
         if (frm.doc.company) {
-            fetch_company_currency(frm, false);
+            fetch_custom_company_currency(frm, false);
         }
 
         /*
@@ -72,7 +72,7 @@ frappe.ui.form.on('Donation Entry', {
         frm.set_value('project', null);
         frm.set_value('received_in_account', null);
 
-        frm.set_value('company_currency', null);
+        frm.set_value('custom_company_currency', null);
         frm.set_value('exchange_rate', null);
         frm.set_value('base_donation_amount', null);
 
@@ -86,7 +86,7 @@ frappe.ui.form.on('Donation Entry', {
             fetch_donor_account(frm);
         }
 
-        fetch_company_currency(frm, true);
+        fetch_custom_company_currency(frm, true);
     },
 
     posting_date(frm) {
@@ -99,7 +99,7 @@ frappe.ui.form.on('Donation Entry', {
         if (
             frm.doc.company &&
             frm.doc.currency &&
-            frm.doc.company_currency
+            frm.doc.custom_company_currency
         ) {
             fetch_company_exchange_rate(frm);
         }
@@ -112,7 +112,7 @@ frappe.ui.form.on('Donation Entry', {
         if (
             frm.doc.company &&
             frm.doc.currency &&
-            frm.doc.company_currency
+            frm.doc.custom_company_currency
         ) {
             fetch_company_exchange_rate(frm);
         }
@@ -173,7 +173,7 @@ frappe.ui.form.on('Donation Entry', {
             );
         }
 
-        if (!frm.doc.company_currency) {
+        if (!frm.doc.custom_company_currency) {
             frappe.throw(
                 __('Company Currency is required before submitting the Donation Entry.')
             );
@@ -716,7 +716,7 @@ function setup_donation_filters(frm) {
    COMPANY CURRENCY
 ========================================================= */
 
-function fetch_company_currency(
+function fetch_custom_company_currency(
     frm,
     fetch_rate = true
 ) {
@@ -737,26 +737,26 @@ function fetch_company_currency(
             return;
         }
 
-        const company_currency =
+        const custom_company_currency =
             r.message.default_currency;
 
         /*
          * Avoid unnecessary set_value calls.
          */
         if (
-            frm.doc.company_currency !==
-            company_currency
+            frm.doc.custom_company_currency !==
+            custom_company_currency
         ) {
             frm.set_value(
-                'company_currency',
-                company_currency
+                'custom_company_currency',
+                custom_company_currency
             );
         }
 
         if (!frm.doc.currency) {
             frm.set_value(
                 'currency',
-                company_currency
+                custom_company_currency
             );
         }
 
@@ -780,7 +780,7 @@ function fetch_company_exchange_rate(frm) {
     if (
         !frm.doc.company ||
         !frm.doc.currency ||
-        !frm.doc.company_currency
+        !frm.doc.custom_company_currency
     ) {
         return;
     }
@@ -801,7 +801,7 @@ function fetch_company_exchange_rate(frm) {
                 frm.doc.currency,
 
             to_currency:
-                frm.doc.company_currency,
+                frm.doc.custom_company_currency,
 
             transaction_date:
                 posting_date
