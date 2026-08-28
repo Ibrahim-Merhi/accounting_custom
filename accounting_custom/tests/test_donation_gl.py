@@ -4,7 +4,12 @@ from unittest.mock import Mock, patch
 
 import frappe
 
-from accounting_custom.accounting.donation_gl import build_gl_entries, cancel_gl_entries, post_gl_entries
+from accounting_custom.accounting.donation_gl import (
+	build_gl_entries,
+	cancel_gl_entries,
+	get_mode_of_payment_currency,
+	post_gl_entries,
+)
 
 
 class TestDonationGL(TestCase):
@@ -47,6 +52,16 @@ class TestDonationGL(TestCase):
 		self.assertTrue(all(row.cost_center == "North - ITHD" for row in rows[4:]))
 		self.assertEqual(rows[2].party_type, "Donor")
 		self.assertEqual(rows[2].party, "DONOR-1")
+		self.assertEqual(rows[4].transaction_currency, "LBP")
+		self.assertEqual(rows[4].debit_in_transaction_currency, 8950000)
+		self.assertEqual(rows[5].credit_in_transaction_currency, 8950000)
+
+	@patch("accounting_custom.accounting.donation_gl.get_account_details")
+	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account", return_value="Cash LBP")
+	def test_mode_of_payment_currency_comes_from_default_account(self, _mode_account, details):
+		details.return_value = frappe._dict(account_currency="LBP")
+
+		self.assertEqual(get_mode_of_payment_currency("Cash LBP", "Itihad"), "LBP")
 
 	@patch("accounting_custom.accounting.donation_gl.get_account_details")
 	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account", return_value="Cash Account")

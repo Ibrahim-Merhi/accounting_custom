@@ -7,6 +7,7 @@ from erpnext.controllers.accounts_controller import AccountsController
 from accounting_custom.accounting.donation_gl import (
 	cancel_gl_entries,
 	get_account_details,
+	get_mode_of_payment_currency,
 	get_mode_of_payment_account,
 	post_gl_entries,
 )
@@ -25,6 +26,7 @@ class DonationEntry(AccountsController):
 
 	def before_submit(self):
 		self.validate()
+		self.validate_submit_requirements()
 		self.validate_donor_account()
 
 	def on_submit(self):
@@ -51,10 +53,10 @@ class DonationEntry(AccountsController):
 
 	def set_payment_amounts(self):
 		for row in self.payments:
+			if not row.mode_of_payment:
+				frappe.throw(_("Row {0}: Mode of Payment is required.").format(row.idx))
+			row.currency = get_mode_of_payment_currency(row.mode_of_payment, self.company)
 			for fieldname, label in (
-				("cost_center", _("Cost Center")),
-				("mode_of_payment", _("Mode of Payment")),
-				("currency", _("Currency")),
 				("received_in_account", _("Received In Account")),
 			):
 				if not row.get(fieldname):
@@ -72,9 +74,16 @@ class DonationEntry(AccountsController):
 		currency_totals = {}
 		for row in self.payments:
 			currency_totals[row.currency] = currency_totals.get(row.currency, 0) + flt(row.donation_amount)
+		self.total_usd = currency_totals.get("USD", 0)
+		self.total_lbp = currency_totals.get("LBP", 0)
 		self.custom_amount_in_words_arabic = "\n".join(
 			arabic_amount_in_words(amount, currency) for currency, amount in currency_totals.items()
 		)
+
+	def validate_submit_requirements(self):
+		for row in self.payments:
+			if not row.cost_center:
+				frappe.throw(_("Row {0}: Cost Center is required before submission.").format(row.idx))
 
 	def validate_donor_account(self):
 		configured_account = get_donor_account(self.donor, self.company)
@@ -88,9 +97,15 @@ class DonationEntry(AccountsController):
 		for row in self.payments:
 			get_account_details(row.received_in_account, self.company)
 			get_account_details(get_mode_of_payment_account(row.mode_of_payment, self.company), self.company)
-			self._validate_company_link("Cost Center", row.cost_center)
+			if row.cost_center:
+				self._validate_company_link("Cost Center", row.cost_center)
 
 	def _validate_company_link(self, doctype, name):
 		company = frappe.db.get_value(doctype, name, "company")
 		if company != self.company:
 			frappe.throw(_("{0} {1} does not belong to company {2}.").format(doctype, name, self.company))
+
+
+@frappe.whitelist()
+def get_payment_currency(mode_of_payment, company):
+	return get_mode_of_payment_currency(mode_of_payment, company)

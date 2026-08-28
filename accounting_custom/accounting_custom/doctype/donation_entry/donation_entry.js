@@ -37,6 +37,10 @@ frappe.ui.form.on("Donation Entry", {
 });
 
 frappe.ui.form.on("Donation Payment Detail", {
+	mode_of_payment(frm, cdt, cdn) {
+		set_payment_currency(frm, locals[cdt][cdn]);
+	},
+
 	currency(frm, cdt, cdn) {
 		set_payment_rate(frm, locals[cdt][cdn]);
 	},
@@ -89,6 +93,20 @@ function fetch_company_currency(frm) {
 	});
 }
 
+function set_payment_currency(frm, row) {
+	if (!frm.doc.company || !row.mode_of_payment) {
+		frappe.model.set_value(row.doctype, row.name, "currency", null);
+		return;
+	}
+	frappe.call({
+		method: "accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.get_payment_currency",
+		args: { mode_of_payment: row.mode_of_payment, company: frm.doc.company },
+		callback(r) {
+			frappe.model.set_value(row.doctype, row.name, "currency", r.message);
+		},
+	});
+}
+
 function refresh_payment_rates(frm) {
 	(frm.doc.payments || []).forEach((row) => set_payment_rate(frm, row));
 }
@@ -128,6 +146,7 @@ function add_ledger_button(frm) {
 			from_date: frm.doc.posting_date,
 			to_date: frm.doc.posting_date,
 			voucher_no: frm.doc.name,
+			add_values_in_transaction_currency: 1,
 			show_cancelled_entries: frm.doc.docstatus === 2 ? 1 : 0,
 		});
 	}, __("View"));

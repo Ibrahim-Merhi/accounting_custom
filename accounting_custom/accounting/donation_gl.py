@@ -20,6 +20,12 @@ def get_mode_of_payment_account(mode_of_payment, company):
 	return account
 
 
+def get_mode_of_payment_currency(mode_of_payment, company):
+	account = get_mode_of_payment_account(mode_of_payment, company)
+	details = get_account_details(account, company)
+	return details.account_currency or frappe.get_cached_value("Company", company, "default_currency")
+
+
 def get_account_details(account, company):
 	details = frappe.db.get_value(
 		"Account",
@@ -77,10 +83,13 @@ def build_gl_entries(doc):
 			row.update(
 				account=account,
 				account_currency=account_currency,
+				transaction_currency=payment.currency,
 				debit=debit,
 				credit=credit,
 				debit_in_account_currency=account_amount if debit else 0,
 				credit_in_account_currency=account_amount if credit else 0,
+				debit_in_transaction_currency=flt(payment.donation_amount) if debit else 0,
+				credit_in_transaction_currency=flt(payment.donation_amount) if credit else 0,
 				against=against,
 				remarks=(_("Donor activity - {0}").format(remarks) if donor_history else remarks),
 			)

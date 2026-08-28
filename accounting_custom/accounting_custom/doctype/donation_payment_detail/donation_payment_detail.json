@@ -19,7 +19,7 @@
    "in_list_view": 1,
    "label": "Cost Center",
    "options": "Cost Center",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "mode_of_payment",
@@ -35,6 +35,7 @@
    "in_list_view": 1,
    "label": "Currency",
    "options": "Currency",
+   "read_only": 1,
    "reqd": 1
   },
   {

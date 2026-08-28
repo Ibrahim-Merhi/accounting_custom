@@ -21,6 +21,10 @@
   "project",
   "remarks",
   "base_donation_amount",
+  "total_usd",
+  "total_lbp",
+  "usd_currency",
+  "lbp_currency",
   "custom_amount_in_words_arabic",
   "custom_company_currency",
   "reference_no",
@@ -120,6 +124,40 @@
    "read_only": 1
   },
   {
+   "fieldname": "total_usd",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total USD",
+   "options": "usd_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_lbp",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total LBP",
+   "options": "lbp_currency",
+   "read_only": 1
+  },
+  {
+   "default": "USD",
+   "fieldname": "usd_currency",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "USD Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "default": "LBP",
+   "fieldname": "lbp_currency",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "LBP Currency",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
@@ -181,7 +219,7 @@
   {
    "fieldname": "donation_amount",
    "fieldtype": "Currency",
-   "in_list_view": 1,
+   "in_list_view": 0,
    "label": "Donation Amount",
    "options": "currency",
    "reqd": 0,

@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 accounting_custom.patches.v1_0.adopt_exported_customizations
 accounting_custom.patches.v1_0.migrate_donation_payment_rows
+accounting_custom.patches.v1_0.backfill_donation_currency_totals
