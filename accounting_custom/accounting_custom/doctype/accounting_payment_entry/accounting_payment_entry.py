@@ -32,8 +32,20 @@ class AccountingPaymentEntry(AccountsController):
 			self.validate_row(row)
 		self.total_debit = sum(flt(row.base_amount) for row in self.custom_accounting_rows_copy)
 		self.total_credit = self.total_debit
+		self.set_currency_totals()
 		if self.total_debit <= 0:
 			frappe.throw(_("Accounting Payment Entry total must be greater than zero."))
+
+	def set_currency_totals(self):
+		totals = {}
+		for row in self.custom_accounting_rows_copy:
+			if row.currency:
+				totals[row.currency] = totals.get(row.currency, 0) + flt(row.amount)
+		self.set("currency_totals", [])
+		for currency, amount in totals.items():
+			self.append("currency_totals", {
+				"currency": currency, "total_debit": amount, "total_credit": amount,
+			})
 
 	def on_submit(self):
 		if frappe.db.exists("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name, "is_cancelled": 0}):

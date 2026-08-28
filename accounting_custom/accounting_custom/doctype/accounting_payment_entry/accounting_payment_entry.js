@@ -5,12 +5,16 @@ frappe.ui.form.on("Accounting Payment Entry", {
 
 	refresh(frm) {
 		set_payment_queries(frm);
+		if (frm.doc.posting_date) set_hijri_date(frm);
+		if (frm.is_new()) refresh_currency_totals(frm);
 		setTimeout(() => ensure_initial_payment_row(frm), 0);
 	},
 
 	company(frm) {
 		frm.set_value("custom_branch", null);
 		frm.clear_table("custom_accounting_rows_copy");
+		frm.clear_table("currency_totals");
+		frm.refresh_field("currency_totals");
 		frappe.db.get_value("Company", frm.doc.company, "default_currency").then((r) => {
 			frm.set_value("custom_company_currency", r.message?.default_currency || null);
 			ensure_initial_payment_row(frm);
@@ -18,6 +22,7 @@ frappe.ui.form.on("Accounting Payment Entry", {
 	},
 
 	posting_date(frm) {
+		set_hijri_date(frm);
 		(frm.doc.custom_accounting_rows_copy || []).forEach((row) => update_row_rate(frm, row));
 	},
 });
@@ -55,10 +60,12 @@ frappe.ui.form.on("Accounting Payment Detail", {
 
 	currency(frm, cdt, cdn) {
 		update_row_rate(frm, locals[cdt][cdn]);
+		refresh_currency_totals(frm);
 	},
 
 	amount(frm, cdt, cdn) {
 		update_row_rate(frm, locals[cdt][cdn]);
+		refresh_currency_totals(frm);
 	},
 });
 
@@ -66,6 +73,31 @@ function ensure_initial_payment_row(frm) {
 	if (!frm.is_new() || (frm.doc.custom_accounting_rows_copy || []).length) return;
 	const grid = frm.fields_dict.custom_accounting_rows_copy?.grid;
 	if (grid) grid.add_new_row(null, null, true, null, true);
+}
+
+function refresh_currency_totals(frm) {
+	const totals = {};
+	(frm.doc.custom_accounting_rows_copy || []).forEach((row) => {
+		if (row.currency) totals[row.currency] = (totals[row.currency] || 0) + flt(row.amount);
+	});
+	frm.clear_table("currency_totals");
+	Object.entries(totals).forEach(([currency, amount]) => {
+		const total = frm.add_child("currency_totals");
+		total.currency = currency;
+		total.total_debit = amount;
+		total.total_credit = amount;
+	});
+	frm.refresh_field("currency_totals");
+}
+
+function set_hijri_date(frm) {
+	if (!frm.doc.posting_date) return;
+	const [year, month, day] = frm.doc.posting_date.split("-").map(Number);
+	const parts = new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura", {
+		year: "numeric", month: "numeric", day: "numeric",
+	}).formatToParts(new Date(year, month - 1, day, 12));
+	const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+	frm.set_value("custom_hijri_date", value.year + "/" + value.month + "/" + value.day);
 }
 
 function set_payment_queries(frm) {
@@ -98,6 +130,7 @@ function set_row_currency(frm, row) {
 		callback(r) {
 			frappe.model.set_value(row.doctype, row.name, "currency", r.message).then(() => {
 				refresh_payment_row(frm, row);
+				refresh_currency_totals(frm);
 			});
 		},
 	});

@@ -38,3 +38,22 @@ class TestAccountingPaymentGL(TestCase):
 		self.assertEqual(rows[3].account, "Cash LBP")
 		self.assertEqual(rows[3].credit_in_account_currency, 8950000)
 		self.assertTrue(all(row.custom_branch == "Beirut" for row in rows))
+
+	def test_builds_debit_and_credit_totals_per_currency(self):
+		totals = []
+		doc = SimpleNamespace(
+			custom_accounting_rows_copy=[
+				SimpleNamespace(currency="USD", amount=100),
+				SimpleNamespace(currency="LBP", amount=8950000),
+				SimpleNamespace(currency="USD", amount=50),
+			],
+			set=lambda _fieldname, _value: totals.clear(),
+			append=lambda _fieldname, value: totals.append(value),
+		)
+
+		AccountingPaymentEntry.set_currency_totals(doc)
+
+		self.assertEqual(totals, [
+			{"currency": "USD", "total_debit": 150, "total_credit": 150},
+			{"currency": "LBP", "total_debit": 8950000, "total_credit": 8950000},
+		])
