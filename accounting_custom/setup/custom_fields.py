@@ -79,16 +79,45 @@ def migrate_journal_entry_branches():
 
 
 def migrate_accounting_payment_rows():
-	if not frappe.db.exists("Custom Field", "Accounting Payment Entry-custom_accounting_rows_copy"):
+	canonical_fieldname = "custom_accounting_rows_copy"
+	canonical_name = "Accounting Payment Entry-custom_accounting_rows_copy"
+	if not frappe.db.exists("Custom Field", canonical_name):
 		return
-	frappe.db.sql("""
-		update `tabAccounting Payment Detail`
-		set parentfield = 'custom_accounting_rows_copy'
-		where parenttype = 'Accounting Payment Entry'
-		and parentfield in ('accounts', 'accounting_rows')
-	""")
+
+	duplicate_fields = frappe.get_all(
+		"Custom Field",
+		filters={
+			"dt": "Accounting Payment Entry",
+			"fieldname": ["like", "custom_accounting_rows_copy%"],
+			"fieldtype": "Table",
+			"options": "Accounting Payment Detail",
+		},
+		fields=["name", "fieldname"],
+	)
+	legacy_fieldnames = ["accounts", "accounting_rows"]
+	legacy_fieldnames.extend(
+		field.fieldname for field in duplicate_fields if field.name != canonical_name
+	)
+	for fieldname in legacy_fieldnames:
+		frappe.db.sql(
+			"""
+			update `tabAccounting Payment Detail`
+			set parentfield = %s
+			where parenttype = 'Accounting Payment Entry' and parentfield = %s
+			""",
+			(canonical_fieldname, fieldname),
+		)
+
+	for field in duplicate_fields:
+		if field.name != canonical_name:
+			frappe.db.set_value(
+				"Custom Field", field.name,
+				{"hidden": 1, "reqd": 0, "label": "Accounting Rows Copy (Legacy)"},
+				update_modified=False,
+			)
+
 	frappe.db.set_value(
-		"Custom Field", "Accounting Payment Entry-custom_accounting_rows_copy",
+		"Custom Field", canonical_name,
 		{"hidden": 0, "reqd": 1, "label": "Accounting Rows"},
 		update_modified=False,
 	)

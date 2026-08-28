@@ -66,7 +66,7 @@ function set_payment_queries(frm) {
 	}));
 	frm.set_query("account", "custom_accounting_rows_copy", () => ({
 		query: "erpnext.controllers.queries.get_account_list",
-		filters: frm.doc.company ? { company: frm.doc.company, disabled: 0, is_group: 0 } : { name: ["=", ""] },
+		filters: frm.doc.company ? { company: ["=", frm.doc.company], disabled: 0, is_group: 0 } : { name: ["=", ""] },
 	}));
 	frm.set_query("cost_center", "custom_accounting_rows_copy", () => ({
 		filters: frm.doc.company ? { company: frm.doc.company, is_group: 0 } : { name: ["=", ""] },
