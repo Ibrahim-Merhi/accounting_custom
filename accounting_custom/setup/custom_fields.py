@@ -21,8 +21,14 @@ CUSTOM_FIELDS = {
 	],
 	"Journal Entry": [
 		{
+			"fieldname": "custom_branch", "label": "Branch (Legacy)", "fieldtype": "Link",
+			"options": "Branch", "insert_after": "company", "hidden": 1,
+		},
+	],
+	"Journal Entry Account": [
+		{
 			"fieldname": "custom_branch", "label": "Branch", "fieldtype": "Link",
-			"options": "Branch", "insert_after": "company",
+			"options": "Branch", "insert_after": "cost_center", "in_list_view": 1, "reqd": 1,
 		},
 	],
 	"GL Entry": [
@@ -43,7 +49,25 @@ def ensure_custom_fields():
 			if definition["fieldname"] not in existing:
 				create_custom_field(doctype, {**definition, "module": "Accounting Custom"})
 				existing.add(definition["fieldname"])
+			else:
+				custom_field = frappe.db.exists("Custom Field", f"{doctype}-{definition['fieldname']}")
+				if custom_field:
+					values = {key: value for key, value in definition.items() if key != "fieldname"}
+					frappe.db.set_value("Custom Field", custom_field, values, update_modified=False)
 		frappe.clear_cache(doctype=doctype)
+	migrate_journal_entry_branches()
+
+
+def migrate_journal_entry_branches():
+	if not (frappe.db.has_column("Journal Entry", "custom_branch") and frappe.db.has_column("Journal Entry Account", "custom_branch")):
+		return
+	frappe.db.sql("""
+		update `tabJournal Entry Account` account
+		inner join `tabJournal Entry` journal on journal.name = account.parent
+		set account.custom_branch = journal.custom_branch
+		where ifnull(account.custom_branch, '') = ''
+		and ifnull(journal.custom_branch, '') != ''
+	""")
 
 
 def ensure_donor_account_fields():

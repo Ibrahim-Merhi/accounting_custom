@@ -38,20 +38,16 @@ frappe.ui.form.on("Accounting Payment Detail", {
 		});
 	},
 
+	mode_of_payment(frm, cdt, cdn) {
+		set_row_currency(frm, locals[cdt][cdn]);
+	},
+
 	currency(frm, cdt, cdn) {
 		update_row_rate(frm, locals[cdt][cdn]);
 	},
 
-	debit(frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-		if (flt(row.debit)) frappe.model.set_value(cdt, cdn, "credit", 0);
-		update_row_rate(frm, row);
-	},
-
-	credit(frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-		if (flt(row.credit)) frappe.model.set_value(cdt, cdn, "debit", 0);
-		update_row_rate(frm, row);
+	amount(frm, cdt, cdn) {
+		update_row_rate(frm, locals[cdt][cdn]);
 	},
 });
 
@@ -74,6 +70,20 @@ function set_payment_queries(frm) {
 	});
 }
 
+function set_row_currency(frm, row) {
+	if (!frm.doc.company || !row.mode_of_payment) {
+		frappe.model.set_value(row.doctype, row.name, "currency", null);
+		return;
+	}
+	frappe.call({
+		method: "accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.get_payment_currency",
+		args: { mode_of_payment: row.mode_of_payment, company: frm.doc.company },
+		callback(r) {
+			frappe.model.set_value(row.doctype, row.name, "currency", r.message);
+		},
+	});
+}
+
 function update_row_rate(frm, row) {
 	if (!frm.doc.company || !frm.doc.custom_company_currency || !frm.doc.posting_date || !row.currency) return;
 	frappe.call({
@@ -82,8 +92,7 @@ function update_row_rate(frm, row) {
 		callback(r) {
 			const rate = flt(r.message?.exchange_rate || 0);
 			frappe.model.set_value(row.doctype, row.name, "exchange_rate", rate);
-			frappe.model.set_value(row.doctype, row.name, "base_debit", flt(row.debit) * rate);
-			frappe.model.set_value(row.doctype, row.name, "base_credit", flt(row.credit) * rate);
+			frappe.model.set_value(row.doctype, row.name, "base_amount", flt(row.amount) * rate);
 		},
 	});
 }

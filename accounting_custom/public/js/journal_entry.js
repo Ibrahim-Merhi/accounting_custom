@@ -1,11 +1,13 @@
 frappe.ui.form.on("Journal Entry", {
 	setup(frm) {
-		frm.set_query("custom_branch", () => ({
+		frm.set_query("custom_branch", "accounts", () => ({
 			filters: frm.doc.company ? { custom_company: frm.doc.company } : { name: ["=", ""] },
 		}));
 	},
 
 	company(frm) {
-		frm.set_value("custom_branch", null);
+		(frm.doc.accounts || []).forEach((row) => {
+			frappe.model.set_value(row.doctype, row.name, "custom_branch", null);
+		});
 	},
 });

@@ -37,7 +37,9 @@ class TestDonationGL(TestCase):
 	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account")
 	def test_builds_four_rows_per_payment(self, mode_account, details):
 		mode_account.side_effect = ["Cash Account", "Bank Account"]
-		details.return_value = frappe._dict(account_currency="USD", account_type="")
+		details.side_effect = lambda account, _company: frappe._dict(
+			account_currency="LBP" if account == "Bank Account" else "USD", account_type=""
+		)
 		rows = build_gl_entries(self.doc)
 		self.assertEqual(len(rows), 8)
 		self.assertEqual([(r.account, r.debit, r.credit) for r in rows[:4]], [
@@ -54,7 +56,8 @@ class TestDonationGL(TestCase):
 		self.assertEqual(rows[2].party, "DONOR-1")
 		self.assertEqual(rows[4].transaction_currency, "LBP")
 		self.assertEqual(rows[4].debit_in_transaction_currency, 8950000)
-		self.assertEqual(rows[5].credit_in_transaction_currency, 8950000)
+		self.assertEqual(rows[5].transaction_currency, "USD")
+		self.assertEqual(rows[5].credit_in_transaction_currency, 100)
 
 	@patch("accounting_custom.accounting.donation_gl.get_account_details")
 	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account", return_value="Cash LBP")

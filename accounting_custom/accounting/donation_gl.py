@@ -83,13 +83,13 @@ def build_gl_entries(doc):
 			row.update(
 				account=account,
 				account_currency=account_currency,
-				transaction_currency=payment.currency,
+				transaction_currency=account_currency,
 				debit=debit,
 				credit=credit,
 				debit_in_account_currency=account_amount if debit else 0,
 				credit_in_account_currency=account_amount if credit else 0,
-				debit_in_transaction_currency=flt(payment.donation_amount) if debit else 0,
-				credit_in_transaction_currency=flt(payment.donation_amount) if credit else 0,
+				debit_in_transaction_currency=account_amount if debit else 0,
+				credit_in_transaction_currency=account_amount if credit else 0,
 				against=against,
 				remarks=(_("Donor activity - {0}").format(remarks) if donor_history else remarks),
 			)
