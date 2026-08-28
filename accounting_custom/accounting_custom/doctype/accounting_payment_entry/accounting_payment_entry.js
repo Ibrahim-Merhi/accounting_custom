@@ -21,6 +21,10 @@ frappe.ui.form.on("Accounting Payment Entry", {
 });
 
 frappe.ui.form.on("Accounting Payment Detail", {
+	accounts_add(frm) {
+		setTimeout(() => frm.refresh_field("accounts"), 0);
+	},
+
 	party_type(frm, cdt, cdn) {
 		frappe.model.set_value(cdt, cdn, "party", null);
 		frappe.model.set_value(cdt, cdn, "party_name", null);
