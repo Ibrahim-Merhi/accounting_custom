@@ -14,8 +14,7 @@
   "exchange_rate",
   "effective_date",
   "enabled",
-  "notes",
-  "test"
+  "notes"
  ],
  "fields": [
   {
@@ -74,16 +73,11 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
-  },
-  {
-   "fieldname": "test",
-   "fieldtype": "Data",
-   "label": "test"
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-28 10:26:23.083494",
+ "modified": "2026-08-28 10:29:05.417108",
  "modified_by": "Administrator",
  "module": "Accounting Custom",
  "name": "Company Exchange Rate",

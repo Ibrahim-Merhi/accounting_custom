@@ -236,5 +236,13 @@ fixtures = [
 	{
 		"dt": "Print Format",
 		"filters": [["name", "=", "سند قبض"], ["doc_type", "=", "Donation Entry"]],
-	}
+	},
+	{
+		"dt": "Property Setter",
+		"filters": [
+			["doc_type", "=", "Donor"],
+			["field_name", "=", "email"],
+			["property", "=", "unique"],
+		],
+	},
 ]
