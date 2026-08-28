@@ -32,9 +32,7 @@
   "currency",
   "donation_amount",
   "exchange_rate",
-  "received_in_account",
-  "column_break_ksfq",
-  "column_break_mhab"
+  "received_in_account"
  ],
  "fields": [
   {
@@ -134,10 +132,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "column_break_ksfq",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "donor_account",
    "fieldtype": "Link",
    "label": "Donor Account",
@@ -177,10 +171,6 @@
    "label": "Reference No",
    "hidden": 1,
    "reqd": 0
-  },
-  {
-   "fieldname": "column_break_mhab",
-   "fieldtype": "Column Break"
   },
   {
    "fieldname": "project",
