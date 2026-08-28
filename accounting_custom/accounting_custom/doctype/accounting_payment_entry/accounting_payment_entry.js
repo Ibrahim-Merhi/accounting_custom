@@ -9,14 +9,14 @@ frappe.ui.form.on("Accounting Payment Entry", {
 
 	company(frm) {
 		frm.set_value("custom_branch", null);
-		frm.clear_table("accounts");
+		frm.clear_table("custom_accounting_rows_copy");
 		frappe.db.get_value("Company", frm.doc.company, "default_currency").then((r) => {
 			frm.set_value("custom_company_currency", r.message?.default_currency || null);
 		});
 	},
 
 	posting_date(frm) {
-		(frm.doc.accounts || []).forEach((row) => update_row_rate(frm, row));
+		(frm.doc.custom_accounting_rows_copy || []).forEach((row) => update_row_rate(frm, row));
 	},
 });
 
@@ -64,14 +64,14 @@ function set_payment_queries(frm) {
 	frm.set_query("custom_branch", () => ({
 		filters: frm.doc.company ? { custom_company: frm.doc.company } : { name: ["=", ""] },
 	}));
-	frm.set_query("account", "accounts", () => ({
+	frm.set_query("account", "custom_accounting_rows_copy", () => ({
 		query: "erpnext.controllers.queries.get_account_list",
 		filters: frm.doc.company ? { company: frm.doc.company, disabled: 0, is_group: 0 } : { name: ["=", ""] },
 	}));
-	frm.set_query("cost_center", "accounts", () => ({
+	frm.set_query("cost_center", "custom_accounting_rows_copy", () => ({
 		filters: frm.doc.company ? { company: frm.doc.company, is_group: 0 } : { name: ["=", ""] },
 	}));
-	frm.set_query("party", "accounts", (_doc, cdt, cdn) => {
+	frm.set_query("party", "custom_accounting_rows_copy", (_doc, cdt, cdn) => {
 		const row = locals[cdt][cdn];
 		if (["Employee", "Beneficiary"].includes(row.party_type)) return { filters: { company: frm.doc.company } };
 		if (["Supplier", "Institution"].includes(row.party_type)) return { filters: { disabled: 0 } };
@@ -97,7 +97,7 @@ function set_row_currency(frm, row) {
 
 function refresh_payment_row(frm, row) {
 	setTimeout(() => {
-		const grid_row = frm.fields_dict.accounts.grid.grid_rows_by_docname[row.name];
+		const grid_row = frm.fields_dict.custom_accounting_rows_copy.grid.grid_rows_by_docname[row.name];
 		if (!grid_row) return;
 		grid_row.refresh();
 		grid_row.toggle_editable_row(true);

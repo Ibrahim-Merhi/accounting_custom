@@ -19,6 +19,13 @@ CUSTOM_FIELDS = {
 			"options": "Party Account", "insert_after": "custom_accounts_section",
 		},
 	],
+	"Accounting Payment Entry": [
+		{
+			"fieldname": "custom_accounting_rows_copy", "label": "Accounting Rows",
+			"fieldtype": "Table", "options": "Accounting Payment Detail",
+			"insert_after": "accounts_section", "reqd": 1,
+		},
+	],
 	"Journal Entry": [
 		{
 			"fieldname": "custom_branch", "label": "Branch (Legacy)", "fieldtype": "Link",
@@ -56,6 +63,7 @@ def ensure_custom_fields():
 					frappe.db.set_value("Custom Field", custom_field, values, update_modified=False)
 		frappe.clear_cache(doctype=doctype)
 	migrate_journal_entry_branches()
+	migrate_accounting_payment_rows()
 
 
 def migrate_journal_entry_branches():
@@ -67,6 +75,17 @@ def migrate_journal_entry_branches():
 		set account.custom_branch = journal.custom_branch
 		where ifnull(account.custom_branch, '') = ''
 		and ifnull(journal.custom_branch, '') != ''
+	""")
+
+
+def migrate_accounting_payment_rows():
+	if not frappe.db.exists("Custom Field", "Accounting Payment Entry-custom_accounting_rows_copy"):
+		return
+	frappe.db.sql("""
+		update `tabAccounting Payment Detail`
+		set parentfield = 'custom_accounting_rows_copy'
+		where parenttype = 'Accounting Payment Entry'
+		and parentfield = 'accounts'
 	""")
 
 

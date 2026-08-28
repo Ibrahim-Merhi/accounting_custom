@@ -19,7 +19,7 @@ class TestAccountingPaymentGL(TestCase):
 			company="Itihad", custom_company_currency="USD", posting_date="2026-08-28",
 			doctype="Accounting Payment Entry", name="APE-2026-00001",
 			custom_branch="Beirut", remarks="Payment",
-			accounts=[
+			custom_accounting_rows_copy=[
 				SimpleNamespace(idx=1, mode_of_payment="Cash USD", account="Expense USD",
 					currency="USD", amount=100, base_amount=100, cost_center="Main",
 					party_type=None, party=None),
