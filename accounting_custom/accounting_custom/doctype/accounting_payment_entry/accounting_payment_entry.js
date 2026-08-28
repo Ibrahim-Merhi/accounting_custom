@@ -5,6 +5,7 @@ frappe.ui.form.on("Accounting Payment Entry", {
 
 	refresh(frm) {
 		set_payment_queries(frm);
+		setTimeout(() => ensure_initial_payment_row(frm), 0);
 	},
 
 	company(frm) {
@@ -12,6 +13,7 @@ frappe.ui.form.on("Accounting Payment Entry", {
 		frm.clear_table("custom_accounting_rows_copy");
 		frappe.db.get_value("Company", frm.doc.company, "default_currency").then((r) => {
 			frm.set_value("custom_company_currency", r.message?.default_currency || null);
+			ensure_initial_payment_row(frm);
 		});
 	},
 
@@ -59,6 +61,12 @@ frappe.ui.form.on("Accounting Payment Detail", {
 		update_row_rate(frm, locals[cdt][cdn]);
 	},
 });
+
+function ensure_initial_payment_row(frm) {
+	if (!frm.is_new() || (frm.doc.custom_accounting_rows_copy || []).length) return;
+	const grid = frm.fields_dict.custom_accounting_rows_copy?.grid;
+	if (grid) grid.add_new_row(null, null, true, null, true);
+}
 
 function set_payment_queries(frm) {
 	frm.set_query("custom_branch", () => ({
