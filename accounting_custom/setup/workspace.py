@@ -19,6 +19,7 @@ SECTIONS = [
 		("Payroll Review", "DocType"),
 	]),
 	("Accounting Setup", [
+		("Accounting User Guide", "DocType"),
 		("Company Exchange Rate", "DocType"),
 		("Institution", "DocType"),
 	]),

@@ -4,6 +4,7 @@ from accounting_custom.setup.workspace import SECTIONS
 
 
 REQUIRED_DOCTYPES = {
+	"Accounting User Guide": {"guide_content"},
 	"Collector Profile": {"user", "company", "default_donor_account", "custody_accounts"},
 	"Collector Custody Account": {"currency", "account"},
 	"Donation Entry": {"collector", "approval_status", "finance_notes", "treasury_status"},

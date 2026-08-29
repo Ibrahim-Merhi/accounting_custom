@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["guide_content"],
+ "fields": [
+  {"fieldname":"guide_content","fieldtype":"HTML","label":"Guide"}
+ ],
+ "hide_toolbar": 1,
+ "issingle": 1,
+ "module": "Accounting Custom",
+ "name": "Accounting User Guide",
+ "permissions": [
+  {"read":1,"role":"Accounts User"},
+  {"read":1,"role":"Accounts Manager"},
+  {"read":1,"role":"Finance Officer"},
+  {"read":1,"role":"Treasurer"},
+  {"read":1,"role":"Collector"},
+  {"read":1,"role":"Responsible Manager"},
+  {"read":1,"role":"HR Coordinator"},
+  {"read":1,"role":"HR Manager"},
+  {"read":1,"role":"Association President"},
+  {"read":1,"role":"CEO"},
+  {"read":1,"role":"Public Relations"},
+  {"read":1,"role":"System Manager"}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}
