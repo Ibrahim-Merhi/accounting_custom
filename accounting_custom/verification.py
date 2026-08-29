@@ -1,5 +1,7 @@
 import frappe
 
+from accounting_custom.setup.workspace import SECTIONS
+
 
 REQUIRED_DOCTYPES = {
 	"Collector Profile": {"user", "company", "default_donor_account", "custody_accounts"},
@@ -55,8 +57,18 @@ def verify_accounting_program():
 	for report in sorted(REQUIRED_REPORTS):
 		if not frappe.db.exists("Report", report):
 			missing.append(f"Report: {report}")
-	if not frappe.db.exists("Workspace", "Accounting Program"):
-		missing.append("Workspace: Accounting Program")
+	if not frappe.db.exists("Workspace", "Accounting"):
+		missing.append("Workspace: Accounting")
+	else:
+		workspace_sections = {
+			row.label for row in frappe.get_doc("Workspace", "Accounting").links
+			if row.type == "Card Break"
+		}
+		for section, _links in SECTIONS:
+			if section not in workspace_sections:
+				missing.append(f"Workspace section: Accounting / {section}")
+	if frappe.db.exists("Workspace", "Accounting Program"):
+		missing.append("Obsolete workspace: Accounting Program")
 	if frappe.db.exists("Custom Field", "Supplier-custom_company"):
 		missing.append("Obsolete field: Supplier.custom_company")
 	if frappe.db.exists("DocType", "Collector Profile") and not frappe.db.count(

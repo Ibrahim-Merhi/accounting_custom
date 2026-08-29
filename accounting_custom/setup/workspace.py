@@ -55,7 +55,7 @@ def ensure_accounting_workspace_sections():
 		{
 			"id": "accounting_custom_header",
 			"type": "header",
-			"data": {"text": '<span class="h4"><b>Accounting Program</b></span>', "col": 12},
+			"data": {"text": '<span class="h4"><b>Accounting Operations and Reports</b></span>', "col": 12},
 		}
 	])
 	for index, (section, _links) in enumerate(SECTIONS, 1):
@@ -94,6 +94,18 @@ def ensure_accounting_workspace_sections():
 		# modified standard workspace into ERPNext when the site is in developer mode.
 		frappe.conf.developer_mode = 0
 		doc.save()
+	finally:
+		frappe.conf.developer_mode = developer_mode
+	frappe.clear_cache(doctype="Workspace")
+
+
+def remove_standalone_accounting_program_workspace():
+	if not frappe.db.exists("Workspace", "Accounting Program"):
+		return
+	developer_mode = frappe.conf.developer_mode
+	try:
+		frappe.conf.developer_mode = 0
+		frappe.delete_doc("Workspace", "Accounting Program", ignore_permissions=True, force=True)
 	finally:
 		frappe.conf.developer_mode = developer_mode
 	frappe.clear_cache(doctype="Workspace")

@@ -65,7 +65,8 @@ comments, returns, and approval of the exported Salary Register.
 - Monthly Cash Bank Balance
 - Balance Sheet by Cost Center
 
-All transactions and reports are linked from the Accounting Program workspace.
+All transactions and reports are linked from dedicated sections in ERPNext's
+standard Accounting workspace.
 
 ## Deployment
 

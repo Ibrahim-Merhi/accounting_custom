@@ -12,7 +12,7 @@ A source-controlled ERPNext/Frappe v15 extension for company-specific exchange r
 - Multi-stage Payment Memos for payments, custody, salary advances, and closures
 - Finance-owned payroll cost-center allocations, monthly employee adjustments,
   and CEO/president payroll review
-- Operational and management accounting reports in the Accounting Program workspace
+- Operational and management accounting reports in dedicated sections of the standard Accounting workspace
 
 See [Accounting Program](docs/accounting_program.md) for setup and workflow details.
 - Company-scoped Branch tracking on Journal Entry and GL Entry
