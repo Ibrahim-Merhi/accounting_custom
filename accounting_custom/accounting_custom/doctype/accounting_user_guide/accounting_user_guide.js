@@ -22,7 +22,14 @@ function render_accounting_guide(frm) {
 					</div>
 					<div class="ag-role-shortcuts"><span>Show the guide for:</span><button data-role-shortcut="accountant">Accountant</button><button data-role-shortcut="manager">Manager & approver</button></div>
 				</div>
-				<div class="ag-hero-stat"><strong>11</strong><span>management reports</span><strong>8</strong><span>guided work areas</span></div>
+				<div class="ag-hero-stat"><strong>11</strong><span>management reports</span><strong>15</strong><span>learning modules</span></div>
+			</section>
+			<section class="ag-learning-path">
+				<div><b>1</b><span><strong>Beginner</strong>Navigation and terminology</span></div><i>→</i>
+				<div><b>2</b><span><strong>Foundation</strong>Companies, accounts, parties</span></div><i>→</i>
+				<div><b>3</b><span><strong>Operator</strong>Receipts, payments, payroll</span></div><i>→</i>
+				<div><b>4</b><span><strong>Reviewer</strong>Approvals and controls</span></div><i>→</i>
+				<div><b>5</b><span><strong>Professional</strong>Reporting and period close</span></div>
 			</section>
 
 			<nav class="ag-tabs" aria-label="Guide audience">
@@ -36,8 +43,10 @@ function render_accounting_guide(frm) {
 				<button data-topic="navigation">Navigation</button><button data-topic="setup">Setup & masters</button>
 				<button data-topic="donations">Donations</button><button data-topic="payments">Direct payments</button>
 				<button data-topic="memos">Payment memos</button><button data-topic="payroll">Payroll</button>
-				<button data-topic="controls">Accounting controls</button><button data-topic="approvals">Approvals</button>
-				<button data-topic="reports">Reports</button><button data-topic="troubleshooting">Troubleshooting</button>
+				<button data-topic="controls">Accounting controls</button><button data-topic="core">ERPNext core</button>
+				<button data-topic="examples">Worked examples</button><button data-topic="approvals">Roles & approvals</button>
+				<button data-topic="reports">Reports</button><button data-topic="closing">Period close</button>
+				<button data-topic="troubleshooting">Troubleshooting</button><button data-topic="glossary">Glossary</button>
 			</nav>
 
 			<section class="ag-section" id="quick-start" data-topic="quick-start" data-audience="all accountant manager" data-search="daily checklist start accounting workspace">
@@ -71,6 +80,7 @@ function render_accounting_guide(frm) {
 
 			<section class="ag-section" data-topic="donations" data-audience="all accountant" data-search="donation donor collector custody receipt handover">
 				<div class="ag-section-heading"><span>04</span><div><h2>Donation and collector lifecycle</h2><p>Record the receipt immediately and keep collected funds in custody until treasury handover.</p></div></div>
+				<figure class="ag-shot ag-diagram"><img src="${image_root}/donation-custody-workflow.png" alt="Donation receipt and collector custody workflow"><figcaption>Complete lifecycle and accounting movement from collection through treasury handover.</figcaption></figure>
 				<div class="ag-flow">
 					<div><em>1</em><strong>Collector Profile</strong><small>Confirm default donor and currency custody accounts.</small><button data-doctype="Collector Profile">Open</button></div>
 					<i>→</i><div><em>2</em><strong>Donation Entry</strong><small>Create or select donor, project, currency, and receipt details.</small><button data-doctype="Donation Entry">Open</button></div>
@@ -93,6 +103,7 @@ function render_accounting_guide(frm) {
 
 			<section class="ag-section" data-topic="memos" data-audience="all accountant manager" data-search="payment memo salary advance custody closure approval manager president treasurer ceo">
 				<div class="ag-section-heading"><span>06</span><div><h2>Payment Memo and custody</h2><p>Select the memo type carefully—the approval route and accounting treatment depend on it.</p></div></div>
+				<figure class="ag-shot ag-diagram"><img src="${image_root}/payment-memo-workflow.png" alt="Payment Memo approval workflows"><figcaption>Approval routes change for salary advances and requests created by the Treasurer.</figcaption></figure>
 				<div class="ag-cards">
 					<article><span class="ag-tag">PAYMENT</span><h3>Normal payment</h3><p>Applicant → Responsible Manager → Finance → President → Treasurer.</p></article>
 					<article><span class="ag-tag">CUSTODY</span><h3>Custody request</h3><p>Use when the applicant will later document how the advance was spent.</p></article>
@@ -106,6 +117,7 @@ function render_accounting_guide(frm) {
 
 			<section class="ag-section" data-topic="payroll" data-audience="all accountant" data-search="payroll salary cost center allocation deductions monthly adjustment">
 				<div class="ag-section-heading"><span>07</span><div><h2>Payroll preparation</h2><p>Finance controls allocations; HR records monthly deductions; executives review the register.</p></div></div>
+				<figure class="ag-shot ag-diagram"><img src="${image_root}/payroll-cycle.png" alt="Monthly payroll accounting cycle"><figcaption>The monthly payroll cycle from employee setup through approved payment.</figcaption></figure>
 				<div class="ag-table-wrap"><table><thead><tr><th>Task</th><th>Owner</th><th>Document</th><th>Control</th></tr></thead><tbody>
 					<tr><td>Allocate salary</td><td>Finance</td><td><button data-doctype="Payroll Cost Center Allocation">Payroll Cost Center Allocation</button></td><td>Cost centers must total 100%.</td></tr>
 					<tr><td>Monthly deductions</td><td>HR / Finance</td><td><button data-doctype="Employee Monthly Adjustment">Employee Monthly Adjustment</button></td><td>Creates submitted Additional Salary deductions.</td></tr>
@@ -126,17 +138,56 @@ function render_accounting_guide(frm) {
 				<div class="ag-detail-grid"><div><h3>Daily controls</h3><ul><li>Review Pending Accounting Approvals.</li><li>Compare Daily Treasury to cash documents.</li><li>Clear collector handovers and investigate old custody.</li><li>Confirm every posted row has cost center and correct branch.</li></ul></div><div><h3>Period-end controls</h3><ul><li>Reconcile cash and bank accounts.</li><li>Review open custody and returned documents.</li><li>Compare weekly and monthly balances.</li><li>Lock the period only after corrections and management review.</li></ul></div></div>
 			</section>
 
+			<section class="ag-section" data-topic="core" data-audience="all accountant manager" data-search="erpnext core chart accounts journal payment entry invoice bank reconciliation general ledger trial balance profit loss balance sheet">
+				<div class="ag-section-heading"><span>09</span><div><h2>Core ERPNext accounting tools</h2><p>The custom workflows complement—not replace—the standard accounting ledgers and controls.</p></div></div>
+				<div class="ag-table-wrap"><table><thead><tr><th>Tool</th><th>Use it for</th><th>Do not use it for</th></tr></thead><tbody>
+					<tr><td><button data-doctype="Account">Chart of Accounts</button></td><td>Create and organize Asset, Liability, Equity, Income, and Expense accounts.</td><td>Do not create duplicate accounts for each transaction.</td></tr>
+					<tr><td><button data-doctype="Journal Entry">Journal Entry</button></td><td>Accruals, corrections, transfers, opening balances, and adjustments requiring explicit debit/credit lines.</td><td>Do not bypass Donation Entry or approved Payment Memo workflows.</td></tr>
+					<tr><td><button data-doctype="Payment Entry">Payment Entry</button></td><td>Standard customer/supplier receivable and payable settlement.</td><td>Do not use for collector custody or custom approval memos.</td></tr>
+					<tr><td><button data-doctype="Sales Invoice">Sales Invoice</button> / <button data-doctype="Purchase Invoice">Purchase Invoice</button></td><td>Recognize standard receivables, payables, income, expense, and taxes.</td><td>Do not record a simple donation receipt as a sales invoice.</td></tr>
+					<tr><td>Bank Reconciliation</td><td>Match bank statement activity to posted entries.</td><td>Do not alter posting dates merely to force a match.</td></tr>
+				</tbody></table></div>
+				<div class="ag-report-grid">
+					<button data-report="General Ledger"><strong>General Ledger</strong><span>Audit every debit and credit by account and voucher.</span></button>
+					<button data-report="Trial Balance"><strong>Trial Balance</strong><span>Confirm total debits equal total credits.</span></button>
+					<button data-report="Profit and Loss Statement"><strong>Profit and Loss</strong><span>Review income and expenses for the period.</span></button>
+					<button data-report="Balance Sheet"><strong>Balance Sheet</strong><span>Review assets, liabilities, and equity.</span></button>
+					<button data-report="Accounts Payable"><strong>Accounts Payable</strong><span>Review unpaid supplier obligations.</span></button>
+					<button data-report="Accounts Receivable"><strong>Accounts Receivable</strong><span>Review unpaid customer balances.</span></button>
+				</div>
+			</section>
+
+			<section class="ag-section" data-topic="examples" data-audience="all accountant manager" data-search="worked example donation payment custody salary journal debit credit">
+				<div class="ag-section-heading"><span>10</span><div><h2>Worked examples</h2><p>Use these patterns to choose the correct document and predict the accounting result.</p></div></div>
+				<div class="ag-example-grid">
+					<article><span>EXAMPLE A</span><h3>Collector receives a USD donation</h3><ol><li>Confirm active Collector Profile and USD custody account.</li><li>Quick-create donor if needed.</li><li>Create Donation Entry, select project and cost center.</li><li>Request Finance approval and submit.</li><li>GL: debit collector USD custody; credit donation revenue.</li><li>Later create Collector Handover to office cash/bank.</li></ol></article>
+					<article><span>EXAMPLE B</span><h3>Employee requests project expenses</h3><ol><li>Create Payment Memo type Payment.</li><li>Select responsible manager and attach invoice.</li><li>Add each expense account and cost center.</li><li>Manager, Finance, President, and Treasurer approve.</li><li>GL: debit expense allocations; credit selected payment account.</li></ol></article>
+					<article><span>EXAMPLE C</span><h3>Employee receives and closes custody</h3><ol><li>Create and approve Payment Memo type Custody.</li><li>When spent, create Custody Closure against original memo.</li><li>Use same company and currency.</li><li>Allocate actual expense lines; never exceed outstanding custody.</li><li>Repeat closure if partially spent; remaining balance stays open.</li></ol></article>
+					<article><span>EXAMPLE D</span><h3>Monthly salary preparation</h3><ol><li>Confirm submitted Salary Structure Assignment.</li><li>Finance allocates cost centers totaling 100%.</li><li>HR enters monthly deductions.</li><li>Generate payroll and attach exported Salary Register.</li><li>CEO and President approve or return notes.</li><li>Finance corrects and processes payment.</li></ol></article>
+				</div>
+			</section>
+
 			<section class="ag-section" data-topic="approvals" data-audience="all manager" data-search="manager approve return reject comments controls review">
-				<div class="ag-section-heading"><span>09</span><div><h2>Manager and approver controls</h2><p>Approval means the business purpose and accounting allocation have both been checked.</p></div></div>
+				<div class="ag-section-heading"><span>11</span><div><h2>Roles, permissions, and approval controls</h2><p>Approval means the business purpose and accounting allocation have both been checked.</p></div></div>
 				<div class="ag-manager-grid">
 					<div><h3>Responsible Manager</h3><ul><li>Review only memos assigned to you.</li><li>Check purpose, project, invoice, and cost centers.</li><li>Return with a clear correction note when needed.</li></ul></div>
 					<div><h3>Finance Officer</h3><ul><li>Verify company, accounts, currency, and exchange rate.</li><li>Select payment or custody account.</li><li>Approve only when supporting evidence is complete.</li></ul></div>
 					<div><h3>President / Treasurer</h3><ul><li>Review earlier comments and final funding source.</li><li>Treasurer confirms execution and daily cash impact.</li><li>Reject only when the request must not continue.</li></ul></div>
 				</div>
+				<div class="ag-table-wrap ag-spaced"><table><thead><tr><th>Role</th><th>Primary responsibility</th><th>Typical documents/reports</th></tr></thead><tbody>
+					<tr><td>Collector</td><td>Create donors and donation receipts; safeguard custody.</td><td>Donation Entry, Collector Handover status.</td></tr>
+					<tr><td>Public Relations</td><td>Analyze donor, collector, and project results.</td><td>Donation reports only.</td></tr>
+					<tr><td>Responsible Manager</td><td>Confirm need, project relevance, and evidence.</td><td>Assigned Payment Memos.</td></tr>
+					<tr><td>HR Coordinator / HR Manager</td><td>Salary advance routing and monthly employee adjustments.</td><td>Salary Advance, Employee Monthly Adjustment.</td></tr>
+					<tr><td>Finance Officer</td><td>Accounts, currency, allocation, approval, payroll finance control.</td><td>All accounting workflows and reports.</td></tr>
+					<tr><td>Association President / CEO</td><td>Executive review, comments, and authorization.</td><td>Payment Memo, Payroll Review, management reports.</td></tr>
+					<tr><td>Treasurer</td><td>Receive collections, execute payments, reconcile liquidity.</td><td>Collector Handover, Payment Memo, Daily Treasury.</td></tr>
+				</tbody></table></div>
 			</section>
 
 			<section class="ag-section" data-topic="reports" data-audience="all accountant manager" data-search="reports daily weekly monthly donor collector approvals custody project cash bank balance sheet cost center">
-				<div class="ag-section-heading"><span>10</span><div><h2>Reports and when to use them</h2><p>Start with an operational report, then use weekly or monthly financial views for management review.</p></div></div>
+				<div class="ag-section-heading"><span>12</span><div><h2>Reports and when to use them</h2><p>Start with an operational report, then use weekly or monthly financial views for management review.</p></div></div>
+				<figure class="ag-shot ag-diagram"><img src="${image_root}/reporting-map.png" alt="Accounting reporting map"><figcaption>Operational, donation, weekly, and monthly management report families.</figcaption></figure>
 				<div class="ag-report-grid">
 					<button data-report="Daily Treasury Report"><strong>Daily Treasury</strong><span>Received and paid by currency.</span></button>
 					<button data-report="Collector Collections"><strong>Collector Collections</strong><span>Collections by date and project.</span></button>
@@ -150,14 +201,28 @@ function render_accounting_guide(frm) {
 					<button data-report="Monthly Cash Bank Balance"><strong>Monthly Cash & Bank</strong><span>Month-end liquidity balances.</span></button>
 					<button data-report="Balance Sheet by Cost Center"><strong>BS by Cost Center</strong><span>Assets, liabilities, and equity.</span></button>
 				</div>
+				<div class="ag-table-wrap ag-spaced"><table><thead><tr><th>Frequency</th><th>Required filters</th><th>Review action</th></tr></thead><tbody><tr><td>Daily</td><td>Company, From Date, To Date</td><td>Match received/paid totals to supporting vouchers and physical cash.</td></tr><tr><td>Weekly</td><td>Company, previous week dates, current week dates</td><td>Explain material changes in cost centers and cash/bank balances.</td></tr><tr><td>Monthly</td><td>Company, year start, month dates</td><td>Review opening, revenue, expense, ending balances and obtain management sign-off.</td></tr><tr><td>Investigative</td><td>Collector, donor, project, document status</td><td>Drill into source document before correcting any posting.</td></tr></tbody></table></div>
+			</section>
+
+			<section class="ag-section" data-topic="closing" data-audience="all accountant manager" data-search="month end period closing professional checklist reconcile review lock">
+				<div class="ag-section-heading"><span>13</span><div><h2>Professional month-end close</h2><p>Close in a controlled sequence so reports are complete, reproducible, and reviewable.</p></div></div>
+				<div class="ag-close-list"><div><b>01</b><span><strong>Cut-off</strong>Confirm all receipts, handovers, approved payments, invoices, and payroll entries for the month are posted.</span></div><div><b>02</b><span><strong>Open items</strong>Resolve returned documents; explain rejected documents; review open collector and employee custody.</span></div><div><b>03</b><span><strong>Reconcile</strong>Reconcile every cash and bank account, then verify custody accounts against subsidiary reports.</span></div><div><b>04</b><span><strong>Ledger review</strong>Run General Ledger and Trial Balance; inspect unusual, negative, missing-cost-center, or wrong-company postings.</span></div><div><b>05</b><span><strong>Management pack</strong>Prepare monthly cost-center movement, cash/bank balance, and balance sheet by cost center.</span></div><div><b>06</b><span><strong>Approval and lock</strong>Record management notes, post approved corrections, archive evidence, and close the Accounting Period.</span></div></div>
 			</section>
 
 			<section class="ag-section" data-topic="troubleshooting" data-audience="all accountant manager" data-search="troubleshooting error query beneficiary company permission approval configuration">
-				<div class="ag-section-heading"><span>11</span><div><h2>Troubleshooting</h2><p>Resolve configuration issues before changing transaction data.</p></div></div>
+				<div class="ag-section-heading"><span>14</span><div><h2>Troubleshooting</h2><p>Resolve configuration issues before changing transaction data.</p></div></div>
 				<details><summary>No beneficiary or party appears</summary><p>Beneficiary is global. For Employee and Institution verify Company. For Supplier add a row for the company in Supplier → Accounts.</p></details>
 				<details><summary>Collector cannot create a quick donor</summary><p>Create an active Collector Profile for the user and company, with a valid default donor account.</p></details>
 				<details><summary>Donation or payment cannot be submitted</summary><p>Check approval status, required cost centers, company accounts, exchange rates, and supporting rows.</p></details>
 				<details><summary>Custody closure amount is rejected</summary><p>The selected original custody must be submitted, use the same company and currency, and have enough outstanding balance.</p></details>
+				<details><summary>Exchange rate is missing</summary><p>Create a Company Exchange Rate for the transaction currency, company currency, and posting date. Do not enter an arbitrary rate simply to submit.</p></details>
+				<details><summary>Account or cost center is rejected</summary><p>The selected record must belong to the transaction Company. Cost centers must be non-group records. Verify the Mode of Payment company account as well.</p></details>
+				<details><summary>User cannot see a document or approval button</summary><p>Confirm the user has the required role and, for Responsible Manager, that the memo is assigned to that exact user. Reload permissions after role changes.</p></details>
+			</section>
+
+			<section class="ag-section" data-topic="glossary" data-audience="all accountant manager" data-search="glossary terms debit credit custody cost center project approval posting base currency">
+				<div class="ag-section-heading"><span>15</span><div><h2>Accounting glossary</h2><p>Shared definitions prevent workflow and reporting misunderstandings.</p></div></div>
+				<div class="ag-glossary"><div><strong>Company currency</strong><span>The base currency in which the company ledger is reported.</span></div><div><strong>Transaction currency</strong><span>The currency physically received or paid.</span></div><div><strong>Exchange rate</strong><span>Multiplier converting transaction amount to company-currency amount.</span></div><div><strong>Custody</strong><span>Money held temporarily by a collector or employee until handed over or settled.</span></div><div><strong>Cost center</strong><span>Organizational dimension used to analyze income and expense responsibility.</span></div><div><strong>Project</strong><span>Activity or funded purpose used to analyze donations and spending.</span></div><div><strong>Posting date</strong><span>Date on which the transaction affects the General Ledger.</span></div><div><strong>Submit</strong><span>Finalizes a document and creates its accounting effect after required approval.</span></div><div><strong>Return</strong><span>Sends a draft back for correction without ending the request.</span></div><div><strong>Reject</strong><span>Stops the approval request.</span></div><div><strong>Reversal</strong><span>Opposite GL entry created when a submitted voucher is cancelled.</span></div><div><strong>Outstanding</strong><span>Amount not yet handed over, settled, paid, or closed.</span></div></div>
 			</section>
 
 			<footer class="ag-footer"><strong>Good accounting starts with complete evidence.</strong><span>When uncertain, return the document with a precise note—do not bypass the approval route.</span></footer>
