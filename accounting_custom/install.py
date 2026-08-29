@@ -1,6 +1,7 @@
 import frappe
 
 from accounting_custom.setup.custom_fields import ensure_custom_fields
+from accounting_custom.setup.workspace import ensure_accounting_workspace_sections
 
 
 PARTY_TYPES = {
@@ -23,6 +24,7 @@ def setup_accounting_customizations():
 	ensure_accounting_roles()
 	ensure_custom_fields()
 	ensure_party_types()
+	ensure_accounting_workspace_sections()
 
 
 def ensure_party_types():
