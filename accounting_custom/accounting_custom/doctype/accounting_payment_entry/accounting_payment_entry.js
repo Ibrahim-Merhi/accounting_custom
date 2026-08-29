@@ -5,6 +5,7 @@ frappe.ui.form.on("Accounting Payment Entry", {
 
 	refresh(frm) {
 		set_payment_queries(frm);
+		add_payment_approval_actions(frm);
 		if (frm.doc.posting_date) set_hijri_date(frm);
 		if (frm.is_new()) refresh_currency_totals(frm);
 		setTimeout(() => ensure_initial_payment_row(frm), 0);
@@ -27,6 +28,25 @@ frappe.ui.form.on("Accounting Payment Entry", {
 		(frm.doc.custom_accounting_rows_copy || []).forEach((row) => update_row_rate(frm, row));
 	},
 });
+
+function add_payment_approval_actions(frm) {
+	if (frm.is_new() || frm.doc.docstatus !== 0) return;
+	const roles = frappe.user_roles || [];
+	const move = (action) => frappe.call({
+		method: "accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.set_approval_status",
+		args: { name: frm.doc.name, action, notes: frm.doc.finance_notes },
+		freeze: true,
+		callback: () => frm.reload_doc(),
+	});
+	if (["Draft", "Returned"].includes(frm.doc.approval_status)) {
+		frm.add_custom_button(__("Submit for Finance Approval"), () => move("Submit for Finance Approval"), __("Approval"));
+	}
+	if (frm.doc.approval_status === "Pending Finance Approval" && roles.some((role) => ["Finance Officer", "Accounts Manager", "System Manager"].includes(role))) {
+		["Approve", "Return", "Reject"].forEach((action) => {
+			frm.add_custom_button(__(action), () => move(action), __("Approval"));
+		});
+	}
+}
 
 function add_accounting_buttons(frm) {
 	if (frm.is_new() || frm.doc.docstatus === 0) return;
@@ -97,7 +117,7 @@ frappe.ui.form.on("Accounting Payment Detail", {
 		if (!row.party_type || !row.party) return;
 		const fields = {
 			Employee: "employee_name", Supplier: "supplier_name",
-			Institution: "institution_name", Beneficiary: "beneficiary_name",
+			Institution: "institution_name", Beneficiary: "full_name_ar",
 		};
 		frappe.db.get_value(row.party_type, row.party, fields[row.party_type]).then((r) => {
 			frappe.model.set_value(cdt, cdn, "party_name", r.message?.[fields[row.party_type]] || row.party);
@@ -163,8 +183,14 @@ function set_payment_queries(frm) {
 	}));
 	frm.set_query("party", "custom_accounting_rows_copy", (_doc, cdt, cdn) => {
 		const row = locals[cdt][cdn];
-		if (["Employee", "Beneficiary"].includes(row.party_type)) return { filters: { company: frm.doc.company } };
-		if (["Supplier", "Institution"].includes(row.party_type)) return { filters: { disabled: 0 } };
+		if (row.party_type === "Beneficiary") return { filters: {}, ignore_user_permissions: 1 };
+		if (!frm.doc.company) return { filters: { name: ["=", ""] } };
+		if (row.party_type === "Employee") return { filters: { company: frm.doc.company } };
+		if (row.party_type === "Supplier") return {
+			query: "accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.supplier_by_company_query",
+			filters: { company: frm.doc.company },
+		};
+		if (row.party_type === "Institution") return { filters: { company: frm.doc.company, disabled: 0 } };
 		return { filters: { name: ["=", ""] } };
 	});
 }

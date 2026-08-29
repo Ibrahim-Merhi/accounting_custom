@@ -15,6 +15,14 @@
   "custom_hijri_date",
   "donor_type",
   "amended_from",
+  "approval_section",
+  "collector",
+  "approval_status",
+  "column_break_approval",
+  "approved_by",
+  "approved_on",
+  "finance_notes",
+  "treasury_status",
   "section_break_rcro",
   "company",
   "donor_account",
@@ -121,6 +129,61 @@
    "fieldtype": "Currency",
    "label": "Total Base Donation Amount",
    "options": "custom_company_currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Collection and Approval"
+  },
+  {
+   "fieldname": "collector",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Collector",
+   "options": "Collector Profile"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "approval_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Approval Status",
+   "options": "Draft\nPending Finance Approval\nApproved\nReturned\nRejected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_approval",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "Approved On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_notes",
+   "fieldtype": "Small Text",
+   "label": "Finance Notes"
+  },
+  {
+   "default": "With Collector",
+   "fieldname": "treasury_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Treasury Status",
+   "options": "Direct Receipt\nWith Collector\nPartly Handed Over\nHanded Over",
    "read_only": 1
   },
   {
@@ -272,6 +335,42 @@
  "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Collector",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Finance Officer",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Treasurer",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
   {
    "amend": 1,
    "cancel": 1,

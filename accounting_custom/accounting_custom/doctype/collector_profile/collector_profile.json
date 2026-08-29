@@ -1,0 +1,28 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "CP-.#####",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["user", "collector_name", "company", "default_donor_account", "active", "accounts_section", "custody_accounts"],
+ "fields": [
+  {"fieldname":"user","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"User","options":"User","reqd":1},
+  {"fetch_from":"user.full_name","fieldname":"collector_name","fieldtype":"Data","in_list_view":1,"label":"Collector Name","read_only":1},
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","options":"Company","reqd":1},
+  {"fieldname":"default_donor_account","fieldtype":"Link","label":"Default Donor Account","options":"Account","reqd":1},
+  {"default":"1","fieldname":"active","fieldtype":"Check","in_list_view":1,"label":"Active"},
+  {"fieldname":"accounts_section","fieldtype":"Section Break","label":"Currency Custody Accounts"},
+  {"fieldname":"custody_accounts","fieldtype":"Table","label":"Custody Accounts","options":"Collector Custody Account","reqd":1}
+ ],
+ "module": "Accounting Custom",
+ "name": "Collector Profile",
+ "naming_rule": "Expression (old style)",
+ "permissions": [
+  {"read":1,"role":"Collector"},
+  {"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Accounts Manager","share":1,"write":1},
+  {"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"System Manager","share":1,"write":1}
+ ],
+ "sort_field": "collector_name",
+ "sort_order": "ASC",
+ "title_field": "collector_name"
+}

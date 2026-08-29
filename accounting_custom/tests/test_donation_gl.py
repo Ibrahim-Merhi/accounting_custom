@@ -82,6 +82,23 @@ class TestDonationGL(TestCase):
 		self.assertEqual(rows[1].party_type, "Donor")
 		self.assertEqual(rows[1].party, "DONOR-1")
 
+	@patch("accounting_custom.accounting.donation_gl.frappe.db.get_value")
+	@patch("accounting_custom.accounting.donation_gl.get_account_details")
+	@patch("accounting_custom.accounting.donation_gl.get_mode_of_payment_account")
+	def test_collector_currency_uses_custody_account(self, mode_account, details, get_value):
+		self.doc.collector = "collector@example.com"
+		mode_account.side_effect = ["Cash USD", "Cash LBP"]
+		get_value.side_effect = ["Collector USD", "Collector LBP"]
+		details.side_effect = lambda account, _company: frappe._dict(
+			account_currency="LBP" if "LBP" in account else "USD",
+			account_type="Income" if account == "Income" else "",
+		)
+
+		rows = build_gl_entries(self.doc)
+
+		self.assertEqual(rows[0].account, "Collector USD")
+		self.assertEqual(rows[4].account, "Collector LBP")
+
 	@patch("accounting_custom.accounting.donation_gl.make_gl_entries")
 	@patch("accounting_custom.accounting.donation_gl.build_gl_entries", return_value=[1, 2, 3, 4])
 	def test_posts_without_merging(self, _build, make_entries):

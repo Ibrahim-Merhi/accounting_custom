@@ -4,6 +4,8 @@ frappe.ui.form.on("Donation Entry", {
 	},
 
 	refresh(frm) {
+		add_approval_actions(frm);
+		add_quick_donor_action(frm);
 		set_queries(frm);
 		if (frm.doc.donor) load_donor_accounts(frm);
 		if (frm.doc.company) fetch_company_currency(frm);
@@ -35,6 +37,57 @@ frappe.ui.form.on("Donation Entry", {
 		refresh_payment_rates(frm);
 	},
 });
+
+function add_quick_donor_action(frm) {
+	if (!frm.is_new() && frm.doc.docstatus !== 0) return;
+	if (!(frappe.user_roles || []).includes("Collector")) return;
+	frm.add_custom_button(__("Quick Donor"), () => {
+		const dialog = new frappe.ui.Dialog({
+			title: __("Quick Donor"),
+			fields: [
+				{ fieldname: "donor_name", fieldtype: "Data", label: __("Donor Name"), reqd: 1 },
+				{ fieldname: "phone_number", fieldtype: "Data", label: __("Phone Number"), reqd: 1 },
+				{ fieldname: "company", fieldtype: "Link", label: __("Company"), options: "Company", reqd: 1, default: frm.doc.company },
+			],
+			primary_action_label: __("Create and Select"),
+			primary_action(values) {
+				frappe.call({
+					method: "accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.quick_create_donor",
+					args: values,
+					freeze: true,
+					callback(r) {
+						dialog.hide();
+						frm.set_value("donor", r.message.name);
+						frm.set_value("donor_name", r.message.donor_name);
+						frm.set_value("company", values.company);
+					},
+				});
+			},
+		});
+		dialog.show();
+	});
+}
+
+function add_approval_actions(frm) {
+	if (frm.is_new() || frm.doc.docstatus !== 0) return;
+	const roles = frappe.user_roles || [];
+	const call_action = (action) => {
+		frappe.call({
+			method: "accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.set_approval_status",
+			args: { name: frm.doc.name, action, notes: frm.doc.finance_notes },
+			freeze: true,
+			callback: () => frm.reload_doc(),
+		});
+	};
+	if (["Draft", "Returned"].includes(frm.doc.approval_status) && roles.some((r) => ["Collector", "System Manager"].includes(r))) {
+		frm.add_custom_button(__("Submit for Finance Approval"), () => call_action("Submit for Finance Approval"), __("Approval"));
+	}
+	if (frm.doc.approval_status === "Pending Finance Approval" && roles.some((r) => ["Finance Officer", "Accounts Manager", "System Manager"].includes(r))) {
+		["Approve", "Return", "Reject"].forEach((action) => {
+			frm.add_custom_button(__(action), () => call_action(action), __("Approval"));
+		});
+	}
+}
 
 frappe.ui.form.on("Donation Payment Detail", {
 	mode_of_payment(frm, cdt, cdn) {

@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, now_datetime
 
 from erpnext.controllers.accounts_controller import AccountsController
 
@@ -17,14 +17,27 @@ from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
 
 class DonationEntry(AccountsController):
+	def before_insert(self):
+		if not self.collector:
+			self.collector = frappe.db.get_value(
+				"Collector Profile",
+				{"user": frappe.session.user, "company": self.company, "active": 1},
+				"name",
+			)
+		if not self.collector:
+			self.treasury_status = "Direct Receipt"
+
 	def validate(self):
 		self.set_custom_company_currency()
 		self.validate_header()
 		self.set_payment_amounts()
 		self.set_totals()
 		self.validate_linked_companies()
+		self.validate_collector()
 
 	def before_submit(self):
+		if self.approval_status != "Approved":
+			frappe.throw(_("Finance approval is required before submitting this donation."))
 		self.validate()
 		self.validate_submit_requirements()
 		self.validate_donor_account()
@@ -105,7 +118,82 @@ class DonationEntry(AccountsController):
 		if company != self.company:
 			frappe.throw(_("{0} {1} does not belong to company {2}.").format(doctype, name, self.company))
 
+	def validate_collector(self):
+		if not self.collector:
+			return
+		collector = frappe.db.get_value(
+			"Collector Profile", self.collector, ["company", "active"], as_dict=True
+		)
+		if not collector or not collector.active:
+			frappe.throw(_("Select an active Collector Profile."))
+		if collector.company != self.company:
+			frappe.throw(_("Collector does not belong to the selected company."))
+
 
 @frappe.whitelist()
 def get_payment_currency(mode_of_payment, company):
 	return get_mode_of_payment_currency(mode_of_payment, company)
+
+
+@frappe.whitelist()
+def set_approval_status(name, action, notes=None):
+	doc = frappe.get_doc("Donation Entry", name)
+	if doc.docstatus != 0:
+		frappe.throw(_("Only draft donations can be reviewed."))
+	roles = frappe.get_roles()
+	if action == "Submit for Finance Approval":
+		if not ({"Collector", "System Manager"} & set(roles)):
+			frappe.throw(_("Only a Collector can submit this donation for approval."))
+		doc.approval_status = "Pending Finance Approval"
+	elif action in ("Approve", "Return", "Reject"):
+		if not ({"Finance Officer", "Accounts Manager", "System Manager"} & set(roles)):
+			frappe.throw(_("Only Finance can review this donation."))
+		doc.approval_status = {"Approve": "Approved", "Return": "Returned", "Reject": "Rejected"}[action]
+		doc.approved_by = frappe.session.user if action == "Approve" else None
+		doc.approved_on = now_datetime() if action == "Approve" else None
+	else:
+		frappe.throw(_("Invalid approval action."))
+	if notes is not None:
+		doc.finance_notes = notes
+	doc.save(ignore_permissions=True)
+	return doc.approval_status
+
+
+@frappe.whitelist()
+def quick_create_donor(donor_name, phone_number, company):
+	if "Collector" not in set(frappe.get_roles()):
+		frappe.throw(_("Collector permission is required to create a quick donor."))
+	donor_name = (donor_name or "").strip()
+	phone_number = (phone_number or "").strip()
+	if not donor_name or not phone_number:
+		frappe.throw(_("Donor Name and Phone Number are required."))
+	collector = frappe.db.get_value(
+		"Collector Profile",
+		{"user": frappe.session.user, "company": company, "active": 1},
+		["name", "default_donor_account"],
+		as_dict=True,
+	)
+	if not collector:
+		frappe.throw(_("An active Collector Profile is required for the selected company."))
+	existing = frappe.db.get_value(
+		"Donor", {"donor_name": donor_name, "custom_phone_numper": phone_number}, "name"
+	)
+	if existing:
+		if not frappe.db.exists(
+			"Party Account", {"parenttype": "Donor", "parent": existing, "company": company}
+		):
+			doc = frappe.get_doc("Donor", existing)
+			doc.append("custom_accounts", {
+				"company": company, "account": collector.default_donor_account,
+			})
+			doc.save(ignore_permissions=True)
+		return {"name": existing, "donor_name": donor_name}
+	doc = frappe.get_doc({
+		"doctype": "Donor", "donor_name": donor_name,
+		"custom_phone_numper": phone_number,
+	})
+	doc.append("custom_accounts", {
+		"company": company, "account": collector.default_donor_account,
+	})
+	doc.insert(ignore_permissions=True)
+	return {"name": doc.name, "donor_name": doc.donor_name}

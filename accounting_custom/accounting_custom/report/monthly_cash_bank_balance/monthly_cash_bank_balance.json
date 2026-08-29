@@ -1,0 +1,33 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "module": "Accounting Custom",
+ "name": "Monthly Cash Bank Balance",
+ "prepared_report": 0,
+ "ref_doctype": "GL Entry",
+ "report_name": "Monthly Cash Bank Balance",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Finance Officer"
+  },
+  {
+   "role": "Treasurer"
+  },
+  {
+   "role": "CEO"
+  },
+  {
+   "role": "Association President"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
+}

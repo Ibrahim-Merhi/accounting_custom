@@ -51,8 +51,18 @@ def build_gl_entries(doc):
 
 	for payment in doc.payments:
 		mode_account = get_mode_of_payment_account(payment.mode_of_payment, doc.company)
+		collection_account = mode_account
+		collector = getattr(doc, "collector", None)
+		if collector:
+			collection_account = frappe.db.get_value(
+				"Collector Custody Account",
+				{"parent": collector, "parenttype": "Collector Profile", "currency": payment.currency},
+				"account",
+			)
+			if not collection_account:
+				frappe.throw(_("Collector {0} has no custody account for {1}.").format(collector, payment.currency))
 		accounts = {
-			mode_account: get_account_details(mode_account, doc.company),
+			collection_account: get_account_details(collection_account, doc.company),
 			payment.received_in_account: get_account_details(payment.received_in_account, doc.company),
 			doc.donor_account: donor_details,
 		}
@@ -99,11 +109,11 @@ def build_gl_entries(doc):
 
 		entries.extend(
 			[
-				entry(mode_account, debit=base_amount, against=payment.received_in_account),
+				entry(collection_account, debit=base_amount, against=payment.received_in_account),
 				entry(
 					payment.received_in_account,
 					credit=base_amount,
-					against=mode_account,
+					against=collection_account,
 					donor_party=True,
 				),
 				entry(doc.donor_account, debit=base_amount, against=doc.donor_account, donor_history=True),

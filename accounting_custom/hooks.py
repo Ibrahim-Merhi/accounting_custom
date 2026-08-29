@@ -105,13 +105,17 @@ after_install = "accounting_custom.install.after_install"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
+permission_query_conditions = {
+	"Donation Entry": "accounting_custom.permissions.donation_query",
+	"Collector Handover": "accounting_custom.permissions.handover_query",
+	"Payment Memo": "accounting_custom.permissions.payment_memo_query",
+}
 #
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+has_permission = {
+	"Donation Entry": "accounting_custom.permissions.donation_permission",
+	"Collector Handover": "accounting_custom.permissions.handover_permission",
+	"Payment Memo": "accounting_custom.permissions.payment_memo_permission",
+}
 
 # DocType Class
 # ---------------

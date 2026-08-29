@@ -1,0 +1,32 @@
+{
+ "actions":[],
+ "autoname":"PRV-.YYYY.-.#####",
+ "doctype":"DocType",
+ "engine":"InnoDB",
+ "field_order":["naming_series","payroll_entry","company","period_start","period_end","salary_register_file","review_status","ceo","president","ceo_notes","president_notes","finance_notes"],
+ "fields":[
+  {"fieldname":"naming_series","fieldtype":"Select","label":"Naming Series","options":"PRV-.YYYY.-.#####"},
+  {"fieldname":"payroll_entry","fieldtype":"Link","in_list_view":1,"label":"Payroll Entry","options":"Payroll Entry","reqd":1,"unique":1},
+  {"fetch_from":"payroll_entry.company","fieldname":"company","fieldtype":"Link","in_standard_filter":1,"label":"Company","options":"Company","read_only":1},
+  {"fetch_from":"payroll_entry.start_date","fieldname":"period_start","fieldtype":"Date","label":"Period Start","read_only":1},
+  {"fetch_from":"payroll_entry.end_date","fieldname":"period_end","fieldtype":"Date","label":"Period End","read_only":1},
+  {"description":"Attach the exported Salary Register for signatures when required.","fieldname":"salary_register_file","fieldtype":"Attach","label":"Salary Register File"},
+  {"default":"Pending CEO","fieldname":"review_status","fieldtype":"Select","in_list_view":1,"in_standard_filter":1,"label":"Review Status","options":"Pending CEO\nPending President\nReturned to Finance\nApproved","read_only":1},
+  {"fieldname":"ceo","fieldtype":"Link","label":"CEO","options":"User","read_only":1},
+  {"fieldname":"president","fieldtype":"Link","label":"Association President","options":"User","read_only":1},
+  {"fieldname":"ceo_notes","fieldtype":"Small Text","label":"CEO Notes"},
+  {"fieldname":"president_notes","fieldtype":"Small Text","label":"President Notes"},
+  {"fieldname":"finance_notes","fieldtype":"Small Text","label":"Finance Response / Adjustments"}
+ ],
+ "module":"Accounting Custom",
+ "name":"Payroll Review",
+ "permissions":[
+  {"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Finance Officer","share":1,"write":1},
+  {"email":1,"print":1,"read":1,"report":1,"role":"CEO","share":1,"write":1},
+  {"email":1,"print":1,"read":1,"report":1,"role":"Association President","share":1,"write":1},
+  {"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"System Manager","share":1,"write":1}
+ ],
+ "sort_field":"modified",
+ "sort_order":"DESC",
+ "track_changes":1
+}

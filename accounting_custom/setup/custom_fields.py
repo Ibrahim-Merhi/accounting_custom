@@ -11,6 +11,10 @@ CUSTOM_FIELDS = {
 	],
 	"Donor": [
 		{
+			"fieldname": "custom_phone_numper", "label": "Phone Number", "fieldtype": "Data",
+			"insert_after": "donor_name", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1,
+		},
+		{
 			"fieldname": "custom_accounts_section", "label": "Accounts Section",
 			"fieldtype": "Section Break", "insert_after": "contact_html",
 		},
@@ -48,6 +52,8 @@ CUSTOM_FIELDS = {
 
 
 def ensure_custom_fields():
+	remove_obsolete_supplier_company_field()
+	configure_quick_donor_creation()
 	for doctype, definitions in CUSTOM_FIELDS.items():
 		if not frappe.db.exists("DocType", doctype):
 			continue
@@ -64,6 +70,25 @@ def ensure_custom_fields():
 		frappe.clear_cache(doctype=doctype)
 	migrate_journal_entry_branches()
 	migrate_accounting_payment_rows()
+
+
+def configure_quick_donor_creation():
+	if not frappe.db.exists("DocType", "Donor"):
+		return
+	for fieldname in ("donor_type", "professional_title"):
+		property_name = f"Donor-{fieldname}-reqd"
+		if not frappe.db.exists("Property Setter", property_name):
+			frappe.make_property_setter({
+				"doctype": "Donor", "fieldname": fieldname, "property": "reqd",
+				"value": "0", "property_type": "Check",
+			})
+
+
+def remove_obsolete_supplier_company_field():
+	fieldname = "Supplier-custom_company"
+	if frappe.db.exists("Custom Field", fieldname):
+		frappe.delete_doc("Custom Field", fieldname, ignore_permissions=True)
+		frappe.clear_cache(doctype="Supplier")
 
 
 def migrate_journal_entry_branches():

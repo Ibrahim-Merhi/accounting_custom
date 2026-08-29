@@ -1,0 +1,14 @@
+{
+ "doctype":"DocType",
+ "editable_grid":1,
+ "engine":"InnoDB",
+ "field_order":["currency","account"],
+ "fields":[
+  {"columns":4,"fieldname":"currency","fieldtype":"Link","in_list_view":1,"label":"Currency","options":"Currency","reqd":1},
+  {"columns":8,"fieldname":"account","fieldtype":"Link","in_list_view":1,"label":"Custody Account","options":"Account","reqd":1}
+ ],
+ "istable":1,
+ "module":"Accounting Custom",
+ "name":"Collector Custody Account",
+ "permissions":[]
+}

@@ -4,9 +4,10 @@
  "autoname": "field:institution_name",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["institution_name", "disabled"],
+ "field_order": ["institution_name", "company", "disabled"],
  "fields": [
   {"fieldname":"institution_name","fieldtype":"Data","in_list_view":1,"label":"Institution Name","reqd":1,"unique":1},
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","options":"Company","reqd":1},
   {"default":"0","fieldname":"disabled","fieldtype":"Check","label":"Disabled"}
  ],
  "index_web_pages_for_search": 1,

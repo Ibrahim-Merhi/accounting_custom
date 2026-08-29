@@ -1,0 +1,15 @@
+{
+ "doctype":"DocType",
+ "editable_grid":1,
+ "engine":"InnoDB",
+ "field_order":["salary_component","amount","note"],
+ "fields":[
+  {"columns":3,"fieldname":"salary_component","fieldtype":"Link","in_list_view":1,"label":"Deduction Component","options":"Salary Component","reqd":1},
+  {"columns":2,"fieldname":"amount","fieldtype":"Currency","in_list_view":1,"label":"Amount","reqd":1},
+  {"columns":7,"fieldname":"note","fieldtype":"Small Text","in_list_view":1,"label":"HR Note","reqd":1}
+ ],
+ "istable":1,
+ "module":"Accounting Custom",
+ "name":"Employee Monthly Adjustment Detail",
+ "permissions":[]
+}

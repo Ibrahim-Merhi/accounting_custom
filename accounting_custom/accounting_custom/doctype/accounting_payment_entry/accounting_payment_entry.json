@@ -4,7 +4,7 @@
  "autoname": "APE-.YYYY.-.#####",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["company","posting_date","custom_hijri_date","custom_branch","column_break_1","custom_company_currency","remarks","accounts_section","totals_section","currency_totals","total_debit","totals_column_break","total_credit","amended_from"],
+ "field_order": ["company","posting_date","custom_hijri_date","custom_branch","column_break_1","custom_company_currency","remarks","approval_section","approval_status","approved_by","approved_on","finance_notes","accounts_section","totals_section","currency_totals","total_debit","totals_column_break","total_credit","amended_from"],
  "fields": [
   {"fieldname":"company","fieldtype":"Link","label":"Company","options":"Company","reqd":1},
   {"default":"Today","fieldname":"posting_date","fieldtype":"Date","label":"Posting Date","reqd":1},
@@ -13,6 +13,11 @@
   {"fieldname":"column_break_1","fieldtype":"Column Break"},
   {"hidden":1,"fieldname":"custom_company_currency","fieldtype":"Link","label":"Company Currency","options":"Currency","read_only":1},
   {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
+  {"fieldname":"approval_section","fieldtype":"Section Break","label":"Finance Approval"},
+  {"default":"Draft","fieldname":"approval_status","fieldtype":"Select","in_list_view":1,"in_standard_filter":1,"label":"Approval Status","options":"Draft\nPending Finance Approval\nApproved\nReturned\nRejected","read_only":1},
+  {"fieldname":"approved_by","fieldtype":"Link","label":"Approved By","options":"User","read_only":1},
+  {"fieldname":"approved_on","fieldtype":"Datetime","label":"Approved On","read_only":1},
+  {"fieldname":"finance_notes","fieldtype":"Small Text","label":"Finance Notes"},
   {"fieldname":"accounts_section","fieldtype":"Section Break","label":"Accounts"},
   {"fieldname":"totals_section","fieldtype":"Section Break","label":"Totals"},
   {"fieldname":"currency_totals","fieldtype":"Table","label":"Currency Totals","options":"Accounting Payment Currency Total","read_only":1},
@@ -27,8 +32,9 @@
  "module": "Accounting Custom",
  "name": "Accounting Payment Entry",
  "permissions": [
-  {"amend":1,"cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Accounts User","share":1,"submit":1,"write":1},
-  {"amend":1,"cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Accounts Manager","share":1,"submit":1,"write":1}
+  {"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Accounts User","share":1,"write":1},
+  {"amend":1,"cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Accounts Manager","share":1,"submit":1,"write":1},
+  {"amend":1,"cancel":1,"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Finance Officer","share":1,"submit":1,"write":1}
  ],
  "sort_field": "modified",
  "sort_order": "DESC",

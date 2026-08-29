@@ -20,6 +20,7 @@ def after_migrate():
 
 
 def setup_accounting_customizations():
+	ensure_accounting_roles()
 	ensure_custom_fields()
 	ensure_party_types()
 
@@ -32,3 +33,12 @@ def ensure_party_types():
 			frappe.get_doc(
 				{"doctype": "Party Type", "party_type": party_type, "account_type": account_type}
 			).insert(ignore_permissions=True)
+
+
+def ensure_accounting_roles():
+	for role in (
+		"Collector", "Treasurer", "Finance Officer", "Association President",
+		"HR Coordinator", "Responsible Manager", "Volunteer", "Public Relations", "CEO",
+	):
+		if not frappe.db.exists("Role", role):
+			frappe.get_doc({"doctype": "Role", "role_name": role}).insert(ignore_permissions=True)

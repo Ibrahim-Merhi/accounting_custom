@@ -1,0 +1,33 @@
+{
+ "actions":[],
+ "autoname":"PCA-.YYYY.-.#####",
+ "doctype":"DocType",
+ "engine":"InnoDB",
+ "field_order":["naming_series","employee","employee_name","company","salary_structure_assignment","effective_date","allocation_section","allocations","total_percentage","finance_notes","previous_allocations","amended_from"],
+ "fields":[
+  {"fieldname":"naming_series","fieldtype":"Select","label":"Naming Series","options":"PCA-.YYYY.-.#####"},
+  {"fieldname":"employee","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Employee","options":"Employee","reqd":1},
+  {"fetch_from":"employee.employee_name","fieldname":"employee_name","fieldtype":"Data","label":"Employee Name","read_only":1},
+  {"fetch_from":"employee.company","fieldname":"company","fieldtype":"Link","in_standard_filter":1,"label":"Company","options":"Company","read_only":1},
+  {"fieldname":"salary_structure_assignment","fieldtype":"Link","in_list_view":1,"label":"Salary Structure Assignment","options":"Salary Structure Assignment","reqd":1},
+  {"default":"Today","fieldname":"effective_date","fieldtype":"Date","label":"Effective Date","reqd":1},
+  {"fieldname":"allocation_section","fieldtype":"Section Break","label":"Payroll Cost Center Allocation"},
+  {"fieldname":"allocations","fieldtype":"Table","label":"Cost Centers","options":"Employee Cost Center","reqd":1},
+  {"fieldname":"total_percentage","fieldtype":"Percent","label":"Total Percentage","read_only":1},
+  {"fieldname":"finance_notes","fieldtype":"Small Text","label":"Finance Notes"},
+  {"fieldname":"previous_allocations","fieldtype":"Code","hidden":1,"label":"Previous Allocations","read_only":1},
+  {"fieldname":"amended_from","fieldtype":"Link","label":"Amended From","no_copy":1,"options":"Payroll Cost Center Allocation","read_only":1}
+ ],
+ "is_submittable":1,
+ "module":"Accounting Custom",
+ "name":"Payroll Cost Center Allocation",
+ "naming_rule":"Expression (old style)",
+ "permissions":[
+  {"amend":1,"cancel":1,"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Finance Officer","share":1,"submit":1,"write":1},
+  {"email":1,"export":1,"print":1,"read":1,"report":1,"role":"HR Manager","share":1},
+  {"amend":1,"cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"System Manager","share":1,"submit":1,"write":1}
+ ],
+ "sort_field":"modified",
+ "sort_order":"DESC",
+ "track_changes":1
+}

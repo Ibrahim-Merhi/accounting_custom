@@ -1,0 +1,32 @@
+{
+ "actions":[],
+ "allow_import":1,
+ "autoname":"CHO-.YYYY.-.#####",
+ "doctype":"DocType",
+ "engine":"InnoDB",
+ "field_order":["naming_series","posting_date","company","collector","remarks","handover_lines","lines","total_base_amount","received_by","amended_from"],
+ "fields":[
+  {"fieldname":"naming_series","fieldtype":"Select","label":"Naming Series","options":"CHO-.YYYY.-.#####"},
+  {"default":"Today","fieldname":"posting_date","fieldtype":"Date","in_list_view":1,"label":"Posting Date","reqd":1},
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","options":"Company","reqd":1},
+  {"fieldname":"collector","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Collector","options":"Collector Profile","reqd":1},
+  {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
+  {"fieldname":"handover_lines","fieldtype":"Section Break","label":"Amounts Received"},
+  {"fieldname":"lines","fieldtype":"Table","label":"Handover Lines","options":"Collector Handover Detail","reqd":1},
+  {"fieldname":"total_base_amount","fieldtype":"Currency","label":"Total (Company Currency)","options":"Company:company:default_currency","read_only":1},
+  {"fieldname":"received_by","fieldtype":"Link","label":"Received By","options":"User","read_only":1},
+  {"fieldname":"amended_from","fieldtype":"Link","label":"Amended From","no_copy":1,"options":"Collector Handover","print_hide":1,"read_only":1}
+ ],
+ "is_submittable":1,
+ "module":"Accounting Custom",
+ "name":"Collector Handover",
+ "naming_rule":"Expression (old style)",
+ "permissions":[
+  {"create":1,"email":1,"print":1,"read":1,"report":1,"role":"Collector","share":1,"write":1},
+  {"cancel":1,"create":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Treasurer","share":1,"submit":1,"write":1},
+  {"amend":1,"cancel":1,"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"System Manager","share":1,"submit":1,"write":1}
+ ],
+ "sort_field":"modified",
+ "sort_order":"DESC",
+ "track_changes":1
+}

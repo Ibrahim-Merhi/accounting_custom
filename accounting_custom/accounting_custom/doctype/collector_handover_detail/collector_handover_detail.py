@@ -1,5 +1,5 @@
 from frappe.model.document import Document
 
 
-class Beneficiary(Document):
+class CollectorHandoverDetail(Document):
 	pass

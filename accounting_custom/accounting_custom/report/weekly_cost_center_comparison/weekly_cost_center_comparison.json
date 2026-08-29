@@ -1,0 +1,33 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "module": "Accounting Custom",
+ "name": "Weekly Cost Center Comparison",
+ "prepared_report": 0,
+ "ref_doctype": "GL Entry",
+ "report_name": "Weekly Cost Center Comparison",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Finance Officer"
+  },
+  {
+   "role": "Treasurer"
+  },
+  {
+   "role": "CEO"
+  },
+  {
+   "role": "Association President"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "module": "Accounting Custom",
+ "name": "Open Custodies",
+ "prepared_report": 0,
+ "ref_doctype": "Payment Memo",
+ "report_name": "Open Custodies",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Finance Officer"
+  },
+  {
+   "role": "Treasurer"
+  },
+  {
+   "role": "CEO"
+  },
+  {
+   "role": "Association President"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
+}

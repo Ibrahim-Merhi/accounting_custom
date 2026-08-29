@@ -1,0 +1,36 @@
+{
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "module": "Accounting Custom",
+ "name": "Project Donation Summary",
+ "prepared_report": 0,
+ "ref_doctype": "Donation Entry",
+ "report_name": "Project Donation Summary",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Finance Officer"
+  },
+  {
+   "role": "Treasurer"
+  },
+  {
+   "role": "CEO"
+  },
+  {
+   "role": "Association President"
+  },
+  {
+   "role": "Public Relations"
+  },
+  {
+   "role": "System Manager"
+  }
+ ]
+}
