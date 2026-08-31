@@ -1,6 +1,11 @@
 import frappe
 
+from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry import (
+	backfill_arabic_amounts,
+)
+from accounting_custom.accounting.cost_center import backfill_arabic_names
 from accounting_custom.setup.custom_fields import ensure_custom_fields
+from accounting_custom.setup.print_formats import ensure_arabic_voucher_print_formats
 from accounting_custom.setup.workspace import (
 	ensure_accounting_workspace_sections,
 	remove_standalone_accounting_program_workspace,
@@ -26,7 +31,10 @@ def after_migrate():
 def setup_accounting_customizations():
 	ensure_accounting_roles()
 	ensure_custom_fields()
+	backfill_arabic_names()
 	ensure_party_types()
+	ensure_arabic_voucher_print_formats()
+	backfill_arabic_amounts()
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
 

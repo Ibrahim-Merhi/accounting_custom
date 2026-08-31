@@ -37,7 +37,12 @@ class DonationEntry(AccountsController):
 
 	def before_submit(self):
 		if self.approval_status != "Approved":
-			frappe.throw(_("Finance approval is required before submitting this donation."))
+			finance_roles = {"Finance Officer", "Accounts Manager", "System Manager"}
+			if not (finance_roles & set(frappe.get_roles())):
+				frappe.throw(_("Finance approval is required before submitting this donation."))
+			self.approval_status = "Approved"
+			self.approved_by = frappe.session.user
+			self.approved_on = now_datetime()
 		self.validate()
 		self.validate_submit_requirements()
 		self.validate_donor_account()
@@ -142,8 +147,8 @@ def set_approval_status(name, action, notes=None):
 		frappe.throw(_("Only draft donations can be reviewed."))
 	roles = frappe.get_roles()
 	if action == "Submit for Finance Approval":
-		if not ({"Collector", "System Manager"} & set(roles)):
-			frappe.throw(_("Only a Collector can submit this donation for approval."))
+		if not ({"Collector", "Finance Officer", "Accounts Manager", "System Manager"} & set(roles)):
+			frappe.throw(_("You are not permitted to submit this donation for approval."))
 		doc.approval_status = "Pending Finance Approval"
 	elif action in ("Approve", "Return", "Reject"):
 		if not ({"Finance Officer", "Accounts Manager", "System Manager"} & set(roles)):

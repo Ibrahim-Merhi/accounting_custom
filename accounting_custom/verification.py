@@ -33,11 +33,28 @@ REQUIRED_ROLES = {
 }
 
 REQUIRED_REPORTS = {
-	"Daily Treasury Report", "Collector Collections", "Donor Donation History",
+	"Daily Movement", "Daily Treasury Report", "Collector Collections", "Donor Donation History",
 	"Project Donation Summary", "Pending Accounting Approvals", "Open Custodies",
 	"Weekly Cost Center Comparison", "Weekly Cash Bank Comparison",
 	"Monthly Cost Center Movement", "Monthly Cash Bank Balance",
 	"Balance Sheet by Cost Center",
+}
+
+REQUIRED_CUSTOM_FIELDS = {
+	"Account": {"custom_account_name_arabic", "custom_parent_account_arabic"},
+	"Company": {"custom_company_name_arabic"},
+	"Cost Center": {
+		"custom_cost_center_name_arabic", "custom_parent_cost_center_arabic",
+		"custom_company_name_arabic",
+	},
+	"Donor": {"custom_phone_numper", "custom_accounts"},
+	"Journal Entry Account": {"custom_branch"},
+	"GL Entry": {"custom_branch"},
+}
+
+REQUIRED_PRINT_FORMATS = {
+	"سند قبض": "Donation Entry",
+	"سند صرف": "Accounting Payment Entry",
 }
 
 
@@ -58,6 +75,14 @@ def verify_accounting_program():
 	for report in sorted(REQUIRED_REPORTS):
 		if not frappe.db.exists("Report", report):
 			missing.append(f"Report: {report}")
+	for doctype, fields in REQUIRED_CUSTOM_FIELDS.items():
+		meta_fields = {field.fieldname for field in frappe.get_meta(doctype).fields}
+		for fieldname in sorted(fields - meta_fields):
+			missing.append(f"Custom Field: {doctype}.{fieldname}")
+	for print_format, doctype in REQUIRED_PRINT_FORMATS.items():
+		actual_doctype = frappe.db.get_value("Print Format", print_format, "doc_type")
+		if actual_doctype != doctype:
+			missing.append(f"Print Format: {print_format} ({doctype})")
 	if not frappe.db.exists("Workspace", "Accounting"):
 		missing.append("Workspace: Accounting")
 	else:
@@ -85,4 +110,13 @@ def verify_accounting_program():
 		"checked_doctypes": len(REQUIRED_DOCTYPES),
 		"checked_roles": len(REQUIRED_ROLES),
 		"checked_reports": len(REQUIRED_REPORTS),
+		"checked_custom_fields": sum(len(fields) for fields in REQUIRED_CUSTOM_FIELDS.values()),
+		"checked_print_formats": len(REQUIRED_PRINT_FORMATS),
 	}
+
+
+def assert_accounting_program():
+	result = verify_accounting_program()
+	if not result["ok"]:
+		frappe.throw("Accounting Custom verification failed:\n- " + "\n- ".join(result["missing"]))
+	return result

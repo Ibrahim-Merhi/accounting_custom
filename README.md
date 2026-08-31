@@ -47,3 +47,19 @@ Do not run migration tests first on production. Use a restored clone and verify 
 ## License
 
 MIT
+## One-command deployment
+
+The deployment includes all DocTypes, reports, Arabic translations, voucher
+print formats, custom fields, roles, and Accounting workspace setup. AI
+services and AI-agent code are not included.
+
+Run as a user allowed to manage the Frappe bench and restart its Supervisor
+processes. Replace the site name when necessary:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ibrahim-Merhi/accounting_custom/develop/deploy.sh | bash -s -- erp.itihad.org /home/frappe/frappe-bench
+```
+
+The command installs or updates the app from `develop`, migrates the site,
+builds assets, clears cache, verifies all required accounting components, and
+restarts the web and worker processes.

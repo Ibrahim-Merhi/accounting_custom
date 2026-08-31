@@ -3,6 +3,54 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 
 
 CUSTOM_FIELDS = {
+	"Account": [
+		{
+			"fieldname": "custom_account_name_arabic", "label": "Arabic Account Name",
+			"fieldtype": "Data", "insert_after": "account_name", "in_list_view": 1,
+		},
+		{
+			"fieldname": "custom_arabic_name_source", "label": "Arabic Name Source",
+			"fieldtype": "Data", "insert_after": "custom_account_name_arabic", "hidden": 1,
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_parent_account_arabic", "label": "Arabic Parent Account",
+			"fieldtype": "Data", "insert_after": "parent_account",
+			"fetch_from": "parent_account.custom_account_name_arabic",
+		},
+	],
+	"Company": [
+		{
+			"fieldname": "custom_company_name_arabic", "label": "Arabic Company Name",
+			"fieldtype": "Data", "insert_after": "company_name", "in_list_view": 1,
+		},
+		{
+			"fieldname": "custom_arabic_name_source", "label": "Arabic Name Source",
+			"fieldtype": "Data", "insert_after": "custom_company_name_arabic", "hidden": 1,
+			"read_only": 1,
+		},
+	],
+	"Cost Center": [
+		{
+			"fieldname": "custom_cost_center_name_arabic", "label": "Arabic Cost Center Name",
+			"fieldtype": "Data", "insert_after": "cost_center_name", "in_list_view": 1,
+		},
+		{
+			"fieldname": "custom_arabic_name_source", "label": "Arabic Name Source",
+			"fieldtype": "Data", "insert_after": "custom_cost_center_name_arabic", "hidden": 1,
+			"read_only": 1,
+		},
+		{
+			"fieldname": "custom_parent_cost_center_arabic", "label": "Arabic Parent Cost Center",
+			"fieldtype": "Data", "insert_after": "parent_cost_center", "read_only": 0,
+			"fetch_from": "parent_cost_center.custom_cost_center_name_arabic",
+		},
+		{
+			"fieldname": "custom_company_name_arabic", "label": "Arabic Company Name",
+			"fieldtype": "Data", "insert_after": "company", "read_only": 0,
+			"fetch_from": "company.custom_company_name_arabic",
+		},
+	],
 	"Branch": [
 		{
 			"fieldname": "custom_company", "label": "Company", "fieldtype": "Link",
@@ -52,6 +100,7 @@ CUSTOM_FIELDS = {
 
 
 def ensure_custom_fields():
+	remove_obsolete_payment_entry_fields()
 	remove_obsolete_supplier_company_field()
 	configure_quick_donor_creation()
 	for doctype, definitions in CUSTOM_FIELDS.items():
@@ -70,6 +119,13 @@ def ensure_custom_fields():
 		frappe.clear_cache(doctype=doctype)
 	migrate_journal_entry_branches()
 	migrate_accounting_payment_rows()
+
+
+def remove_obsolete_payment_entry_fields():
+	fieldname = "Payment Entry-custom_amount_in_words_arabic"
+	if frappe.db.exists("Custom Field", fieldname):
+		frappe.delete_doc("Custom Field", fieldname, ignore_permissions=True)
+		frappe.clear_cache(doctype="Payment Entry")
 
 
 def configure_quick_donor_creation():

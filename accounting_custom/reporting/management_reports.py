@@ -14,9 +14,9 @@ def daily_treasury(filters):
 		{"fieldname":"paid","label":_("Paid"),"fieldtype":"Currency","options":"currency","width":120},
 	]
 	data = frappe.db.sql(
-		"""select posting_date, voucher_type, voucher_no, account,
-		account_currency as currency, sum(debit_in_account_currency) received,
-		sum(credit_in_account_currency) paid
+		"""select gle.posting_date, gle.voucher_type, gle.voucher_no, gle.account,
+		gle.account_currency as currency, sum(gle.debit_in_account_currency) received,
+		sum(gle.credit_in_account_currency) paid
 		from `tabGL Entry` gle
 		inner join `tabAccount` account_master on account_master.name=gle.account
 		where gle.company=%(company)s and gle.posting_date between %(from_date)s and %(to_date)s

@@ -11,7 +11,7 @@ required_apps = ["erpnext", "non_profit"]
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/accounting_custom/css/accounting_custom.css"
-# app_include_js = "/assets/accounting_custom/js/accounting_custom.js"
+app_include_js = "/assets/accounting_custom/js/cost_center_arabic.js"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/accounting_custom/css/accounting_custom.css"
@@ -29,9 +29,14 @@ required_apps = ["erpnext", "non_profit"]
 
 # include js in doctype views
 doctype_js = {
+	"Account": "public/js/arabic_name.js",
+	"Company": "public/js/arabic_name.js",
+	"Cost Center": "public/js/arabic_name.js",
 	"Donor": "public/js/donor.js",
 	"Journal Entry": "public/js/journal_entry.js",
 }
+
+extend_bootinfo = "accounting_custom.accounting.cost_center.extend_bootinfo"
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -130,6 +135,15 @@ has_permission = {
 # Hook on document methods and events
 
 doc_events = {
+	"Account": {
+		"validate": "accounting_custom.accounting.cost_center.set_arabic_account_name",
+	},
+	"Company": {
+		"validate": "accounting_custom.accounting.cost_center.set_arabic_company_name",
+	},
+	"Cost Center": {
+		"validate": "accounting_custom.accounting.cost_center.set_arabic_cost_center_name",
+	},
 	"Journal Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
 		"validate": "accounting_custom.accounting.branch.validate_journal_entry_branch",
@@ -246,7 +260,7 @@ after_migrate = "accounting_custom.install.after_migrate"
 fixtures = [
 	{
 		"dt": "Print Format",
-		"filters": [["name", "=", "سند قبض"], ["doc_type", "=", "Donation Entry"]],
+		"filters": [["name", "in", ["سند قبض", "سند صرف"]]],
 	},
 	{
 		"dt": "Property Setter",

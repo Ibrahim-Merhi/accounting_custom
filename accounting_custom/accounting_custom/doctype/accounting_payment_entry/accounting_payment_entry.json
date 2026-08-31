@@ -4,7 +4,7 @@
  "autoname": "APE-.YYYY.-.#####",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["company","posting_date","custom_hijri_date","custom_branch","column_break_1","custom_company_currency","remarks","approval_section","approval_status","approved_by","approved_on","finance_notes","accounts_section","totals_section","currency_totals","total_debit","totals_column_break","total_credit","amended_from"],
+ "field_order": ["company","posting_date","custom_hijri_date","custom_branch","column_break_1","custom_company_currency","remarks","custom_amount_in_words_arabic","approval_section","approval_status","approved_by","approved_on","finance_notes","accounts_section","totals_section","currency_totals","total_debit","totals_column_break","total_credit","amended_from"],
  "fields": [
   {"fieldname":"company","fieldtype":"Link","label":"Company","options":"Company","reqd":1},
   {"default":"Today","fieldname":"posting_date","fieldtype":"Date","label":"Posting Date","reqd":1},
@@ -13,6 +13,7 @@
   {"fieldname":"column_break_1","fieldtype":"Column Break"},
   {"hidden":1,"fieldname":"custom_company_currency","fieldtype":"Link","label":"Company Currency","options":"Currency","read_only":1},
   {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
+  {"fieldname":"custom_amount_in_words_arabic","fieldtype":"Small Text","label":"Amount in Words (Arabic)","read_only":1},
   {"fieldname":"approval_section","fieldtype":"Section Break","label":"Finance Approval"},
   {"default":"Draft","fieldname":"approval_status","fieldtype":"Select","in_list_view":1,"in_standard_filter":1,"label":"Approval Status","options":"Draft\nPending Finance Approval\nApproved\nReturned\nRejected","read_only":1},
   {"fieldname":"approved_by","fieldtype":"Link","label":"Approved By","options":"User","read_only":1},

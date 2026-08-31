@@ -29,6 +29,7 @@ SECTIONS = [
 		("Project Donation Summary", "Report"),
 	]),
 	("Treasury and Approval Reports", [
+		("Daily Movement", "Report"),
 		("Daily Treasury Report", "Report"),
 		("Pending Accounting Approvals", "Report"),
 		("Open Custodies", "Report"),

@@ -13,6 +13,7 @@ from accounting_custom.accounting.donation_gl import (
 	get_mode_of_payment_currency,
 )
 from accounting_custom.api.exchange_rate import get_company_exchange_rate
+from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
 
 PARTY_NAME_FIELDS = {
@@ -39,6 +40,7 @@ class AccountingPaymentEntry(AccountsController):
 		self.total_debit = sum(flt(row.base_amount) for row in self.custom_accounting_rows_copy)
 		self.total_credit = self.total_debit
 		self.set_currency_totals()
+		self.set_arabic_amount_in_words()
 		if self.total_debit <= 0:
 			frappe.throw(_("Accounting Payment Entry total must be greater than zero."))
 
@@ -53,12 +55,23 @@ class AccountingPaymentEntry(AccountsController):
 				"currency": currency, "total_debit": amount, "total_credit": amount,
 			})
 
+	def set_arabic_amount_in_words(self):
+		self.custom_amount_in_words_arabic = "\n".join(
+			arabic_amount_in_words(row.total_debit, row.currency)
+			for row in self.currency_totals
+		)
+
 	def on_submit(self):
 		if frappe.db.exists("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name, "is_cancelled": 0}):
 			frappe.throw(_("Active accounting entries already exist for {0}.").format(self.name))
 		make_gl_entries(self.get_gl_entries(), merge_entries=False, update_outstanding="No")
 
 	def before_submit(self):
+		for row in self.custom_accounting_rows_copy:
+			if not row.account:
+				frappe.throw(_("Row {0}: {1} is required.").format(row.idx, _("Account")))
+			if not row.cost_center:
+				frappe.throw(_("Row {0}: {1} is required.").format(row.idx, _("Cost Center")))
 		if self.approval_status != "Approved":
 			frappe.throw(_("Finance approval is required before submitting this payment."))
 
@@ -72,13 +85,15 @@ class AccountingPaymentEntry(AccountsController):
 			frappe.throw(_("Company Currency is required."))
 
 	def validate_row(self, row):
-		get_account_details(row.account, self.company)
+		if row.account:
+			get_account_details(row.account, self.company)
 		mode_account = get_mode_of_payment_account(row.mode_of_payment, self.company)
 		get_account_details(mode_account, self.company)
 		row.currency = get_mode_of_payment_currency(row.mode_of_payment, self.company)
-		cost_center_company = frappe.db.get_value("Cost Center", row.cost_center, "company")
-		if cost_center_company != self.company:
-			frappe.throw(_("Row {0}: Cost Center does not belong to the selected company.").format(row.idx))
+		if row.cost_center:
+			cost_center_company = frappe.db.get_value("Cost Center", row.cost_center, "company")
+			if cost_center_company != self.company:
+				frappe.throw(_("Row {0}: Cost Center does not belong to the selected company.").format(row.idx))
 		if flt(row.amount) <= 0:
 			frappe.throw(_("Row {0}: Amount must be greater than zero.").format(row.idx))
 		if row.party_type or row.party:
@@ -168,6 +183,19 @@ def supplier_by_company_query(doctype, txt, searchfield, start, page_len, filter
 			"start": start,
 		},
 	)
+
+
+def backfill_arabic_amounts():
+	if not frappe.db.has_column("Accounting Payment Entry", "custom_amount_in_words_arabic"):
+		return
+	for name in frappe.get_all("Accounting Payment Entry", pluck="name"):
+		doc = frappe.get_doc("Accounting Payment Entry", name)
+		doc.set_arabic_amount_in_words()
+		doc.db_set(
+			"custom_amount_in_words_arabic",
+			doc.custom_amount_in_words_arabic,
+			update_modified=False,
+		)
 
 
 @frappe.whitelist()
