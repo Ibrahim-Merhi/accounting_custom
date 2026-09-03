@@ -13,7 +13,7 @@ def validate_accounting_payment_branch(doc, method=None):
 def validate_journal_entry_branch(doc, method=None):
 	for row in doc.accounts:
 		if not row.custom_branch:
-			frappe.throw(_("Row {0}: Branch is required.").format(row.idx))
+			continue
 		branch_company = frappe.db.get_value("Branch", row.custom_branch, "custom_company")
 		if branch_company != doc.company:
 			frappe.throw(_("Row {0}: Branch {1} does not belong to company {2}.").format(

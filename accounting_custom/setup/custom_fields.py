@@ -87,7 +87,7 @@ CUSTOM_FIELDS = {
 	"Journal Entry Account": [
 		{
 			"fieldname": "custom_branch", "label": "Branch", "fieldtype": "Link",
-			"options": "Branch", "insert_after": "cost_center", "in_list_view": 1, "reqd": 1,
+			"options": "Branch", "insert_after": "cost_center", "in_list_view": 1, "reqd": 0,
 		},
 	],
 	"GL Entry": [

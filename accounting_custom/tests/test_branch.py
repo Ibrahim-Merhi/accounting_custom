@@ -17,6 +17,11 @@ class TestBranchValidation(TestCase):
 	def test_matching_branch_company_is_allowed(self, _get_value):
 		validate_journal_entry_branch(SimpleNamespace(company="Itihad", accounts=[SimpleNamespace(idx=1, custom_branch="Beirut")]))
 
+	@patch("accounting_custom.accounting.branch.frappe.db.get_value")
+	def test_empty_branch_is_allowed(self, get_value):
+		validate_journal_entry_branch(SimpleNamespace(company="Itihad", accounts=[SimpleNamespace(idx=1, custom_branch=None)]))
+		get_value.assert_not_called()
+
 	@patch("accounting_custom.accounting.branch.frappe.throw", side_effect=frappe.ValidationError)
 	@patch("accounting_custom.accounting.branch.frappe.db.get_value", return_value="Other")
 	def test_cross_company_branch_is_rejected(self, _get_value, _throw):
