@@ -44,7 +44,7 @@ frappe.ui.form.on("Donation Entry", {
 });
 
 function prepare_compact_layout(frm) {
-	frm.wrapper.addClass("accounting-custom-donation-entry");
+	frm.$wrapper.addClass("accounting-custom-donation-entry");
 	$(frm.fields_dict.payments?.wrapper).addClass("donation-payments-grid");
 }
 
