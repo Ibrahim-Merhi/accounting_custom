@@ -3,6 +3,9 @@ import json
 import frappe
 
 
+OBSOLETE_WORKSPACE_TARGETS = {"Currency Exchange"}
+
+
 SECTIONS = [
 	("Donations and Collectors", [
 		("Donation Entry", "DocType"),
@@ -11,7 +14,7 @@ SECTIONS = [
 	]),
 	("Payments and Custodies", [
 		("Accounting Payment Entry", "DocType"),
-		("Currency Exchange", "DocType"),
+		("Accounting Currency Exchange", "DocType"),
 		("Payment Memo", "DocType"),
 	]),
 	("Payroll", [
@@ -77,7 +80,9 @@ def ensure_accounting_workspace_sections():
 	for row in doc.links:
 		if row.type == "Card Break" and row.label in section_labels:
 			continue
-		if row.type == "Link" and row.link_to in custom_targets:
+		if row.type == "Link" and (
+			row.link_to in custom_targets or row.link_to in OBSOLETE_WORKSPACE_TARGETS
+		):
 			continue
 		existing_links.append(row.as_dict())
 	doc.set("links", existing_links)
