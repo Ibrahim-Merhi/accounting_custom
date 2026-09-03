@@ -27,6 +27,7 @@
   "company",
   "donor_account",
   "project",
+  "details_column_break",
   "remarks",
   "base_donation_amount",
   "total_usd",
@@ -115,6 +116,10 @@
    "label": "Company",
    "options": "Company",
    "reqd": 1
+  },
+  {
+   "fieldname": "details_column_break",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "mode_of_payment",
@@ -223,7 +228,8 @@
   {
    "fieldname": "remarks",
    "fieldtype": "Small Text",
-   "label": "Remarks"
+   "label": "Remarks",
+   "max_height": "90px"
   },
   {
    "fieldname": "custom_amount_in_words_arabic",

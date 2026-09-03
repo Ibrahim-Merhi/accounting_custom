@@ -4,6 +4,7 @@ frappe.ui.form.on("Donation Entry", {
 	},
 
 	refresh(frm) {
+		prepare_compact_layout(frm);
 		add_approval_actions(frm);
 		add_quick_donor_action(frm);
 		set_queries(frm);
@@ -37,6 +38,11 @@ frappe.ui.form.on("Donation Entry", {
 		refresh_payment_rates(frm);
 	},
 });
+
+function prepare_compact_layout(frm) {
+	frm.wrapper.addClass("accounting-custom-donation-entry");
+	$(frm.fields_dict.payments?.wrapper).addClass("donation-payments-grid");
+}
 
 function add_quick_donor_action(frm) {
 	if (!frm.is_new() && frm.doc.docstatus !== 0) return;
