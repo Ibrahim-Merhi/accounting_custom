@@ -1,5 +1,4 @@
-frappe.query_reports["Daily Movement"] = {
-	html_format: `
+const daily_movement_arabic_print_format = `
 		<style>
 			@page { size: A4 landscape; margin: 7mm; }
 			.daily-movement-print { direction: rtl; width: 100%; font-family: Tahoma, Arial, sans-serif; color: #15191d; font-size: 10px; }
@@ -62,12 +61,15 @@ frappe.query_reports["Daily Movement"] = {
 			{% endfor %}
 			<div class="signatures"><div class="signature">أمين الصندوق</div><div class="signature">المحاسب</div><div class="signature">الاعتماد</div></div>
 			<div class="print-footer">تم إصدار هذا التقرير من نظام المحاسبة</div>
-		</div>`,
+		</div>`;
+
+frappe.query_reports["Daily Movement"] = {
+	html_format: daily_movement_arabic_print_format,
 	onload(report) {
 		const print_arabic_report = () => {
 			report.make_access_log?.("Print", "PDF");
 			frappe.render_grid({
-				template: frappe.query_reports["Daily Movement"].html_format,
+				template: daily_movement_arabic_print_format,
 				title: "الحركة اليومية",
 				subtitle: "",
 				print_settings: { orientation: "Landscape" },
