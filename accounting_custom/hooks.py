@@ -33,7 +33,12 @@ doctype_js = {
 	"Company": "public/js/arabic_name.js",
 	"Cost Center": "public/js/arabic_name.js",
 	"Donor": "public/js/donor.js",
-	"Journal Entry": "public/js/journal_entry.js",
+	"Journal Entry": "public/js/company_exchange_rate.js",
+	"Payment Entry": "public/js/company_exchange_rate.js",
+	"Sales Order": "public/js/company_exchange_rate.js",
+	"Purchase Order": "public/js/company_exchange_rate.js",
+	"Purchase Invoice": "public/js/company_exchange_rate.js",
+	"Sales Invoice": "public/js/company_exchange_rate.js",
 }
 
 extend_bootinfo = "accounting_custom.accounting.cost_center.extend_bootinfo"
@@ -146,10 +151,24 @@ doc_events = {
 	},
 	"Journal Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
+		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_journal_entry_exchange_rates",
 		"validate": "accounting_custom.accounting.branch.validate_journal_entry_branch",
 	},
 	"Payment Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_payment_entry_series",
+		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_payment_entry_exchange_rates",
+	},
+	"Sales Order": {
+		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_transaction_exchange_rate",
+	},
+	"Purchase Order": {
+		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_transaction_exchange_rate",
+	},
+	"Purchase Invoice": {
+		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_transaction_exchange_rate",
+	},
+	"Sales Invoice": {
+		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_transaction_exchange_rate",
 	},
 	"GL Entry": {
 		"before_insert": "accounting_custom.accounting.branch.set_gl_entry_branch",
