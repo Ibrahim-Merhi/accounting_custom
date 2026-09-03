@@ -67,3 +67,17 @@ class TestStandardExchangeRate(TestCase):
 
 		self.assertEqual(doc.accounts[0].exchange_rate, 1)
 		self.assertAlmostEqual(doc.accounts[1].exchange_rate, 1 / 89500)
+
+	@patch("accounting_custom.accounting.standard_exchange_rate.get_company_exchange_rate")
+	def test_journal_keeps_transaction_specific_rates(self, get_rate):
+		doc = frappe._dict(
+			company="Itihad",
+			posting_date="2026-08-28",
+			flags=frappe._dict(ignore_company_exchange_rate=True),
+			accounts=[frappe._dict(exchange_rate=1 / 90000)],
+		)
+
+		apply_journal_entry_exchange_rates(doc)
+
+		self.assertAlmostEqual(doc.accounts[0].exchange_rate, 1 / 90000)
+		get_rate.assert_not_called()

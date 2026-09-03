@@ -14,12 +14,14 @@
   "source_section",
   "from_mode_of_payment",
   "source_account",
+  "from_cost_center",
   "column_break_source",
   "from_currency",
   "from_amount",
   "target_section",
   "to_mode_of_payment",
   "target_account",
+  "to_cost_center",
   "column_break_target",
   "to_currency",
   "exchange_rate",
@@ -88,6 +90,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "from_cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center From",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
    "fieldname": "from_currency",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -129,6 +138,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "fieldname": "to_cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center To",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
    "fieldname": "to_currency",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -142,7 +158,6 @@
    "fieldtype": "Float",
    "label": "Exchange Rate",
    "precision": "9",
-   "read_only": 1,
    "reqd": 1
   },
   {

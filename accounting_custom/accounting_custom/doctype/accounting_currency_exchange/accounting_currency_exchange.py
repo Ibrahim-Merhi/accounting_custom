@@ -24,6 +24,10 @@ class AccountingCurrencyExchange(Document):
 			frappe.throw(_("Currency From and Currency To must be different."))
 		if flt(self.from_amount) <= 0:
 			frappe.throw(_("Amount From must be greater than zero."))
+		if flt(self.exchange_rate) <= 0:
+			frappe.throw(_("Exchange Rate must be greater than zero."))
+		self._validate_cost_center(self.from_cost_center, _("Cost Center From"))
+		self._validate_cost_center(self.to_cost_center, _("Cost Center To"))
 		self._set_amounts()
 
 	def _get_payment_account(self, mode_of_payment):
@@ -33,16 +37,27 @@ class AccountingCurrencyExchange(Document):
 		return account, currency
 
 	def _set_amounts(self):
-		from_base_rate = self._base_rate(self.from_currency)
-		to_base_rate = self._base_rate(self.to_currency)
-		if from_base_rate <= 0 or to_base_rate <= 0:
-			frappe.throw(_("A valid Company Exchange Rate is required for both currencies."))
-		self.exchange_rate = from_base_rate / to_base_rate
-		self.to_amount = flt(self.from_amount) * self.exchange_rate
+		self.to_amount = flt(self.from_amount) * flt(self.exchange_rate)
+
+	def _validate_cost_center(self, cost_center, label):
+		if not cost_center:
+			frappe.throw(_("{0} is required.").format(label))
+		if frappe.db.get_value("Cost Center", cost_center, "company") != self.company:
+			frappe.throw(_("{0} must belong to company {1}.").format(label, self.company))
+
+	def _journal_exchange_rates(self):
+		"""Return source/target rates to company currency without changing master rates."""
+		if self.from_currency == self.company_currency:
+			return 1, 1 / flt(self.exchange_rate)
+		if self.to_currency == self.company_currency:
+			return flt(self.exchange_rate), 1
+		source_rate = self._base_rate(self.from_currency)
+		return source_rate, source_rate / flt(self.exchange_rate)
 
 	def on_submit(self):
 		if self.journal_entry:
 			frappe.throw(_("A Journal Entry is already linked to this Accounting Currency Exchange."))
+		source_rate, target_rate = self._journal_exchange_rates()
 		journal = frappe.get_doc({
 			"doctype": "Journal Entry",
 			"voucher_type": "Journal Entry",
@@ -54,15 +69,18 @@ class AccountingCurrencyExchange(Document):
 		journal.append("accounts", {
 			"account": self.target_account,
 			"account_currency": self.to_currency,
-			"exchange_rate": self._base_rate(self.to_currency),
+			"exchange_rate": target_rate,
 			"debit_in_account_currency": self.to_amount,
+			"cost_center": self.to_cost_center,
 		})
 		journal.append("accounts", {
 			"account": self.source_account,
 			"account_currency": self.from_currency,
-			"exchange_rate": self._base_rate(self.from_currency),
+			"exchange_rate": source_rate,
 			"credit_in_account_currency": self.from_amount,
+			"cost_center": self.from_cost_center,
 		})
+		journal.flags.ignore_company_exchange_rate = True
 		journal.flags.ignore_permissions = True
 		journal.insert()
 		journal.submit()

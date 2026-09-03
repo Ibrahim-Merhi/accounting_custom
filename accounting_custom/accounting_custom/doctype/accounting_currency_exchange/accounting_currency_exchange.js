@@ -16,6 +16,8 @@ frappe.ui.form.on("Accounting Currency Exchange", {
 			to_mode_of_payment: null,
 			source_account: null,
 			target_account: null,
+			from_cost_center: null,
+			to_cost_center: null,
 			from_currency: null,
 			to_currency: null,
 			exchange_rate: 0,
@@ -33,8 +35,8 @@ frappe.ui.form.on("Accounting Currency Exchange", {
 	to_mode_of_payment(frm) {
 		return set_exchange_side(frm, "to");
 	},
-	posting_date: update_exchange_amount,
 	from_amount: update_exchange_amount,
+	exchange_rate: update_exchange_amount,
 });
 
 function set_accounting_currency_exchange_queries(frm) {
@@ -44,6 +46,13 @@ function set_accounting_currency_exchange_queries(frm) {
 	});
 	frm.set_query("from_mode_of_payment", payment_query);
 	frm.set_query("to_mode_of_payment", payment_query);
+	const cost_center_query = () => ({
+		filters: frm.doc.company
+			? { company: frm.doc.company, is_group: 0 }
+			: { name: ["=", ""] },
+	});
+	frm.set_query("from_cost_center", cost_center_query);
+	frm.set_query("to_cost_center", cost_center_query);
 }
 
 async function set_exchange_side(frm, side) {
@@ -60,32 +69,7 @@ async function set_exchange_side(frm, side) {
 }
 
 async function update_exchange_amount(frm) {
-	if (!frm.doc.company || !frm.doc.posting_date || !frm.doc.company_currency ||
-		!frm.doc.from_currency || !frm.doc.to_currency || !frm.doc.from_amount) return;
-	const [from_result, to_result] = await Promise.all([
-		frappe.call({
-			method: "accounting_custom.api.exchange_rate.get_company_exchange_rate",
-			args: {
-				company: frm.doc.company,
-				from_currency: frm.doc.from_currency,
-				to_currency: frm.doc.company_currency,
-				transaction_date: frm.doc.posting_date,
-			},
-		}),
-		frappe.call({
-			method: "accounting_custom.api.exchange_rate.get_company_exchange_rate",
-			args: {
-				company: frm.doc.company,
-				from_currency: frm.doc.to_currency,
-				to_currency: frm.doc.company_currency,
-				transaction_date: frm.doc.posting_date,
-			},
-		}),
-	]);
-	const from_rate = Number(from_result.message?.exchange_rate || 0);
-	const to_rate = Number(to_result.message?.exchange_rate || 0);
-	if (from_rate <= 0 || to_rate <= 0) return;
-	const rate = from_rate / to_rate;
-	await frm.set_value("exchange_rate", rate);
-	await frm.set_value("to_amount", Number(frm.doc.from_amount) * rate);
+	const amount = Number(frm.doc.from_amount || 0);
+	const rate = Number(frm.doc.exchange_rate || 0);
+	await frm.set_value("to_amount", amount > 0 && rate > 0 ? amount * rate : 0);
 }

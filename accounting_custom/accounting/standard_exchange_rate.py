@@ -6,6 +6,8 @@ from accounting_custom.api.exchange_rate import get_company_exchange_rate
 
 
 def apply_journal_entry_exchange_rates(doc, method=None):
+	if getattr(doc, "flags", {}).get("ignore_company_exchange_rate"):
+		return
 	if not doc.company or not doc.posting_date:
 		return
 
