@@ -37,6 +37,7 @@ const daily_movement_arabic_print_format = `
 			</div>
 			{% var currencies = [{code: "LBP", label: "الليرة اللبنانية"}, {code: "USD", label: "الدولار الأمريكي"}]; %}
 			{% for item in currencies %}
+				{% var currency_symbol = item.code === "LBP" ? "ل.ل" : "$"; %}
 				{% var sections = original_data.filter(row => row.currency === item.code && row.is_section); %}
 				{% var transactions = original_data.filter(row => row.currency === item.code && row.voucher_no); %}
 				{% var previous = sections.reduce((sum, row) => sum + Number(row.previous_balance || 0), 0); %}
@@ -45,10 +46,10 @@ const daily_movement_arabic_print_format = `
 				<div class="currency-section">
 					<div class="section-title">{{ item.label }} ({{ item.code }})</div>
 					<div class="summary">
-						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ frappe.format(previous, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ frappe.format(incoming, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ frappe.format(outgoing, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ frappe.format(previous + incoming - outgoing, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ currency_symbol }} {{ format_number(previous, null, 2) }}</span></div>
+						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ currency_symbol }} {{ format_number(incoming, null, 2) }}</span></div>
+						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ currency_symbol }} {{ format_number(outgoing, null, 2) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ currency_symbol }} {{ format_number(previous + incoming - outgoing, null, 2) }}</span></div>
 					</div>
 					<table class="transactions">
 						<colgroup><col style="width:46%"><col style="width:12%"><col style="width:21%"><col style="width:21%"></colgroup>
@@ -56,7 +57,7 @@ const daily_movement_arabic_print_format = `
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
-							<tr><td>{{ row.voucher_no }} - {{ row.description || "" }}</td><td>{{ __(row.status || "") }}</td><td class="amount">{% if row.incoming %}{{ frappe.format(row.incoming, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ frappe.format(row.outgoing, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td></tr>
+							<tr><td>{{ row.voucher_no }} - {{ row.description || "" }}</td><td>{{ __(row.status || "") }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ format_number(row.incoming, null, 2) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ format_number(row.outgoing, null, 2) }}{% endif %}</td></tr>
 							{% endfor %}
 						{% else %}
 							<tr><td colspan="4" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>
@@ -137,7 +138,12 @@ frappe.query_reports["Daily Movement"] = {
 		if (["previous_balance", "current_balance"].includes(column.fieldname) && !data?.is_section) {
 			return "";
 		}
-		value = default_formatter(value, row, column, data);
+		if (amount_fields.includes(column.fieldname) && data?.currency) {
+			const symbol = data.currency === "LBP" ? "ل.ل" : data.currency === "USD" ? "$" : data.currency;
+			value = `${symbol} ${format_number(value, null, 2)}`;
+		} else {
+			value = default_formatter(value, row, column, data);
+		}
 		if (data?.is_section) {
 			return `<strong style="font-size:14px">${value}</strong>`;
 		}
