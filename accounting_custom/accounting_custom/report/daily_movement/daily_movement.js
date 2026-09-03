@@ -64,10 +64,10 @@ frappe.query_reports["Daily Movement"] = {
 			<div class="print-footer">تم إصدار هذا التقرير من نظام المحاسبة</div>
 		</div>`,
 	onload(report) {
-		report.page.add_inner_button(__("Arabic Print"), () => {
+		const print_arabic_report = () => {
 			report.make_access_log?.("Print", "PDF");
 			frappe.render_grid({
-				template: report.report_settings.html_format,
+				template: frappe.query_reports["Daily Movement"].html_format,
 				title: "الحركة اليومية",
 				subtitle: "",
 				print_settings: { orientation: "Landscape" },
@@ -79,7 +79,12 @@ frappe.query_reports["Daily Movement"] = {
 				report,
 				can_use_smaller_font: 0,
 			});
-		}, __("Print"));
+		};
+
+		// Frappe's print dialog forces the generic grid when it supplies columns.
+		// Keep every print path for this report on the dedicated Arabic format.
+		report.print_report = print_arabic_report;
+		report.page.add_inner_button(__("Arabic Print"), print_arabic_report, __("Print"));
 	},
 	filters: [
 		{
