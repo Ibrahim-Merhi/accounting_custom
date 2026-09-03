@@ -102,6 +102,7 @@ CUSTOM_FIELDS = {
 def ensure_custom_fields():
 	remove_obsolete_payment_entry_fields()
 	remove_obsolete_supplier_company_field()
+	remove_legacy_donation_requirements()
 	configure_quick_donor_creation()
 	for doctype, definitions in CUSTOM_FIELDS.items():
 		if not frappe.db.exists("DocType", doctype):
@@ -126,6 +127,25 @@ def remove_obsolete_payment_entry_fields():
 	if frappe.db.exists("Custom Field", fieldname):
 		frappe.delete_doc("Custom Field", fieldname, ignore_permissions=True)
 		frappe.clear_cache(doctype="Payment Entry")
+
+
+def remove_legacy_donation_requirements():
+	"""Legacy header fields are hidden; payment requirements belong to child rows."""
+	if not frappe.db.exists("DocType", "Donation Entry"):
+		return
+	legacy_fields = (
+		"mode_of_payment", "cost_center", "currency", "donation_amount",
+		"exchange_rate", "received_in_account", "reference_no", "reference_date",
+	)
+	frappe.db.delete(
+		"Property Setter",
+		{
+			"doc_type": "Donation Entry",
+			"field_name": ["in", legacy_fields],
+			"property": "reqd",
+		},
+	)
+	frappe.clear_cache(doctype="Donation Entry")
 
 
 def configure_quick_donor_creation():

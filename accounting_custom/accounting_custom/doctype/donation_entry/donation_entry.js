@@ -37,11 +37,30 @@ frappe.ui.form.on("Donation Entry", {
 		set_hijri_date(frm);
 		refresh_payment_rates(frm);
 	},
+
+	validate(frm) {
+		sync_legacy_payment_fields(frm);
+	},
 });
 
 function prepare_compact_layout(frm) {
 	frm.wrapper.addClass("accounting-custom-donation-entry");
 	$(frm.fields_dict.payments?.wrapper).addClass("donation-payments-grid");
+}
+
+function sync_legacy_payment_fields(frm) {
+	const first_payment = (frm.doc.payments || [])[0];
+	if (!first_payment) return;
+	[
+		"mode_of_payment",
+		"cost_center",
+		"currency",
+		"donation_amount",
+		"exchange_rate",
+		"received_in_account",
+	].forEach((fieldname) => {
+		frm.doc[fieldname] = first_payment[fieldname] || null;
+	});
 }
 
 function add_quick_donor_action(frm) {
