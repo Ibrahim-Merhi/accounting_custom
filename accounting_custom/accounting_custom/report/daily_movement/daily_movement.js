@@ -57,7 +57,7 @@ const daily_movement_arabic_print_format = `
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
-							<tr><td>{{ row.voucher_no }} - {{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ format_number(row.incoming, null, 2) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ format_number(row.outgoing, null, 2) }}{% endif %}</td></tr>
+							<tr><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ format_number(row.incoming, null, 2) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ format_number(row.outgoing, null, 2) }}{% endif %}</td></tr>
 							{% endfor %}
 						{% else %}
 							<tr><td colspan="3" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>
