@@ -1,6 +1,9 @@
 frappe.ui.form.on("Accounting User Guide", {
 	refresh(frm) {
-		frappe.require("/assets/accounting_custom/css/accounting_user_guide.css", () => {
+		frappe.require([
+			"/assets/accounting_custom/css/accounting_user_guide.css",
+			"/assets/accounting_custom/js/accounting_user_guide_ar.js",
+		], () => {
 			render_accounting_guide(frm);
 		});
 	},
@@ -8,8 +11,9 @@ frappe.ui.form.on("Accounting User Guide", {
 
 function render_accounting_guide(frm) {
 	frm.disable_save();
-	const image_root = "/assets/accounting_custom/images/accounting_guide";
-	const html = `
+	const is_arabic = (frappe.boot.lang || "").toLowerCase().startsWith("ar");
+	const image_root = `/assets/accounting_custom/images/accounting_guide${is_arabic ? "/ar" : ""}`;
+	const html = is_arabic ? accounting_custom.get_arabic_accounting_guide(image_root) : `
 		<div class="accounting-guide">
 			<section class="ag-hero">
 				<div class="ag-hero-copy">
