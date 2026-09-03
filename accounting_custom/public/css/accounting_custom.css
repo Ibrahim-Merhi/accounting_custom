@@ -29,3 +29,22 @@
 		min-width: 100%;
 	}
 }
+
+.accounting-custom-wide-journal-grid .form-grid-container {
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scrollbar-width: thin;
+}
+
+.accounting-custom-wide-journal-grid .grid-row > .row {
+	flex-wrap: nowrap;
+}
+
+.accounting-custom-wide-journal-grid .form-grid-container::-webkit-scrollbar {
+	height: 9px;
+}
+
+.accounting-custom-wide-journal-grid .form-grid-container::-webkit-scrollbar-thumb {
+	border-radius: 9px;
+	background: var(--gray-400);
+}

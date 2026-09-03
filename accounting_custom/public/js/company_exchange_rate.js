@@ -25,6 +25,7 @@ frappe.ui.form.on("Journal Entry", {
 		return set_all_journal_exchange_rates(frm);
 	},
 	refresh(frm) {
+		enable_wide_journal_grid(frm);
 		show_more_journal_rows(frm);
 		if (frm.is_new()) return set_all_journal_exchange_rates(frm);
 	},
@@ -32,6 +33,30 @@ frappe.ui.form.on("Journal Entry", {
 		return set_all_journal_exchange_rates(frm, true);
 	},
 });
+
+function enable_wide_journal_grid(frm) {
+	const grid = frm.fields_dict.accounts?.grid;
+	if (!grid) return;
+
+	$(frm.fields_dict.accounts.wrapper).addClass("accounting-custom-wide-journal-grid");
+
+	const grid_row_prototype = grid.header_row
+		? Object.getPrototypeOf(grid.header_row)
+		: null;
+	if (!grid_row_prototype || grid_row_prototype._accounting_custom_width_override) return;
+
+	const validate_columns_width = grid_row_prototype.validate_columns_width;
+	grid_row_prototype.validate_columns_width = function () {
+		if (
+			this.frm?.doctype === "Journal Entry" &&
+			this.grid?.doctype === "Journal Entry Account"
+		) {
+			return;
+		}
+		return validate_columns_width.call(this);
+	};
+	grid_row_prototype._accounting_custom_width_override = true;
+}
 
 function show_more_journal_rows(frm) {
 	const pagination = frm.fields_dict.accounts?.grid?.grid_pagination;
