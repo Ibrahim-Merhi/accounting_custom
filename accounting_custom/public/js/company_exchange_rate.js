@@ -40,6 +40,7 @@ function enable_wide_journal_grid(frm) {
 
 	$(frm.fields_dict.accounts.wrapper).addClass("accounting-custom-wide-journal-grid");
 	install_wide_column_renderer(grid);
+	requestAnimationFrame(() => install_journal_grid_scrollbar(frm));
 
 	const grid_row_prototype = grid.header_row
 		? Object.getPrototypeOf(grid.header_row)
@@ -57,6 +58,42 @@ function enable_wide_journal_grid(frm) {
 		return validate_columns_width.call(this);
 	};
 	grid_row_prototype._accounting_custom_width_override = true;
+}
+
+function install_journal_grid_scrollbar(frm) {
+	const field = $(frm.fields_dict.accounts?.wrapper);
+	const container = field.find(".form-grid-container").get(0);
+	if (!container) return;
+
+	let scrollbar = field.find(".journal-grid-horizontal-scroll").get(0);
+	if (!scrollbar) {
+		scrollbar = $(
+			'<div class="journal-grid-horizontal-scroll"><div class="journal-grid-scroll-width"></div></div>'
+		).insertAfter(container).get(0);
+		scrollbar.addEventListener("scroll", () => {
+			if (container.scrollLeft !== scrollbar.scrollLeft) {
+				container.scrollLeft = scrollbar.scrollLeft;
+			}
+		});
+		container.addEventListener("scroll", () => {
+			if (scrollbar.scrollLeft !== container.scrollLeft) {
+				scrollbar.scrollLeft = container.scrollLeft;
+			}
+		});
+	}
+
+	const update_scroll_width = () => {
+		const inner = scrollbar.querySelector(".journal-grid-scroll-width");
+		if (inner) inner.style.width = `${Math.max(container.scrollWidth, container.clientWidth + 1)}px`;
+	};
+	update_scroll_width();
+	if (!container._accounting_custom_scroll_observer) {
+		container._accounting_custom_scroll_observer = new MutationObserver(update_scroll_width);
+		container._accounting_custom_scroll_observer.observe(container, {
+			childList: true,
+			subtree: true,
+		});
+	}
 }
 
 function install_wide_column_renderer(grid) {
