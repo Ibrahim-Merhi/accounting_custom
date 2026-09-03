@@ -23,9 +23,12 @@ const daily_movement_arabic_print_format = `
 			.daily-movement-print .signatures { display: flex; justify-content: space-between; gap: 50px; margin-top: 20px; page-break-inside: avoid; }
 			.daily-movement-print .signature { width: 30%; border-top: 1px solid #59636c; padding-top: 5px; text-align: center; }
 			.daily-movement-print .print-footer { margin-top: 10px; padding-top: 5px; border-top: 1px solid #999; text-align: center; color: #444; font-size: 10px; }
-			@media print { .daily-movement-print { width: 100%; } * { -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; } }
+			.daily-movement-print .print-action { position: fixed; top: 14px; left: 14px; z-index: 10; border: 1px solid #222; border-radius: 4px; padding: 8px 18px; background: #fff; color: #111; font: 700 13px Tahoma, Arial, sans-serif; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16); }
+			.daily-movement-print .print-action:hover { background: #f3f3f3; }
+			@media print { .daily-movement-print { width: 100%; } .daily-movement-print .print-action { display: none !important; } * { -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; } }
 		</style>
 		<div class="daily-movement-print">
+			<button type="button" class="print-action" onclick="window.print()">طباعة</button>
 			<div class="report-head">
 				<div class="title-block"><h1>الحركة اليومية</h1><div class="subtitle">بيان حركة الصندوق اليومية</div></div>
 				<div class="meta"><span><strong>الشركة:</strong> {{ filters.company }}</span><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
