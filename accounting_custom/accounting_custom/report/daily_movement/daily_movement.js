@@ -20,9 +20,11 @@ const daily_movement_arabic_print_format = `
 			.daily-movement-print .transactions tr { page-break-inside: avoid; }
 			.daily-movement-print .amount { direction: ltr; text-align: right !important; white-space: nowrap; font-size: 14px; font-weight: 700; }
 			.daily-movement-print .empty-row { text-align: center !important; color: #69747d; padding: 7px !important; }
-			.daily-movement-print .signatures { display: flex; justify-content: space-between; gap: 50px; margin-top: 20px; page-break-inside: avoid; }
-			.daily-movement-print .signature { width: 30%; border-top: 1px solid #59636c; padding-top: 5px; text-align: center; }
-			.daily-movement-print .print-footer { margin-top: 10px; padding-top: 5px; border-top: 1px solid #999; text-align: center; color: #444; font-size: 10px; }
+			.daily-movement-print .signatures { display: flex; justify-content: center; align-items: flex-start; gap: 24px; margin-top: 10px; page-break-inside: avoid; }
+			.daily-movement-print .signature { width: 34%; text-align: center; }
+			.daily-movement-print .signature-line { position: relative; height: 8px; margin-top: 50px; border-top: 1px solid #59636c; }
+			.daily-movement-print .signature-image { position: absolute; top: 0; left: 50%; display: block; width: 50px; height: 48px; object-fit: contain; mix-blend-mode: multiply; transform: translate(-50%, -100%); }
+			.daily-movement-print .print-footer { margin-top: 4px; padding-top: 4px; border-top: 1px solid #999; text-align: center; color: #444; font-size: 10px; }
 			.daily-movement-print .print-action { position: fixed; top: 14px; left: 14px; z-index: 10; border: 1px solid #222; border-radius: 4px; padding: 8px 18px; background: #fff; color: #111; font: 700 13px Tahoma, Arial, sans-serif; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16); }
 			.daily-movement-print .print-action:hover { background: #f3f3f3; }
 			@media print { .daily-movement-print { width: 100%; } .daily-movement-print .print-action { display: none !important; } * { -webkit-print-color-adjust: economy !important; print-color-adjust: economy !important; } }
@@ -63,7 +65,18 @@ const daily_movement_arabic_print_format = `
 					</table>
 				</div>
 			{% endfor %}
-			<div class="signatures"><div class="signature">أمين الصندوق</div><div class="signature">رئيس الجمعية</div></div>
+			<div class="signatures">
+				<div class="signature">
+					أمين الصندوق
+					<div class="signature-line">
+						<img class="signature-image" src="https://i.imgur.com/aP1ydEJ.jpg" alt="توقيع وختم أمين الصندوق">
+					</div>
+				</div>
+				<div class="signature">
+					رئيس الجمعية
+					<div class="signature-line"></div>
+				</div>
+			</div>
 			<div class="print-footer">تم إصدار هذا التقرير من نظام المحاسبة</div>
 		</div>`;
 
