@@ -186,6 +186,11 @@ def supplier_by_company_query(doctype, txt, searchfield, start, page_len, filter
 
 
 def backfill_arabic_amounts():
+	# During a first app installation, after_install can run before MariaDB has
+	# created this app-owned DocType table. after_migrate will run the backfill
+	# once schema synchronization has completed.
+	if not frappe.db.table_exists("Accounting Payment Entry", cached=False):
+		return
 	if not frappe.db.has_column("Accounting Payment Entry", "custom_amount_in_words_arabic"):
 		return
 	for name in frappe.get_all("Accounting Payment Entry", pluck="name"):

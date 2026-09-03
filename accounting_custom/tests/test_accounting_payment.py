@@ -2,12 +2,23 @@ from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
 
+import frappe
+
 from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry import (
 	AccountingPaymentEntry,
+	backfill_arabic_amounts,
 )
 
 
 class TestAccountingPaymentGL(TestCase):
+	@patch.object(frappe.db, "has_column")
+	@patch.object(frappe.db, "table_exists", return_value=False)
+	def test_backfill_skips_missing_table_during_install(self, table_exists, has_column):
+		backfill_arabic_amounts()
+
+		table_exists.assert_called_once_with("Accounting Payment Entry", cached=False)
+		has_column.assert_not_called()
+
 	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_account_details")
 	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_mode_of_payment_account")
 	def test_builds_balanced_multi_currency_rows(self, mode_account, details):
