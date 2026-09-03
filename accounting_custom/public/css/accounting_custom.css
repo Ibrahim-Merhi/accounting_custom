@@ -31,9 +31,15 @@
 }
 
 .accounting-custom-wide-journal-grid .form-grid-container {
-	overflow-x: auto;
+	overflow-x: scroll;
 	overscroll-behavior-x: contain;
+	scrollbar-gutter: stable;
 	scrollbar-width: thin;
+}
+
+.accounting-custom-wide-journal-grid .form-grid {
+	width: 150%;
+	min-width: 1500px;
 }
 
 .accounting-custom-wide-journal-grid .grid-row > .row {
