@@ -39,6 +39,7 @@ function enable_wide_journal_grid(frm) {
 	if (!grid) return;
 
 	$(frm.fields_dict.accounts.wrapper).addClass("accounting-custom-wide-journal-grid");
+	install_wide_column_renderer(grid);
 
 	const grid_row_prototype = grid.header_row
 		? Object.getPrototypeOf(grid.header_row)
@@ -56,6 +57,52 @@ function enable_wide_journal_grid(frm) {
 		return validate_columns_width.call(this);
 	};
 	grid_row_prototype._accounting_custom_width_override = true;
+}
+
+function install_wide_column_renderer(grid) {
+	const grid_prototype = Object.getPrototypeOf(grid);
+	if (!grid_prototype._accounting_custom_wide_columns_override) {
+		const setup_visible_columns = grid_prototype.setup_visible_columns;
+		grid_prototype.setup_visible_columns = function () {
+			const result = setup_visible_columns.call(this);
+			if (
+				this.frm?.doctype !== "Journal Entry" ||
+				this.doctype !== "Journal Entry Account" ||
+				!this.user_defined_columns?.length
+			) {
+				return result;
+			}
+
+			const rendered_fields = new Set(
+				(this.visible_columns || []).map(([field]) => field.fieldname)
+			);
+			for (const field of this.user_defined_columns) {
+				if (
+					rendered_fields.has(field.fieldname) ||
+					field.hidden ||
+					frappe.model.layout_fields.includes(field.fieldtype) ||
+					!this.frm.get_perm(field.permlevel, "read")
+				) {
+					continue;
+				}
+				field.colsize = cint(field.columns) || 1;
+				this.visible_columns.push([field, field.colsize]);
+			}
+			const total_width = this.visible_columns.reduce(
+				(total, [, width]) => total + cint(width),
+				0
+			);
+			this.form_grid.css("width", `${Math.max(150, total_width * 10)}%`);
+			return result;
+		};
+		grid_prototype._accounting_custom_wide_columns_override = true;
+	}
+
+	if (!grid._accounting_custom_wide_columns_initialized) {
+		grid._accounting_custom_wide_columns_initialized = true;
+		grid.visible_columns = [];
+		grid.reset_grid();
+	}
 }
 
 function show_more_journal_rows(frm) {

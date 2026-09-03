@@ -30,7 +30,24 @@
 	}
 }
 
+.accounting-custom-wide-journal-grid {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: hidden;
+}
+
+.accounting-custom-wide-journal-grid .grid-field {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+}
+
 .accounting-custom-wide-journal-grid .form-grid-container {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	overflow-x: scroll;
 	overscroll-behavior-x: contain;
 	scrollbar-gutter: stable;
