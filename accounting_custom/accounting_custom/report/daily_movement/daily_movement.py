@@ -73,7 +73,6 @@ def get_columns():
 		{"fieldname": "currency", "label": _("Currency"), "fieldtype": "Data", "width": 80},
 		{"fieldname": "voucher_type", "label": _("Document Type"), "fieldtype": "Data", "width": 150},
 		{"fieldname": "voucher_no", "label": _("Document"), "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 180},
-		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 95},
 		{"fieldname": "party", "label": _("Party"), "fieldtype": "Data", "width": 190},
 		{"fieldname": "description", "label": _("Description"), "fieldtype": "Data", "width": 260},
 		{"fieldname": "incoming", "label": _("Incoming"), "fieldtype": "Currency", "options": "currency", "width": 130},
