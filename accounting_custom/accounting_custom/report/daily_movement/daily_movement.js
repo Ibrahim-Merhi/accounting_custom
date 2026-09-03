@@ -52,6 +52,13 @@ frappe.query_reports["Daily Movement"] = {
 		},
 	],
 	formatter(value, row, column, data, default_formatter) {
+		const amount_fields = ["incoming", "outgoing", "previous_balance", "current_balance"];
+		if (amount_fields.includes(column.fieldname) && (value === null || value === undefined || value === "")) {
+			return "";
+		}
+		if (["previous_balance", "current_balance"].includes(column.fieldname) && !data?.is_section) {
+			return "";
+		}
 		value = default_formatter(value, row, column, data);
 		if (data?.is_section) {
 			return `<strong style="font-size:14px">${value}</strong>`;
