@@ -131,13 +131,18 @@ def remove_obsolete_payment_entry_fields():
 def configure_quick_donor_creation():
 	if not frappe.db.exists("DocType", "Donor"):
 		return
-	for fieldname in ("donor_type", "professional_title"):
+	for fieldname in ("donor_type", "professional_title", "email"):
 		property_name = f"Donor-{fieldname}-reqd"
-		if not frappe.db.exists("Property Setter", property_name):
+		if frappe.db.exists("Property Setter", property_name):
+			frappe.db.set_value(
+				"Property Setter", property_name, "value", "0", update_modified=False
+			)
+		else:
 			frappe.make_property_setter({
 				"doctype": "Donor", "fieldname": fieldname, "property": "reqd",
 				"value": "0", "property_type": "Check",
 			})
+	frappe.clear_cache(doctype="Donor")
 
 
 def remove_obsolete_supplier_company_field():

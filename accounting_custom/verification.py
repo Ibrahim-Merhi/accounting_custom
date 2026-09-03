@@ -9,6 +9,7 @@ REQUIRED_DOCTYPES = {
 	"Collector Custody Account": {"currency", "account"},
 	"Donation Entry": {"collector", "approval_status", "finance_notes", "treasury_status"},
 	"Accounting Payment Entry": {"approval_status", "approved_by", "approved_on", "finance_notes"},
+	"Currency Exchange": {"company", "posting_date", "from_mode_of_payment", "source_account", "from_currency", "from_amount", "to_mode_of_payment", "target_account", "to_currency", "exchange_rate", "to_amount", "journal_entry"},
 	"Collector Handover": {"company", "collector", "lines", "received_by"},
 	"Collector Handover Detail": {
 		"donation_entry", "currency", "amount", "source_account", "destination_account", "cost_center",

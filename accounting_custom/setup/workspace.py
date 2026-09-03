@@ -11,6 +11,7 @@ SECTIONS = [
 	]),
 	("Payments and Custodies", [
 		("Accounting Payment Entry", "DocType"),
+		("Currency Exchange", "DocType"),
 		("Payment Memo", "DocType"),
 	]),
 	("Payroll", [

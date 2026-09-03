@@ -7,6 +7,12 @@ frappe.ui.form.on("Journal Entry", {
 		frm.set_query("custom_branch", "accounts", () => ({
 			filters: frm.doc.company ? { custom_company: frm.doc.company } : { name: ["=", ""] },
 		}));
+		frm.set_query("account", "accounts", () => ({
+			query: "erpnext.controllers.queries.get_account_list",
+			filters: frm.doc.company
+				? { company: frm.doc.company, disabled: 0, is_group: 0 }
+				: { name: ["=", ""] },
+		}));
 	},
 	company(frm) {
 		frm.company_currency_cache = null;
@@ -19,12 +25,23 @@ frappe.ui.form.on("Journal Entry", {
 		return set_all_journal_exchange_rates(frm);
 	},
 	refresh(frm) {
+		show_more_journal_rows(frm);
 		if (frm.is_new()) return set_all_journal_exchange_rates(frm);
 	},
 	validate(frm) {
 		return set_all_journal_exchange_rates(frm, true);
 	},
 });
+
+function show_more_journal_rows(frm) {
+	const pagination = frm.fields_dict.accounts?.grid?.grid_pagination;
+	if (!pagination || pagination.page_length >= 25) return;
+	pagination.page_length = 25;
+	pagination.page_index = 1;
+	pagination.total_pages = Math.ceil((frm.doc.accounts || []).length / pagination.page_length);
+	pagination.render_pagination();
+	frm.refresh_field("accounts");
+}
 
 frappe.ui.form.on("Journal Entry Account", {
 	account: set_journal_row_exchange_rate,

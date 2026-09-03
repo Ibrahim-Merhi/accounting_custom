@@ -111,10 +111,18 @@ function set_queries(frm) {
 	}));
 	frm.set_query("donor_account", () => account_query(frm.doc.company));
 	frm.set_query("project", () => ({ filters: frm.doc.company ? { company: frm.doc.company } : { name: ["=", ""] } }));
+	frm.set_query("mode_of_payment", "payments", () => mode_of_payment_query(frm.doc.company));
 	frm.set_query("cost_center", "payments", () => ({
 		filters: { company: frm.doc.company, is_group: 0 },
 	}));
 	frm.set_query("received_in_account", "payments", () => account_query(frm.doc.company));
+}
+
+function mode_of_payment_query(company) {
+	return {
+		query: "accounting_custom.api.queries.mode_of_payment_by_company",
+		filters: { company },
+	};
 }
 
 function account_query(company) {

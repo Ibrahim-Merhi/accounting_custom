@@ -174,6 +174,10 @@ function set_payment_queries(frm) {
 	frm.set_query("custom_branch", () => ({
 		filters: frm.doc.company ? { custom_company: frm.doc.company } : { name: ["=", ""] },
 	}));
+	frm.set_query("mode_of_payment", "custom_accounting_rows_copy", () => ({
+		query: "accounting_custom.api.queries.mode_of_payment_by_company",
+		filters: { company: frm.doc.company },
+	}));
 	frm.set_query("account", "custom_accounting_rows_copy", () => ({
 		query: "erpnext.controllers.queries.get_account_list",
 		filters: frm.doc.company ? { company: ["=", frm.doc.company], disabled: 0, is_group: 0 } : { name: ["=", ""] },

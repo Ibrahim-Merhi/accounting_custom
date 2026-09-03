@@ -73,6 +73,7 @@ def get_columns():
 		{"fieldname": "currency", "label": _("Currency"), "fieldtype": "Data", "width": 80},
 		{"fieldname": "voucher_type", "label": _("Document Type"), "fieldtype": "Data", "width": 150},
 		{"fieldname": "voucher_no", "label": _("Document"), "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 180},
+		{"fieldname": "status", "label": _("Status"), "fieldtype": "Data", "width": 95},
 		{"fieldname": "party", "label": _("Party"), "fieldtype": "Data", "width": 190},
 		{"fieldname": "description", "label": _("Description"), "fieldtype": "Data", "width": 260},
 		{"fieldname": "incoming", "label": _("Incoming"), "fieldtype": "Currency", "options": "currency", "width": 130},
@@ -138,11 +139,11 @@ def get_transactions(filters):
 				donation.name voucher_no, coalesce(donation.donor_name, donation.donor, '') party,
 				coalesce(donation.remarks, '') description,
 				sum(payment.donation_amount) incoming, null outgoing,
-				donation.creation
+				donation.creation, case donation.docstatus when 0 then 'Draft' else 'Submitted' end status
 			from `tabDonation Entry` donation
 			inner join `tabDonation Payment Detail` payment on payment.parent = donation.name
 			where {company_condition('donation', filters)} and donation.posting_date = %(date)s
-				and donation.docstatus = 1 and payment.currency in ('LBP', 'USD')
+				and donation.docstatus < 2 and payment.currency in ('LBP', 'USD')
 			group by donation.company, donation.name, payment.currency
 
 			union all
@@ -151,11 +152,11 @@ def get_transactions(filters):
 				entry.name voucher_no, coalesce(max(payment.party_name), max(payment.party), '') party,
 				coalesce(entry.remarks, '') description,
 				null incoming, sum(payment.amount) outgoing,
-				entry.creation
+				entry.creation, case entry.docstatus when 0 then 'Draft' else 'Submitted' end status
 			from `tabAccounting Payment Entry` entry
 			inner join `tabAccounting Payment Detail` payment on payment.parent = entry.name
 			where {company_condition('entry', filters)} and entry.posting_date = %(date)s
-				and entry.docstatus = 1 and payment.currency in ('LBP', 'USD')
+				and entry.docstatus < 2 and payment.currency in ('LBP', 'USD')
 			group by entry.company, entry.name, payment.currency
 
 			union all
@@ -165,25 +166,38 @@ def get_transactions(filters):
 				coalesce(max(gle.remarks), 'Currency Exchange') description,
 				sum(gle.debit_in_account_currency) incoming,
 				sum(gle.credit_in_account_currency) outgoing,
-				min(gle.creation) creation
+				min(gle.creation) creation, 'Submitted' status
 			from `tabGL Entry` gle
 			inner join `tabAccount` account on account.name = gle.account
 			where {company_condition('gle', filters)} and gle.posting_date = %(date)s
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and gle.account_currency in ('LBP', 'USD')
 				and {treasury_account_condition()}
-				and gle.voucher_no in (
-					select exchange.voucher_no
-					from `tabGL Entry` exchange
-					where exchange.company = gle.company
-						and exchange.posting_date = %(date)s
-						and exchange.is_cancelled = 0
-						and exchange.voucher_type = 'Journal Entry'
-						and exchange.account_currency in ('LBP', 'USD')
-					group by exchange.voucher_no
-					having count(distinct exchange.account_currency) = 2
-				)
 			group by gle.company, gle.voucher_no, gle.account_currency
+
+			union all
+
+			select journal.company, line.account_currency currency, 'Journal Entry' voucher_type,
+				journal.name voucher_no, '' party,
+				coalesce(journal.user_remark, 'Journal Entry') description,
+				sum(line.debit_in_account_currency) incoming,
+				sum(line.credit_in_account_currency) outgoing,
+				journal.creation, 'Draft' status
+			from `tabJournal Entry` journal
+			inner join `tabJournal Entry Account` line on line.parent = journal.name
+			inner join `tabAccount` account on account.name = line.account
+			where {company_condition('journal', filters)} and journal.posting_date = %(date)s
+				and journal.docstatus = 0 and line.account_currency in ('LBP', 'USD')
+				and (
+					account.account_type in ('Cash', 'Bank')
+					or line.account in (select custody.account from `tabCollector Custody Account` custody)
+					or line.account in (
+						select mode_account.default_account
+						from `tabMode of Payment Account` mode_account
+						where mode_account.company = journal.company
+					)
+				)
+			group by journal.company, journal.name, line.account_currency
 		) movement
 		where coalesce(movement.incoming, 0) > 0 or coalesce(movement.outgoing, 0) > 0
 		order by movement.company, movement.currency, movement.creation, movement.voucher_no

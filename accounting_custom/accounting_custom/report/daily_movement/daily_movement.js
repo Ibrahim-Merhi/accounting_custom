@@ -51,15 +51,15 @@ const daily_movement_arabic_print_format = `
 						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ frappe.format(previous + incoming - outgoing, {fieldtype: "Currency", options: item.code}) }}</span></div>
 					</div>
 					<table class="transactions">
-						<colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup>
-						<thead><tr><th>الوصف</th><th>الوارد</th><th>الصادر</th></tr></thead>
+						<colgroup><col style="width:46%"><col style="width:12%"><col style="width:21%"><col style="width:21%"></colgroup>
+						<thead><tr><th>الوصف</th><th>الحالة</th><th>الوارد</th><th>الصادر</th></tr></thead>
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
-							<tr><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ frappe.format(row.incoming, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ frappe.format(row.outgoing, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td></tr>
+							<tr><td>{{ row.voucher_no }} - {{ row.description || "" }}</td><td>{{ __(row.status || "") }}</td><td class="amount">{% if row.incoming %}{{ frappe.format(row.incoming, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ frappe.format(row.outgoing, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td></tr>
 							{% endfor %}
 						{% else %}
-							<tr><td colspan="3" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>
+							<tr><td colspan="4" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>
 						{% endif %}
 						</tbody>
 					</table>
