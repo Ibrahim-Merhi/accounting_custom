@@ -35,16 +35,18 @@ const daily_movement_arabic_print_format = `
 			</div>
 			{% var currencies = [{code: "LBP", label: "الليرة اللبنانية"}, {code: "USD", label: "الدولار الأمريكي"}]; %}
 			{% for item in currencies %}
-				{% var section = original_data.find(row => row.currency === item.code && row.is_section); %}
-				{% var total = original_data.find(row => row.currency === item.code && row.is_total); %}
+				{% var sections = original_data.filter(row => row.currency === item.code && row.is_section); %}
 				{% var transactions = original_data.filter(row => row.currency === item.code && row.voucher_no); %}
+				{% var previous = sections.reduce((sum, row) => sum + Number(row.previous_balance || 0), 0); %}
+				{% var incoming = transactions.reduce((sum, row) => sum + Number(row.incoming || 0), 0); %}
+				{% var outgoing = transactions.reduce((sum, row) => sum + Number(row.outgoing || 0), 0); %}
 				<div class="currency-section">
 					<div class="section-title">{{ item.label }} ({{ item.code }})</div>
 					<div class="summary">
-						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ frappe.format((section && section.previous_balance) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ frappe.format((total && total.incoming) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ frappe.format((total && total.outgoing) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ frappe.format((section && section.current_balance) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ frappe.format(previous, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ frappe.format(incoming, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ frappe.format(outgoing, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ frappe.format(previous + incoming - outgoing, {fieldtype: "Currency", options: item.code}) }}</span></div>
 					</div>
 					<table class="transactions">
 						<colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup>

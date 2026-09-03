@@ -22,37 +22,49 @@ def execute(filters=None):
 
 	opening_balances = get_balances(filters)
 	transactions = get_transactions(filters)
+	if len(filters.companies) == 1:
+		for row in transactions:
+			row.company = row.company or filters.companies[0]
+	companies = list(filters.companies)
+	available_companies = {company for company, _currency in opening_balances}
+	available_companies.update(row.company for row in transactions if row.company)
+	if companies:
+		companies.extend(sorted(available_companies.difference(companies)))
+	else:
+		companies = sorted(available_companies)
+
 	rows = []
-	for currency, section_label in CURRENCIES:
-		currency_rows = [row for row in transactions if row.currency == currency]
-		incoming = sum(flt(row.incoming) for row in currency_rows)
-		outgoing = sum(flt(row.outgoing) for row in currency_rows)
-		previous = flt(opening_balances.get(currency))
-		current = previous + incoming - outgoing
+	for company in companies:
 		rows.append({
-			"currency": currency,
-			"description": _(section_label),
-			"previous_balance": previous,
-			"current_balance": current,
-			"is_section": 1,
+			"description": _("Company: {0}").format(company),
+			"is_company": 1,
 		})
-		current_company = None
-		for row in currency_rows:
-			if len(filters.companies) != 1 and row.company != current_company:
-				current_company = row.company
-				rows.append({
-					"currency": currency,
-					"description": _("Company: {0}").format(current_company),
-					"is_company": 1,
-				})
-			rows.append(row)
-		rows.append({
-			"currency": currency,
-			"description": _("Daily Movement Total"),
-			"incoming": incoming or None,
-			"outgoing": outgoing or None,
-			"is_total": 1,
-		})
+		for currency, section_label in CURRENCIES:
+			currency_rows = [
+				row for row in transactions
+				if row.company == company and row.currency == currency
+			]
+			incoming = sum(flt(row.incoming) for row in currency_rows)
+			outgoing = sum(flt(row.outgoing) for row in currency_rows)
+			previous = flt(opening_balances.get((company, currency)))
+			current = previous + incoming - outgoing
+			rows.append({
+				"company": company,
+				"currency": currency,
+				"description": _(section_label),
+				"previous_balance": previous,
+				"current_balance": current,
+				"is_section": 1,
+			})
+			rows.extend(currency_rows)
+			rows.append({
+				"company": company,
+				"currency": currency,
+				"description": _("Daily Movement Total"),
+				"incoming": incoming or None,
+				"outgoing": outgoing or None,
+				"is_total": 1,
+			})
 	return get_columns(), rows
 
 
@@ -101,7 +113,7 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 def get_balances(filters):
 	rows = frappe.db.sql(
 		f"""
-		select gle.account_currency currency,
+		select gle.company, gle.account_currency currency,
 			sum(gle.debit_in_account_currency - gle.credit_in_account_currency) balance
 		from `tabGL Entry` gle
 		inner join `tabAccount` account on account.name = gle.account
@@ -110,12 +122,12 @@ def get_balances(filters):
 			and gle.is_cancelled = 0
 			and gle.account_currency in ('LBP', 'USD')
 			and {treasury_account_condition()}
-		group by gle.account_currency
+		group by gle.company, gle.account_currency
 		""",
 		filters,
 		as_dict=True,
 	)
-	return {row.currency: row.balance for row in rows}
+	return {(row.company, row.currency): row.balance for row in rows}
 
 
 def get_transactions(filters):
@@ -174,7 +186,7 @@ def get_transactions(filters):
 			group by gle.company, gle.voucher_no, gle.account_currency
 		) movement
 		where coalesce(movement.incoming, 0) > 0 or coalesce(movement.outgoing, 0) > 0
-		order by movement.currency, movement.company, movement.creation, movement.voucher_no
+		order by movement.company, movement.currency, movement.creation, movement.voucher_no
 		""",
 		filters,
 		as_dict=True,

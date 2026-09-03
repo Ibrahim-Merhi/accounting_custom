@@ -29,7 +29,7 @@ class TestDailyMovement(FrappeTestCase):
 	)
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
 	def test_current_balance_uses_opening_and_visible_movements(self, get_balances, get_transactions):
-		get_balances.return_value = {"LBP": 1_000_000, "USD": 500}
+		get_balances.return_value = {("Test", "LBP"): 1_000_000, ("Test", "USD"): 500}
 		get_transactions.return_value = [
 			frappe._dict(currency="LBP", incoming=300_000, outgoing=None),
 			frappe._dict(currency="LBP", incoming=None, outgoing=100_000),
@@ -50,7 +50,7 @@ class TestDailyMovement(FrappeTestCase):
 	)
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
 	def test_all_companies_have_screen_separators(self, get_balances, get_transactions):
-		get_balances.return_value = {"LBP": 0, "USD": 0}
+		get_balances.return_value = {}
 		get_transactions.return_value = [
 			frappe._dict(company="Alpha", currency="LBP", incoming=10, outgoing=None),
 			frappe._dict(company="Beta", currency="LBP", incoming=20, outgoing=None),
@@ -61,3 +61,10 @@ class TestDailyMovement(FrappeTestCase):
 
 		self.assertEqual([row["description"] for row in company_rows], ["Company: Alpha", "Company: Beta"])
 		self.assertTrue(all(not row.get("voucher_no") for row in company_rows))
+		section_order = [
+			(row.get("company"), row.get("currency")) for row in rows if row.get("is_section")
+		]
+		self.assertEqual(
+			section_order,
+			[("Alpha", "LBP"), ("Alpha", "USD"), ("Beta", "LBP"), ("Beta", "USD")],
+		)
