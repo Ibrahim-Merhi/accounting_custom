@@ -2,8 +2,9 @@ import frappe
 
 
 PRINT_FORMATS = {
-	"سند قبض": "Donation Entry",
+"سند قبض": "Donation Entry",
 	"سند صرف": "Accounting Payment Entry",
+	"Journal Voucher": "Journal Entry",
 }
 
 REPORTS = {

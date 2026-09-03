@@ -56,6 +56,7 @@ REQUIRED_CUSTOM_FIELDS = {
 REQUIRED_PRINT_FORMATS = {
 	"سند قبض": "Donation Entry",
 	"سند صرف": "Accounting Payment Entry",
+	"Journal Voucher": "Journal Entry",
 }
 
 
