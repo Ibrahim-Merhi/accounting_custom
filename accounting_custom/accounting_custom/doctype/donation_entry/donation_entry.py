@@ -31,6 +31,7 @@ class DonationEntry(AccountsController):
 		self.set_custom_company_currency()
 		self.validate_header()
 		self.set_payment_amounts()
+		self.sync_legacy_payment_fields()
 		self.set_totals()
 		self.validate_linked_companies()
 		self.validate_collector()
@@ -86,6 +87,21 @@ class DonationEntry(AccountsController):
 			)
 			row.exchange_rate = flt(rate["exchange_rate"])
 			row.base_amount = flt(row.donation_amount) * row.exchange_rate
+
+	def sync_legacy_payment_fields(self):
+		"""Keep upgraded sites with legacy header requirements compatible."""
+		if not self.payments:
+			return
+		first_payment = self.payments[0]
+		for fieldname in (
+			"mode_of_payment",
+			"cost_center",
+			"currency",
+			"donation_amount",
+			"exchange_rate",
+			"received_in_account",
+		):
+			self.set(fieldname, first_payment.get(fieldname))
 
 	def set_totals(self):
 		self.base_donation_amount = sum(flt(row.base_amount) for row in self.payments)
