@@ -51,6 +51,8 @@ def ensure_accounting_workspace_sections():
 		return
 
 	doc = frappe.get_doc("Workspace", "Accounting")
+	if "Treasurer" not in {row.role for row in doc.roles}:
+		doc.append("roles", {"role": "Treasurer"})
 	content = json.loads(doc.content or "[]")
 	content = [item for item in content if not item.get("id", "").startswith("accounting_custom_")]
 	content.extend([
