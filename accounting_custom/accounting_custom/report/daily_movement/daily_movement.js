@@ -45,7 +45,7 @@ const daily_movement_arabic_print_format = `
 					</div>
 					<table class="transactions">
 						<colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup>
-						<thead><tr><th>البيان</th><th>الوارد</th><th>الصادر</th></tr></thead>
+						<thead><tr><th>الوصف</th><th>الوارد</th><th>الصادر</th></tr></thead>
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
