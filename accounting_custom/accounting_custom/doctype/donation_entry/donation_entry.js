@@ -226,7 +226,7 @@ function set_hijri_date(frm) {
 }
 
 function add_ledger_button(frm) {
-	frm.add_custom_button(__("Accounting Ledger"), () => {
+	frm.add_custom_button(__("View Ledger"), () => {
 		frappe.set_route("query-report", "General Ledger", {
 			company: frm.doc.company,
 			from_date: frm.doc.posting_date,
@@ -235,5 +235,5 @@ function add_ledger_button(frm) {
 			add_values_in_transaction_currency: 1,
 			show_cancelled_entries: frm.doc.docstatus === 2 ? 1 : 0,
 		});
-	}, __("View"));
+	});
 }
