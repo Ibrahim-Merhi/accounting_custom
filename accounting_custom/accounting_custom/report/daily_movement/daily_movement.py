@@ -7,12 +7,14 @@ CURRENCIES = (
 	("LBP", "Lebanese Pound Section"),
 	("USD", "US Dollar Section"),
 )
+EXCLUDED_COMPANY = "Namaa"
 
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
-	if not filters.company or not filters.date:
+	if not filters.date or filters.company == EXCLUDED_COMPANY:
 		return get_columns(), []
+	filters.excluded_company = EXCLUDED_COMPANY
 
 	opening_balances = get_balances(filters)
 	transactions = get_transactions(filters)
@@ -30,7 +32,16 @@ def execute(filters=None):
 			"current_balance": current,
 			"is_section": 1,
 		})
-		rows.extend(currency_rows)
+		current_company = None
+		for row in currency_rows:
+			if not filters.company and row.company != current_company:
+				current_company = row.company
+				rows.append({
+					"currency": currency,
+					"description": _("Company: {0}").format(current_company),
+					"is_company": 1,
+				})
+			rows.append(row)
 		rows.append({
 			"currency": currency,
 			"description": _("Daily Movement Total"),
@@ -55,6 +66,12 @@ def get_columns():
 	]
 
 
+def company_condition(alias, filters):
+	if filters.company:
+		return f"{alias}.company = %(company)s and {alias}.company != %(excluded_company)s"
+	return f"{alias}.company != %(excluded_company)s"
+
+
 def treasury_account_condition(alias="gle", account_alias="account"):
 	return f"""(
 		{account_alias}.account_type in ('Cash', 'Bank')
@@ -64,7 +81,7 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 		or {alias}.account in (
 			select mode_account.default_account
 			from `tabMode of Payment Account` mode_account
-			where mode_account.company = %(company)s
+			where mode_account.company = {alias}.company
 		)
 	)"""
 
@@ -76,7 +93,7 @@ def get_balances(filters):
 			sum(gle.debit_in_account_currency - gle.credit_in_account_currency) balance
 		from `tabGL Entry` gle
 		inner join `tabAccount` account on account.name = gle.account
-		where gle.company = %(company)s
+		where {company_condition('gle', filters)}
 			and gle.posting_date < %(date)s
 			and gle.is_cancelled = 0
 			and gle.account_currency in ('LBP', 'USD')
@@ -93,33 +110,33 @@ def get_transactions(filters):
 	rows = frappe.db.sql(
 		f"""
 		select movement.* from (
-			select payment.currency, 'Donation Entry' voucher_type,
+			select donation.company, payment.currency, 'Donation Entry' voucher_type,
 				donation.name voucher_no, coalesce(donation.donor_name, donation.donor, '') party,
 				coalesce(donation.remarks, '') description,
 				sum(payment.donation_amount) incoming, null outgoing,
 				donation.creation
 			from `tabDonation Entry` donation
 			inner join `tabDonation Payment Detail` payment on payment.parent = donation.name
-			where donation.company = %(company)s and donation.posting_date = %(date)s
+			where {company_condition('donation', filters)} and donation.posting_date = %(date)s
 				and donation.docstatus = 1 and payment.currency in ('LBP', 'USD')
-			group by donation.name, payment.currency
+			group by donation.company, donation.name, payment.currency
 
 			union all
 
-			select payment.currency, 'Accounting Payment Entry' voucher_type,
+			select entry.company, payment.currency, 'Accounting Payment Entry' voucher_type,
 				entry.name voucher_no, coalesce(max(payment.party_name), max(payment.party), '') party,
 				coalesce(entry.remarks, '') description,
 				null incoming, sum(payment.amount) outgoing,
 				entry.creation
 			from `tabAccounting Payment Entry` entry
 			inner join `tabAccounting Payment Detail` payment on payment.parent = entry.name
-			where entry.company = %(company)s and entry.posting_date = %(date)s
+			where {company_condition('entry', filters)} and entry.posting_date = %(date)s
 				and entry.docstatus = 1 and payment.currency in ('LBP', 'USD')
-			group by entry.name, payment.currency
+			group by entry.company, entry.name, payment.currency
 
 			union all
 
-			select gle.account_currency currency, 'Journal Entry' voucher_type,
+			select gle.company, gle.account_currency currency, 'Journal Entry' voucher_type,
 				gle.voucher_no, '' party,
 				coalesce(max(gle.remarks), 'Currency Exchange') description,
 				sum(gle.debit_in_account_currency) incoming,
@@ -127,14 +144,14 @@ def get_transactions(filters):
 				min(gle.creation) creation
 			from `tabGL Entry` gle
 			inner join `tabAccount` account on account.name = gle.account
-			where gle.company = %(company)s and gle.posting_date = %(date)s
+			where {company_condition('gle', filters)} and gle.posting_date = %(date)s
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and gle.account_currency in ('LBP', 'USD')
 				and {treasury_account_condition()}
 				and gle.voucher_no in (
 					select exchange.voucher_no
 					from `tabGL Entry` exchange
-					where exchange.company = %(company)s
+					where exchange.company = gle.company
 						and exchange.posting_date = %(date)s
 						and exchange.is_cancelled = 0
 						and exchange.voucher_type = 'Journal Entry'
@@ -142,10 +159,10 @@ def get_transactions(filters):
 					group by exchange.voucher_no
 					having count(distinct exchange.account_currency) = 2
 				)
-			group by gle.voucher_no, gle.account_currency
+			group by gle.company, gle.voucher_no, gle.account_currency
 		) movement
 		where coalesce(movement.incoming, 0) > 0 or coalesce(movement.outgoing, 0) > 0
-		order by movement.currency, movement.creation, movement.voucher_no
+		order by movement.currency, movement.company, movement.creation, movement.voucher_no
 		""",
 		filters,
 		as_dict=True,

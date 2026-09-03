@@ -61,7 +61,7 @@ const daily_movement_arabic_print_format = `
 					</table>
 				</div>
 			{% endfor %}
-			<div class="signatures"><div class="signature">أمين الصندوق</div><div class="signature">المحاسب</div><div class="signature">الاعتماد</div></div>
+			<div class="signatures"><div class="signature">أمين الصندوق</div><div class="signature">رئيس الجمعية</div></div>
 			<div class="print-footer">تم إصدار هذا التقرير من نظام المحاسبة</div>
 		</div>`;
 
@@ -96,8 +96,7 @@ frappe.query_reports["Daily Movement"] = {
 			label: __("Company"),
 			fieldtype: "Link",
 			options: "Company",
-			reqd: 1,
-			default: frappe.defaults.get_user_default("Company"),
+			get_query: () => ({ filters: { name: ["!=", "Namaa"] } }),
 		},
 		{
 			fieldname: "date",
@@ -118,6 +117,9 @@ frappe.query_reports["Daily Movement"] = {
 		value = default_formatter(value, row, column, data);
 		if (data?.is_section) {
 			return `<strong style="font-size:14px">${value}</strong>`;
+		}
+		if (data?.is_company) {
+			return `<strong style="display:block;border-top:2px solid #888;padding-top:8px">${value}</strong>`;
 		}
 		if (data?.is_total) {
 			return `<strong>${value}</strong>`;
