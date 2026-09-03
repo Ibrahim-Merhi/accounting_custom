@@ -57,13 +57,52 @@
 }
 
 .accounting-custom-wide-journal-grid .form-grid {
-	width: 150%;
-	min-width: 1500px;
+	min-width: 100%;
 	transform: none !important;
 }
 
 .accounting-custom-wide-journal-grid .grid-row > .row {
 	flex-wrap: nowrap;
+	width: 100% !important;
+	min-width: 100%;
+}
+
+.accounting-custom-wide-journal-grid .grid-row > .row > .col {
+	flex-grow: 0 !important;
+	flex-shrink: 0 !important;
+	max-width: none !important;
+}
+
+.accounting-custom-wide-journal-grid .grid-row > .row > .row-check {
+	flex-basis: 42px !important;
+	width: 42px !important;
+}
+
+.accounting-custom-wide-journal-grid .grid-row > .row > .row-index {
+	flex-basis: 64px !important;
+	width: 64px !important;
+}
+
+.accounting-custom-wide-journal-grid .grid-row > .row > .col:last-child {
+	flex-basis: 44px !important;
+	width: 44px !important;
+}
+
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-1 { flex-basis: 120px !important; width: 120px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-2 { flex-basis: 240px !important; width: 240px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-3 { flex-basis: 360px !important; width: 360px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-4 { flex-basis: 480px !important; width: 480px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-5 { flex-basis: 600px !important; width: 600px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-6 { flex-basis: 720px !important; width: 720px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-7 { flex-basis: 840px !important; width: 840px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-8 { flex-basis: 960px !important; width: 960px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-9 { flex-basis: 1080px !important; width: 1080px !important; }
+.accounting-custom-wide-journal-grid .grid-static-col.col-xs-10 { flex-basis: 1200px !important; width: 1200px !important; }
+
+.accounting-custom-wide-journal-grid .grid-heading-row,
+.accounting-custom-wide-journal-grid .grid-body,
+.accounting-custom-wide-journal-grid .rows {
+	width: 100%;
 }
 
 .accounting-custom-wide-journal-grid .form-grid-container::-webkit-scrollbar {

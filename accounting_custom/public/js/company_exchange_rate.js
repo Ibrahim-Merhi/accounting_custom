@@ -124,7 +124,7 @@ function install_wide_column_renderer(grid) {
 				(total, [, width]) => total + cint(width),
 				0
 			);
-			this.form_grid.css("width", `${Math.max(150, total_width * 10)}%`);
+			this.form_grid.css("width", `${total_width * 120 + 150}px`);
 			return result;
 		};
 		grid_prototype._accounting_custom_wide_columns_override = true;
