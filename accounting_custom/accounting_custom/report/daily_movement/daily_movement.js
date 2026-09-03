@@ -1,31 +1,36 @@
 frappe.query_reports["Daily Movement"] = {
 	html_format: `
 		<style>
-			.daily-movement-print { direction: rtl; font-family: Tahoma, Arial, sans-serif; color: #15191d; font-size: 11px; }
-			.daily-movement-print .report-head { display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 3px solid #202a33; padding: 0 0 10px; margin-bottom: 14px; }
-			.daily-movement-print h1 { margin: 0; font-size: 25px; font-weight: 700; }
-			.daily-movement-print .meta { line-height: 1.9; text-align: left; font-size: 11px; }
-			.daily-movement-print .currency-section { margin: 0 0 22px; page-break-inside: avoid; }
-			.daily-movement-print .section-title { background: #202a33; color: #fff; padding: 7px 10px; font-size: 14px; font-weight: 700; }
+			@page { size: A4 landscape; margin: 7mm; }
+			.daily-movement-print { direction: rtl; width: 100%; font-family: Tahoma, Arial, sans-serif; color: #15191d; font-size: 10px; }
+			.daily-movement-print .report-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2px solid #202a33; padding: 0 0 7px; margin-bottom: 9px; }
+			.daily-movement-print .title-block { white-space: nowrap; }
+			.daily-movement-print h1 { margin: 0; font-size: 22px; font-weight: 700; }
+			.daily-movement-print .subtitle { margin-top: 2px; color: #59636c; }
+			.daily-movement-print .meta { display: flex; align-items: center; gap: 24px; text-align: right; font-size: 10px; white-space: nowrap; }
+			.daily-movement-print .currency-section { margin: 0 0 11px; }
+			.daily-movement-print .section-title { background: #202a33; color: #fff; padding: 5px 8px; font-size: 12px; font-weight: 700; }
 			.daily-movement-print .summary { display: table; width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0 0 8px; }
-			.daily-movement-print .summary-item { display: table-cell; border: 1px solid #aeb6bd; padding: 7px 9px; background: #f3f5f6; }
-			.daily-movement-print .summary-label { display: block; color: #59636c; font-size: 9px; margin-bottom: 3px; }
-			.daily-movement-print .summary-value { display: block; direction: ltr; text-align: right; font-size: 14px; font-weight: 700; white-space: nowrap; }
+			.daily-movement-print .summary-item { display: table-cell; border: 1px solid #aeb6bd; padding: 5px 8px; background: #f3f5f6; }
+			.daily-movement-print .summary-label { display: block; color: #59636c; font-size: 8px; margin-bottom: 2px; }
+			.daily-movement-print .summary-value { display: block; direction: ltr; text-align: right; font-size: 12px; font-weight: 700; white-space: nowrap; }
 			.daily-movement-print table.transactions { width: 100%; table-layout: fixed; border-collapse: collapse; }
+			.daily-movement-print .transactions thead { display: table-header-group; }
 			.daily-movement-print .transactions th { background: #dfe4e7; font-weight: 700; }
-			.daily-movement-print .transactions th, .daily-movement-print .transactions td { border: 1px solid #b8bec4; padding: 6px 7px; text-align: right; vertical-align: top; overflow-wrap: anywhere; }
+			.daily-movement-print .transactions th, .daily-movement-print .transactions td { border: 1px solid #b8bec4; padding: 4px 5px; text-align: right; vertical-align: top; overflow-wrap: anywhere; }
+			.daily-movement-print .transactions tr { page-break-inside: avoid; }
 			.daily-movement-print .transactions tbody tr:nth-child(even) { background: #f8f9f9; }
 			.daily-movement-print .amount { direction: ltr; text-align: right !important; white-space: nowrap; font-weight: 600; }
-			.daily-movement-print .empty-row { text-align: center !important; color: #69747d; padding: 14px !important; }
-			.daily-movement-print .signatures { display: flex; justify-content: space-between; gap: 50px; margin-top: 28px; }
+			.daily-movement-print .empty-row { text-align: center !important; color: #69747d; padding: 7px !important; }
+			.daily-movement-print .signatures { display: flex; justify-content: space-between; gap: 50px; margin-top: 20px; page-break-inside: avoid; }
 			.daily-movement-print .signature { width: 30%; border-top: 1px solid #59636c; padding-top: 5px; text-align: center; }
-			.daily-movement-print .print-footer { margin-top: 18px; padding-top: 6px; border-top: 1px solid #c8cdd1; text-align: center; color: #69747d; font-size: 9px; }
-			@media print { .daily-movement-print { font-size: 10px; } .daily-movement-print .currency-section { page-break-inside: avoid; } }
+			.daily-movement-print .print-footer { margin-top: 10px; padding-top: 5px; border-top: 1px solid #c8cdd1; text-align: center; color: #69747d; font-size: 8px; }
+			@media print { .daily-movement-print { width: 100%; } }
 		</style>
 		<div class="daily-movement-print">
 			<div class="report-head">
-				<div><h1>الحركة اليومية</h1><div>بيان حركة الصندوق اليومية</div></div>
-				<div class="meta"><div><strong>الشركة:</strong> {{ filters.company }}</div><div><strong>التاريخ:</strong> {{ filters.date }}</div></div>
+				<div class="title-block"><h1>الحركة اليومية</h1><div class="subtitle">بيان حركة الصندوق اليومية</div></div>
+				<div class="meta"><span><strong>الشركة:</strong> {{ filters.company }}</span><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
 			</div>
 			{% var currencies = [{code: "LBP", label: "الليرة اللبنانية"}, {code: "USD", label: "الدولار الأمريكي"}]; %}
 			{% for item in currencies %}
@@ -35,10 +40,10 @@ frappe.query_reports["Daily Movement"] = {
 				<div class="currency-section">
 					<div class="section-title">{{ item.label }} ({{ item.code }})</div>
 					<div class="summary">
-						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ frappe.format(section.previous_balance, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ frappe.format((section && section.previous_balance) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
 						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ frappe.format((total && total.incoming) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
 						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ frappe.format((total && total.outgoing) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
-						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ frappe.format(section.current_balance, {fieldtype: "Currency", options: item.code}) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ frappe.format((section && section.current_balance) || 0, {fieldtype: "Currency", options: item.code}) }}</span></div>
 					</div>
 					<table class="transactions">
 						<colgroup><col style="width:16%"><col style="width:17%"><col style="width:20%"><col style="width:25%"><col style="width:11%"><col style="width:11%"></colgroup>
@@ -46,7 +51,7 @@ frappe.query_reports["Daily Movement"] = {
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
-							<tr><td>{{ __(row.voucher_type) }}</td><td dir="ltr">{{ row.voucher_no }}</td><td>{{ row.party || "" }}</td><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ frappe.format(row.incoming, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ frappe.format(row.outgoing, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td></tr>
+							<tr><td>{{ row.voucher_type === "Donation Entry" ? "سند تبرع" : (row.voucher_type === "Accounting Payment Entry" ? "سند صرف" : row.voucher_type) }}</td><td dir="ltr">{{ row.voucher_no }}</td><td>{{ row.party || "" }}</td><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ frappe.format(row.incoming, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ frappe.format(row.outgoing, {fieldtype: "Currency", options: item.code}) }}{% endif %}</td></tr>
 							{% endfor %}
 						{% else %}
 							<tr><td colspan="6" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>
@@ -60,7 +65,20 @@ frappe.query_reports["Daily Movement"] = {
 		</div>`,
 	onload(report) {
 		report.page.add_inner_button(__("Arabic Print"), () => {
-			report.print_report({ orientation: "Landscape" });
+			report.make_access_log?.("Print", "PDF");
+			frappe.render_grid({
+				template: report.report_settings.html_format,
+				title: "الحركة اليومية",
+				subtitle: "",
+				print_settings: { orientation: "Landscape" },
+				landscape: true,
+				filters: report.get_filter_values(),
+				data: report.get_data_for_print(),
+				columns: report.columns,
+				original_data: report.data,
+				report,
+				can_use_smaller_font: 0,
+			});
 		}, __("Print"));
 	},
 	filters: [
