@@ -14,6 +14,14 @@ fi
 
 cd "$BENCH_DIR"
 
+RUN_USER="$(id -un)"
+RUN_GROUP="$(id -gn)"
+sudo chown -R "$RUN_USER:$RUN_GROUP" \
+	"$BENCH_DIR/logs" \
+	"$BENCH_DIR/config" \
+	"$BENCH_DIR/sites/$SITE/logs" \
+	"$BENCH_DIR/sites/$SITE/locks"
+
 if [[ -d "apps/$APP_NAME/.git" ]]; then
 	git -C "apps/$APP_NAME" fetch origin "$APP_BRANCH"
 	git -C "apps/$APP_NAME" checkout "$APP_BRANCH"
