@@ -75,11 +75,6 @@ class DonationEntry(AccountsController):
 			if not row.mode_of_payment:
 				frappe.throw(_("Row {0}: Mode of Payment is required.").format(row.idx))
 			row.currency = get_mode_of_payment_currency(row.mode_of_payment, self.company)
-			for fieldname, label in (
-				("received_in_account", _("Received In Account")),
-			):
-				if not row.get(fieldname):
-					frappe.throw(_("Row {0}: {1} is required.").format(row.idx, label))
 			if flt(row.donation_amount) <= 0:
 				frappe.throw(_("Row {0}: Donation Amount must be greater than zero.").format(row.idx))
 			rate = get_company_exchange_rate(
@@ -118,6 +113,8 @@ class DonationEntry(AccountsController):
 		for row in self.payments:
 			if not row.cost_center:
 				frappe.throw(_("Row {0}: Cost Center is required before submission.").format(row.idx))
+			if not row.received_in_account:
+				frappe.throw(_("Row {0}: Received In Account is required before submission.").format(row.idx))
 
 	def validate_donor_account(self):
 		configured_account = get_donor_account(self.donor, self.company)
@@ -129,7 +126,8 @@ class DonationEntry(AccountsController):
 		if self.project:
 			self._validate_company_link("Project", self.project)
 		for row in self.payments:
-			get_account_details(row.received_in_account, self.company)
+			if row.received_in_account:
+				get_account_details(row.received_in_account, self.company)
 			get_account_details(get_mode_of_payment_account(row.mode_of_payment, self.company), self.company)
 			if row.cost_center:
 				self._validate_company_link("Cost Center", row.cost_center)

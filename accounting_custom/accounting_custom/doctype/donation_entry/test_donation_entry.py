@@ -21,6 +21,16 @@ class TestDonationEntryMetadata(FrappeTestCase):
 	def test_cost_center_is_submit_only_required(self):
 		field = frappe.get_meta("Donation Entry").get_field("cost_center")
 		self.assertFalse(field.reqd)
+		received_in_account = frappe.get_meta("Donation Payment Detail").get_field(
+			"received_in_account"
+		)
+		self.assertFalse(received_in_account.reqd)
+
+	def test_received_in_account_is_required_on_submit(self):
+		doc = DonationEntry({"doctype": "Donation Entry"})
+		doc.append("payments", {"cost_center": "Main - ITHD"})
+		with self.assertRaises(frappe.ValidationError):
+			doc.validate_submit_requirements()
 
 	def test_first_payment_is_synced_to_legacy_header_fields(self):
 		doc = DonationEntry({"doctype": "Donation Entry"})

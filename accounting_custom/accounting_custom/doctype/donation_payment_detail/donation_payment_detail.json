@@ -52,12 +52,13 @@
   },
   {
    "columns": 3,
+   "description": "Required before submission",
    "fieldname": "received_in_account",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Received In Account",
    "options": "Account",
-   "reqd": 1
+   "reqd": 0
   },
   {
    "fieldname": "exchange_rate",
