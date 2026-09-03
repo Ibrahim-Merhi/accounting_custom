@@ -12,7 +12,11 @@ EXCLUDED_COMPANY = "Namaa"
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
-	if not filters.date or filters.company == EXCLUDED_COMPANY:
+	if not filters.date:
+		return get_columns(), []
+	requested_companies = filters.company
+	filters.companies = get_selected_companies(requested_companies)
+	if requested_companies and not filters.companies:
 		return get_columns(), []
 	filters.excluded_company = EXCLUDED_COMPANY
 
@@ -34,7 +38,7 @@ def execute(filters=None):
 		})
 		current_company = None
 		for row in currency_rows:
-			if not filters.company and row.company != current_company:
+			if len(filters.companies) != 1 and row.company != current_company:
 				current_company = row.company
 				rows.append({
 					"currency": currency,
@@ -66,9 +70,17 @@ def get_columns():
 	]
 
 
+def get_selected_companies(value):
+	if not value:
+		return ()
+	if isinstance(value, str):
+		value = frappe.parse_json(value) if value.lstrip().startswith("[") else [value]
+	return tuple(company for company in value if company and company != EXCLUDED_COMPANY)
+
+
 def company_condition(alias, filters):
-	if filters.company:
-		return f"{alias}.company = %(company)s and {alias}.company != %(excluded_company)s"
+	if filters.companies:
+		return f"{alias}.company in %(companies)s and {alias}.company != %(excluded_company)s"
 	return f"{alias}.company != %(excluded_company)s"
 
 

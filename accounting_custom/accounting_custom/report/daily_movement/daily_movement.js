@@ -94,9 +94,11 @@ frappe.query_reports["Daily Movement"] = {
 		{
 			fieldname: "company",
 			label: __("Company"),
-			fieldtype: "Link",
+			fieldtype: "MultiSelectList",
 			options: "Company",
-			get_query: () => ({ filters: { name: ["!=", "Namaa"] } }),
+			get_data: (txt) => frappe.db.get_link_options("Company", txt, {
+				name: ["!=", "Namaa"],
+			}),
 		},
 		{
 			fieldname: "date",
@@ -108,6 +110,12 @@ frappe.query_reports["Daily Movement"] = {
 	],
 	formatter(value, row, column, data, default_formatter) {
 		const amount_fields = ["incoming", "outgoing", "previous_balance", "current_balance"];
+		if (data?.is_company) {
+			if (column.fieldname !== "description") {
+				return "";
+			}
+			return `<strong style="display:block;font-size:13px;white-space:nowrap">${value}</strong>`;
+		}
 		if (amount_fields.includes(column.fieldname) && (value === null || value === undefined || value === "")) {
 			return "";
 		}
@@ -117,9 +125,6 @@ frappe.query_reports["Daily Movement"] = {
 		value = default_formatter(value, row, column, data);
 		if (data?.is_section) {
 			return `<strong style="font-size:14px">${value}</strong>`;
-		}
-		if (data?.is_company) {
-			return `<strong style="display:block;border-top:2px solid #888;padding-top:8px">${value}</strong>`;
 		}
 		if (data?.is_total) {
 			return `<strong>${value}</strong>`;

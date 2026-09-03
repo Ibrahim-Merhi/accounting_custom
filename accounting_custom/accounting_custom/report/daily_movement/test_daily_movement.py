@@ -6,17 +6,23 @@ from frappe.tests.utils import FrappeTestCase
 from accounting_custom.accounting_custom.report.daily_movement.daily_movement import (
 	company_condition,
 	execute,
+	get_selected_companies,
 )
 
 
 class TestDailyMovement(FrappeTestCase):
 	def test_company_condition_supports_one_or_all_except_namaa(self):
-		selected = company_condition("gle", frappe._dict(company="Itihad"))
-		all_companies = company_condition("gle", frappe._dict(company=None))
+		selected = company_condition("gle", frappe._dict(companies=("Itihad", "Other")))
+		all_companies = company_condition("gle", frappe._dict(companies=()))
 
-		self.assertIn("gle.company = %(company)s", selected)
+		self.assertIn("gle.company in %(companies)s", selected)
 		self.assertIn("gle.company != %(excluded_company)s", selected)
 		self.assertEqual(all_companies, "gle.company != %(excluded_company)s")
+
+	def test_selected_companies_are_normalized_and_namaa_is_excluded(self):
+		self.assertEqual(get_selected_companies('["Itihad", "Namaa", "Other"]'), ("Itihad", "Other"))
+		self.assertEqual(get_selected_companies("Itihad"), ("Itihad",))
+		self.assertEqual(get_selected_companies(None), ())
 
 	@patch(
 		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
