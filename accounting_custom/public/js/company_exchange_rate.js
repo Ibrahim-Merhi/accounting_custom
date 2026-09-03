@@ -40,7 +40,7 @@ function enable_wide_journal_grid(frm) {
 
 	$(frm.fields_dict.accounts.wrapper).addClass("accounting-custom-wide-journal-grid");
 	install_wide_column_renderer(grid);
-	requestAnimationFrame(() => install_journal_grid_scrollbar(frm));
+	requestAnimationFrame(() => enable_journal_grid_wheel_scroll(frm));
 
 	const grid_row_prototype = grid.header_row
 		? Object.getPrototypeOf(grid.header_row)
@@ -60,37 +60,35 @@ function enable_wide_journal_grid(frm) {
 	grid_row_prototype._accounting_custom_width_override = true;
 }
 
-function install_journal_grid_scrollbar(frm) {
+function enable_journal_grid_wheel_scroll(frm) {
 	const field = $(frm.fields_dict.accounts?.wrapper);
 	const container = field.find(".form-grid-container").get(0);
 	const form_grid = field.find(".form-grid").get(0);
 	if (!container || !form_grid) return;
 
-	let scrollbar = field.find(".journal-grid-horizontal-scroll").get(0);
-	if (!scrollbar) {
-		scrollbar = $(
-			'<div class="journal-grid-horizontal-scroll"><div class="journal-grid-scroll-width"></div></div>'
-		).insertAfter(container).get(0);
-	}
-	scrollbar.onscroll = () => {
-		form_grid.style.transform = `translateX(-${scrollbar.scrollLeft}px)`;
-	};
+	field.find(".journal-grid-horizontal-scroll").remove();
+	form_grid.style.transform = "none";
 
-	const update_scroll_width = () => {
-		const inner = scrollbar.querySelector(".journal-grid-scroll-width");
-		if (inner) {
-			inner.style.width = `${Math.max(form_grid.scrollWidth, form_grid.offsetWidth, container.clientWidth + 1)}px`;
-		}
-		form_grid.style.transform = `translateX(-${scrollbar.scrollLeft}px)`;
-	};
-	update_scroll_width();
-	if (!container._accounting_custom_scroll_observer) {
-		container._accounting_custom_scroll_observer = new MutationObserver(update_scroll_width);
-		container._accounting_custom_scroll_observer.observe(container, {
-			childList: true,
-			subtree: true,
-		});
+	if (container._accounting_custom_wheel_handler) {
+		container.removeEventListener("wheel", container._accounting_custom_wheel_handler);
 	}
+	container._accounting_custom_wheel_handler = (event) => {
+		if (container.scrollWidth <= container.clientWidth) return;
+		const distance = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+			? event.deltaX
+			: event.deltaY;
+		if (!distance) return;
+		const previous_position = container.scrollLeft;
+		container.scrollLeft = Math.max(
+			0,
+			Math.min(container.scrollWidth - container.clientWidth, previous_position + distance)
+		);
+		if (container.scrollLeft === previous_position) return;
+		event.preventDefault();
+	};
+	container.addEventListener("wheel", container._accounting_custom_wheel_handler, {
+		passive: false,
+	});
 }
 
 function install_wide_column_renderer(grid) {
