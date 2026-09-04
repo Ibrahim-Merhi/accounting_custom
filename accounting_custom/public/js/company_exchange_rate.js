@@ -37,6 +37,7 @@ frappe.ui.form.on("Journal Entry", {
 function enable_wide_journal_grid(frm) {
 	const grid = frm.fields_dict.accounts?.grid;
 	if (!grid) return;
+	install_journal_width_validation_override(grid);
 	if (frm.doc.docstatus === 0) {
 		$(frm.fields_dict.accounts.wrapper).removeClass("accounting-custom-wide-journal-grid");
 		return;
@@ -45,7 +46,9 @@ function enable_wide_journal_grid(frm) {
 	$(frm.fields_dict.accounts.wrapper).addClass("accounting-custom-wide-journal-grid");
 	install_wide_column_renderer(grid);
 	requestAnimationFrame(() => enable_journal_grid_wheel_scroll(frm));
+}
 
+function install_journal_width_validation_override(grid) {
 	const grid_row_prototype = grid.header_row
 		? Object.getPrototypeOf(grid.header_row)
 		: null;
