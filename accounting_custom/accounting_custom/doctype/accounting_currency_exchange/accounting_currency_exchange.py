@@ -7,7 +7,6 @@ from accounting_custom.accounting.donation_gl import (
 	get_account_details,
 	get_mode_of_payment_account,
 )
-from accounting_custom.api.exchange_rate import get_company_exchange_rate
 
 
 class AccountingCurrencyExchange(Document):
@@ -24,20 +23,16 @@ class AccountingCurrencyExchange(Document):
 			frappe.throw(_("Currency From and Currency To must be different."))
 		if flt(self.from_amount) <= 0:
 			frappe.throw(_("Amount From must be greater than zero."))
-		if flt(self.exchange_rate) <= 0:
-			frappe.throw(_("Exchange Rate must be greater than zero."))
+		if flt(self.to_amount) <= 0:
+			frappe.throw(_("Amount To must be greater than zero."))
 		self._validate_cost_center(self.from_cost_center, _("Cost Center From"))
 		self._validate_cost_center(self.to_cost_center, _("Cost Center To"))
-		self._set_amounts()
 
 	def _get_payment_account(self, mode_of_payment):
 		account = get_mode_of_payment_account(mode_of_payment, self.company)
 		details = get_account_details(account, self.company)
 		currency = details.account_currency or self.company_currency
 		return account, currency
-
-	def _set_amounts(self):
-		self.to_amount = flt(self.from_amount) * flt(self.exchange_rate)
 
 	def _validate_cost_center(self, cost_center, label):
 		if not cost_center:
@@ -46,13 +41,16 @@ class AccountingCurrencyExchange(Document):
 			frappe.throw(_("{0} must belong to company {1}.").format(label, self.company))
 
 	def _journal_exchange_rates(self):
-		"""Return source/target rates to company currency without changing master rates."""
+		"""Derive balanced line rates from the two entered transaction amounts."""
+		from_amount = flt(self.from_amount)
+		to_amount = flt(self.to_amount)
 		if self.from_currency == self.company_currency:
-			return 1, 1 / flt(self.exchange_rate)
+			return 1, from_amount / to_amount
 		if self.to_currency == self.company_currency:
-			return flt(self.exchange_rate), 1
-		source_rate = self._base_rate(self.from_currency)
-		return source_rate, source_rate / flt(self.exchange_rate)
+			return to_amount / from_amount, 1
+		# When neither side is the company currency, use the source amount as the
+		# balancing base and derive the target line rate from the entered amounts.
+		return 1, from_amount / to_amount
 
 	def on_submit(self):
 		if self.journal_entry:
@@ -93,14 +91,6 @@ class AccountingCurrencyExchange(Document):
 		if journal.docstatus == 1:
 			journal.flags.ignore_permissions = True
 			journal.cancel()
-
-	def _base_rate(self, currency):
-		return flt(get_company_exchange_rate(
-			self.company,
-			currency,
-			self.company_currency,
-			self.posting_date,
-		)["exchange_rate"])
 
 
 @frappe.whitelist()

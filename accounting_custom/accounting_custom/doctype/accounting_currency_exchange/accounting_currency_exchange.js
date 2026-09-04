@@ -20,7 +20,6 @@ frappe.ui.form.on("Accounting Currency Exchange", {
 			to_cost_center: null,
 			from_currency: null,
 			to_currency: null,
-			exchange_rate: 0,
 			to_amount: 0,
 		});
 		if (frm.doc.company) {
@@ -35,8 +34,6 @@ frappe.ui.form.on("Accounting Currency Exchange", {
 	to_mode_of_payment(frm) {
 		return set_exchange_side(frm, "to");
 	},
-	from_amount: update_exchange_amount,
-	exchange_rate: update_exchange_amount,
 });
 
 function set_accounting_currency_exchange_queries(frm) {
@@ -65,11 +62,4 @@ async function set_exchange_side(frm, side) {
 	const account_field = side === "from" ? "source_account" : "target_account";
 	await frm.set_value(account_field, result.message?.account || null);
 	await frm.set_value(`${side}_currency`, result.message?.currency || null);
-	return update_exchange_amount(frm);
-}
-
-async function update_exchange_amount(frm) {
-	const amount = Number(frm.doc.from_amount || 0);
-	const rate = Number(frm.doc.exchange_rate || 0);
-	await frm.set_value("to_amount", amount > 0 && rate > 0 ? amount * rate : 0);
 }

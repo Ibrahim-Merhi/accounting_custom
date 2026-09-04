@@ -2,37 +2,33 @@ from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
+import frappe
+
 from accounting_custom.accounting_custom.doctype.accounting_currency_exchange.accounting_currency_exchange import (
 	AccountingCurrencyExchange,
 )
 
 
 class TestAccountingCurrencyExchange(TestCase):
-	def test_employee_rate_sets_target_amount(self):
-		doc = AccountingCurrencyExchange({
-			"doctype": "Accounting Currency Exchange",
-			"from_amount": 100,
-			"exchange_rate": 89500,
-		})
+	def test_exchange_rate_field_is_removed(self):
+		meta = frappe.get_meta("Accounting Currency Exchange")
+		self.assertFalse(meta.has_field("exchange_rate"))
+		self.assertFalse(meta.get_field("to_amount").read_only)
 
-		doc._set_amounts()
-
-		self.assertAlmostEqual(doc.exchange_rate, 89500)
-		self.assertAlmostEqual(doc.to_amount, 8950000)
-
-	def test_transaction_rate_balances_company_currency(self):
+	def test_entered_amounts_derive_balanced_company_rates(self):
 		doc = AccountingCurrencyExchange({
 			"doctype": "Accounting Currency Exchange",
 			"company_currency": "USD",
 			"from_currency": "USD",
 			"to_currency": "LBP",
-			"exchange_rate": 89500,
+			"from_amount": 100,
+			"to_amount": 8950000,
 		})
 
 		source_rate, target_rate = doc._journal_exchange_rates()
 
 		self.assertEqual(source_rate, 1)
-		self.assertAlmostEqual(target_rate, 1 / 89500)
+		self.assertAlmostEqual(target_rate, 100 / 8950000)
 
 	@patch("accounting_custom.accounting_custom.doctype.accounting_currency_exchange.accounting_currency_exchange.get_account_details")
 	@patch("accounting_custom.accounting_custom.doctype.accounting_currency_exchange.accounting_currency_exchange.get_mode_of_payment_account")
@@ -62,7 +58,6 @@ class TestAccountingCurrencyExchange(TestCase):
 			"to_currency": "LBP",
 			"to_amount": 895000,
 			"to_cost_center": "General - ITHD",
-			"exchange_rate": 89500,
 			"remarks": "Exchange cash for office use",
 		})
 		doc.db_set = MagicMock()

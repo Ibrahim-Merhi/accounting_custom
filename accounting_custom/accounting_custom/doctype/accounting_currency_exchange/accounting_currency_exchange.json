@@ -24,7 +24,6 @@
   "to_cost_center",
   "column_break_target",
   "to_currency",
-  "exchange_rate",
   "to_amount",
   "remarks_section",
   "remarks"
@@ -154,19 +153,11 @@
    "reqd": 1
   },
   {
-   "fieldname": "exchange_rate",
-   "fieldtype": "Float",
-   "label": "Exchange Rate",
-   "precision": "9",
-   "reqd": 1
-  },
-  {
    "fieldname": "to_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount Exchanged",
+   "label": "Amount To",
    "options": "to_currency",
-   "read_only": 1,
    "reqd": 1
   },
   {
