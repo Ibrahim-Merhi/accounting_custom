@@ -11,7 +11,10 @@ required_apps = ["erpnext", "non_profit"]
 
 # include js, css files in header of desk.html
 app_include_css = "/assets/accounting_custom/css/accounting_custom.css"
-app_include_js = "/assets/accounting_custom/js/cost_center_arabic.js"
+app_include_js = [
+	"/assets/accounting_custom/js/cost_center_arabic.js",
+	"/assets/accounting_custom/js/general_ledger.js",
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/accounting_custom/css/accounting_custom.css"
