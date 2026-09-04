@@ -58,6 +58,7 @@
 
 .accounting-custom-wide-journal-grid .form-grid {
 	min-width: 100%;
+	margin-bottom: 12px;
 	transform: none !important;
 }
 
