@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 
 def validate_accounting_payment_branch(doc, method=None):
@@ -22,6 +23,8 @@ def validate_journal_entry_branch(doc, method=None):
 
 
 def set_gl_entry_branch(doc, method=None):
+	set_journal_entry_transaction_currency(doc)
+
 	if not frappe.get_meta("GL Entry").has_field("custom_branch"):
 		return
 	if doc.get("custom_branch") or not doc.voucher_type or not doc.voucher_no:
@@ -30,3 +33,22 @@ def set_gl_entry_branch(doc, method=None):
 		doc.custom_branch = frappe.db.get_value("Journal Entry Account", doc.voucher_detail_no, "custom_branch")
 	elif frappe.get_meta(doc.voucher_type).has_field("custom_branch"):
 		doc.custom_branch = frappe.db.get_value(doc.voucher_type, doc.voucher_no, "custom_branch")
+
+
+def set_journal_entry_transaction_currency(doc):
+	"""Keep each Journal Entry row's original account currency in General Ledger."""
+	if doc.get("voucher_type") != "Journal Entry" or not doc.get("account_currency"):
+		return
+
+	doc.transaction_currency = doc.account_currency
+	doc.debit_in_transaction_currency = flt(doc.get("debit_in_account_currency"))
+	doc.credit_in_transaction_currency = flt(doc.get("credit_in_account_currency"))
+
+	account_amount = (
+		doc.debit_in_transaction_currency
+		if doc.debit_in_transaction_currency
+		else doc.credit_in_transaction_currency
+	)
+	company_amount = flt(doc.get("debit")) if doc.debit_in_transaction_currency else flt(doc.get("credit"))
+	if account_amount:
+		doc.transaction_exchange_rate = company_amount / account_amount

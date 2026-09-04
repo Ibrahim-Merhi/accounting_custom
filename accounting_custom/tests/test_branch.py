@@ -4,7 +4,10 @@ from unittest.mock import patch
 
 import frappe
 
-from accounting_custom.accounting.branch import validate_journal_entry_branch
+from accounting_custom.accounting.branch import (
+	set_journal_entry_transaction_currency,
+	validate_journal_entry_branch,
+)
 
 
 class TestBranchValidation(TestCase):
@@ -27,3 +30,38 @@ class TestBranchValidation(TestCase):
 	def test_cross_company_branch_is_rejected(self, _get_value, _throw):
 		with self.assertRaises(frappe.ValidationError):
 			validate_journal_entry_branch(SimpleNamespace(company="Itihad", accounts=[SimpleNamespace(idx=1, custom_branch="Beirut")]))
+
+
+class TestJournalEntryTransactionCurrency(TestCase):
+	def test_lbp_account_amount_is_preserved_for_general_ledger(self):
+		gl_entry = frappe._dict({
+			"voucher_type": "Journal Entry",
+			"account_currency": "LBP",
+			"debit": 198.88,
+			"credit": 0,
+			"debit_in_account_currency": 17800000,
+			"credit_in_account_currency": 0,
+		})
+
+		set_journal_entry_transaction_currency(gl_entry)
+
+		self.assertEqual(gl_entry.transaction_currency, "LBP")
+		self.assertEqual(gl_entry.debit_in_transaction_currency, 17800000)
+		self.assertEqual(gl_entry.credit_in_transaction_currency, 0)
+		self.assertAlmostEqual(gl_entry.transaction_exchange_rate, 198.88 / 17800000)
+
+	def test_usd_credit_is_preserved_for_general_ledger(self):
+		gl_entry = frappe._dict({
+			"voucher_type": "Journal Entry",
+			"account_currency": "USD",
+			"debit": 0,
+			"credit": 200,
+			"debit_in_account_currency": 0,
+			"credit_in_account_currency": 200,
+		})
+
+		set_journal_entry_transaction_currency(gl_entry)
+
+		self.assertEqual(gl_entry.transaction_currency, "USD")
+		self.assertEqual(gl_entry.credit_in_transaction_currency, 200)
+		self.assertEqual(gl_entry.transaction_exchange_rate, 1)
