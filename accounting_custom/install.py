@@ -4,6 +4,7 @@ from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accoun
 	backfill_arabic_amounts,
 )
 from accounting_custom.accounting.cost_center import backfill_arabic_names
+from accounting_custom.accounting.branch import backfill_journal_entry_transaction_currency
 from accounting_custom.setup.custom_fields import ensure_custom_fields
 from accounting_custom.setup.journal_voucher import ensure_journal_voucher_print_format
 from accounting_custom.setup.metadata import ensure_visible_metadata
@@ -39,6 +40,7 @@ def setup_accounting_customizations():
 	ensure_journal_voucher_print_format()
 	ensure_visible_metadata()
 	backfill_arabic_amounts()
+	backfill_journal_entry_transaction_currency()
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
 

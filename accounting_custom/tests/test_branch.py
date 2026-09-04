@@ -5,6 +5,7 @@ from unittest.mock import patch
 import frappe
 
 from accounting_custom.accounting.branch import (
+	backfill_journal_entry_transaction_currency,
 	set_journal_entry_transaction_currency,
 	validate_journal_entry_branch,
 )
@@ -65,3 +66,14 @@ class TestJournalEntryTransactionCurrency(TestCase):
 		self.assertEqual(gl_entry.transaction_currency, "USD")
 		self.assertEqual(gl_entry.credit_in_transaction_currency, 200)
 		self.assertEqual(gl_entry.transaction_exchange_rate, 1)
+
+	@patch("accounting_custom.accounting.branch.frappe.db.sql")
+	@patch("accounting_custom.accounting.branch.frappe.db.table_exists", return_value=True)
+	def test_existing_journal_gl_entries_are_backfilled(self, _table_exists, sql):
+		backfill_journal_entry_transaction_currency()
+
+		query = sql.call_args.args[0]
+		self.assertIn("transaction_currency = account_currency", query)
+		self.assertIn("debit_in_transaction_currency = debit_in_account_currency", query)
+		self.assertIn("credit_in_transaction_currency = credit_in_account_currency", query)
+		self.assertIn("voucher_type = 'Journal Entry'", query)

@@ -52,3 +52,33 @@ def set_journal_entry_transaction_currency(doc):
 	company_amount = flt(doc.get("debit")) if doc.debit_in_transaction_currency else flt(doc.get("credit"))
 	if account_amount:
 		doc.transaction_exchange_rate = company_amount / account_amount
+
+
+def backfill_journal_entry_transaction_currency():
+	"""Correct previously posted Journal Entry GL rows after this customization is installed."""
+	if not frappe.db.table_exists("GL Entry"):
+		return
+
+	frappe.db.sql(
+		"""
+		UPDATE `tabGL Entry`
+		SET
+			transaction_currency = account_currency,
+			debit_in_transaction_currency = debit_in_account_currency,
+			credit_in_transaction_currency = credit_in_account_currency,
+			transaction_exchange_rate = CASE
+				WHEN debit_in_account_currency != 0
+					THEN debit / debit_in_account_currency
+				WHEN credit_in_account_currency != 0
+					THEN credit / credit_in_account_currency
+				ELSE transaction_exchange_rate
+			END
+		WHERE voucher_type = 'Journal Entry'
+			AND COALESCE(account_currency, '') != ''
+			AND (
+				NOT (transaction_currency <=> account_currency)
+				OR NOT (debit_in_transaction_currency <=> debit_in_account_currency)
+				OR NOT (credit_in_transaction_currency <=> credit_in_account_currency)
+			)
+		"""
+	)
