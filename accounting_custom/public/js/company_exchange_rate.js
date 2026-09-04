@@ -47,20 +47,31 @@ function enable_wide_journal_grid(frm) {
 
 function install_journal_link_dropdown_space(frm) {
 	const wrapper = $(frm.fields_dict.accounts?.wrapper);
-	const container = wrapper.find(".form-grid-container");
-	if (!container.length || wrapper.data("accounting-custom-dropdown-space")) return;
+	if (wrapper.data("accounting-custom-dropdown-space")) return;
 
 	wrapper.data("accounting-custom-dropdown-space", true);
-	wrapper.on("focusin.accountingCustom", ".awesomplete input", () => {
-		container.addClass("link-dropdown-open");
+	wrapper.on("focusin.accountingCustom input.accountingCustom", ".awesomplete input", (event) => {
+		requestAnimationFrame(() => position_journal_link_dropdown(event.currentTarget));
 	});
-	wrapper.on("focusout.accountingCustom", ".awesomplete input", () => {
+	wrapper.on("focusout.accountingCustom", ".awesomplete input", (event) => {
 		setTimeout(() => {
-			if (!wrapper.find(".awesomplete input:focus").length) {
-				container.removeClass("link-dropdown-open");
-			}
+			const menu = $(event.currentTarget).closest(".awesomplete").children("ul").get(0);
+			if (menu) menu.removeAttribute("style");
 		}, 250);
 	});
+}
+
+function position_journal_link_dropdown(input) {
+	const menu = $(input).closest(".awesomplete").children("ul").get(0);
+	if (!menu) return;
+	const input_rect = input.getBoundingClientRect();
+	menu.style.setProperty("position", "fixed", "important");
+	menu.style.setProperty("left", `${input_rect.left}px`, "important");
+	menu.style.setProperty("top", `${input_rect.bottom + 2}px`, "important");
+	menu.style.setProperty("width", `${Math.max(input_rect.width, 320)}px`, "important");
+	menu.style.setProperty("max-height", "260px", "important");
+	menu.style.setProperty("overflow-y", "auto", "important");
+	menu.style.setProperty("z-index", "1060", "important");
 }
 
 function install_journal_width_validation_override(grid) {

@@ -56,11 +56,10 @@
 	direction: ltr;
 }
 
-.accounting-custom-wide-journal-grid .form-grid-container.link-dropdown-open {
-	padding-bottom: 230px;
-}
-
 .accounting-custom-wide-journal-grid .awesomplete > ul {
+	position: fixed !important;
+	max-height: 260px;
+	overflow-y: auto;
 	z-index: 1060 !important;
 }
 
