@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_import": 1,
- "autoname": "DON-.YYYY.-.#####",
+ "autoname": "naming_series:",
  "creation": "2026-08-28 10:31:39.781086",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,6 +12,7 @@
   "donor_name",
   "column_break_cxbv",
   "posting_date",
+  "reference_no",
   "custom_hijri_date",
   "donor_type",
   "amended_from",
@@ -36,7 +37,6 @@
   "lbp_currency",
   "custom_amount_in_words_arabic",
   "custom_company_currency",
-  "reference_no",
   "reference_date",
   "payments_section",
   "payments",
@@ -275,8 +275,7 @@
   {
    "fieldname": "reference_no",
    "fieldtype": "Data",
-   "label": "Reference No",
-   "hidden": 1,
+   "label": "Reference Number",
    "reqd": 0
   },
   {

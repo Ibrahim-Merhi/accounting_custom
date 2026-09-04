@@ -15,6 +15,14 @@ def set_payment_entry_series(doc, method=None):
 	set_company_series(doc, "PAY")
 
 
+def set_accounting_payment_entry_series(doc, method=None):
+	set_company_series(doc, "APE")
+
+
+def set_donation_entry_series(doc, method=None):
+	set_company_series(doc, "DON")
+
+
 def set_company_series(doc, transaction_code):
 	if not doc.company:
 		frappe.throw(_("Company is required before naming {0}.").format(doc.doctype))

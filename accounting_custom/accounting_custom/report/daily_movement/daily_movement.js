@@ -33,8 +33,9 @@ const daily_movement_arabic_print_format = `
 			<button type="button" class="print-action" onclick="window.print()">طباعة</button>
 			<div class="report-head">
 				<div class="title-block"><h1>الحركة اليومية</h1><div class="subtitle">بيان حركة الصندوق اليومية</div></div>
-				<div class="meta"><span><strong>الشركة:</strong> {{ filters.company }}</span><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
+				<div class="meta"><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
 			</div>
+			{% var display_amount = value => format_number(value, null, 2).replace(/\.00$/, ""); %}
 			{% var currencies = [{code: "LBP", label: "الليرة اللبنانية"}, {code: "USD", label: "الدولار الأمريكي"}]; %}
 			{% for item in currencies %}
 				{% var currency_symbol = item.code === "LBP" ? "ل.ل" : "$"; %}
@@ -46,10 +47,10 @@ const daily_movement_arabic_print_format = `
 				<div class="currency-section">
 					<div class="section-title">{{ item.label }} ({{ item.code }})</div>
 					<div class="summary">
-						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ currency_symbol }} {{ format_number(previous, null, 2) }}</span></div>
-						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ currency_symbol }} {{ format_number(incoming, null, 2) }}</span></div>
-						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ currency_symbol }} {{ format_number(outgoing, null, 2) }}</span></div>
-						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ currency_symbol }} {{ format_number(previous + incoming - outgoing, null, 2) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد السابق</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(previous) }}</span></div>
+						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(incoming) }}</span></div>
+						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(outgoing) }}</span></div>
+						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(previous + incoming - outgoing) }}</span></div>
 					</div>
 					<table class="transactions">
 						<colgroup><col style="width:54%"><col style="width:23%"><col style="width:23%"></colgroup>
@@ -57,7 +58,7 @@ const daily_movement_arabic_print_format = `
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
-							<tr><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ format_number(row.incoming, null, 2) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ format_number(row.outgoing, null, 2) }}{% endif %}</td></tr>
+							<tr><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ display_amount(row.incoming) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ display_amount(row.outgoing) }}{% endif %}</td></tr>
 							{% endfor %}
 						{% else %}
 							<tr><td colspan="3" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>

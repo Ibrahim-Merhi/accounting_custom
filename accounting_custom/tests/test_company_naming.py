@@ -4,7 +4,11 @@ from unittest.mock import patch
 
 import frappe
 
-from accounting_custom.naming.company_series import set_company_series
+from accounting_custom.naming.company_series import (
+	set_accounting_payment_entry_series,
+	set_company_series,
+	set_donation_entry_series,
+)
 
 
 class TestCompanyNaming(TestCase):
@@ -31,3 +35,14 @@ class TestCompanyNaming(TestCase):
 	def test_invalid_abbreviation_is_rejected(self, _get_cached_value, _throw):
 		with self.assertRaises(frappe.ValidationError):
 			set_company_series(SimpleNamespace(company="Company", doctype="Journal Entry"), "JV")
+
+	@patch("accounting_custom.naming.company_series.frappe.get_cached_value", return_value="ITHD")
+	def test_custom_accounting_document_patterns(self, _get_cached_value):
+		payment = SimpleNamespace(company="Company", doctype="Accounting Payment Entry")
+		donation = SimpleNamespace(company="Company", doctype="Donation Entry")
+
+		set_accounting_payment_entry_series(payment)
+		set_donation_entry_series(donation)
+
+		self.assertEqual(payment.naming_series, "ITHD-ACC-APE-.YYYY.-.#####")
+		self.assertEqual(donation.naming_series, "ITHD-ACC-DON-.YYYY.-.#####")

@@ -143,6 +143,9 @@ has_permission = {
 # Hook on document methods and events
 
 doc_events = {
+	"Accounting Payment Entry": {
+		"before_naming": "accounting_custom.naming.company_series.set_accounting_payment_entry_series",
+	},
 	"Account": {
 		"validate": "accounting_custom.accounting.cost_center.set_arabic_account_name",
 	},
@@ -151,6 +154,9 @@ doc_events = {
 	},
 	"Cost Center": {
 		"validate": "accounting_custom.accounting.cost_center.set_arabic_cost_center_name",
+	},
+	"Donation Entry": {
+		"before_naming": "accounting_custom.naming.company_series.set_donation_entry_series",
 	},
 	"Journal Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
