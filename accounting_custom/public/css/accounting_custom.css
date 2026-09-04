@@ -56,6 +56,14 @@
 	direction: ltr;
 }
 
+.accounting-custom-wide-journal-grid .form-grid-container.link-dropdown-open {
+	padding-bottom: 230px;
+}
+
+.accounting-custom-wide-journal-grid .awesomplete > ul {
+	z-index: 1060 !important;
+}
+
 .accounting-custom-wide-journal-grid .form-grid {
 	min-width: 100%;
 	margin-bottom: 12px;

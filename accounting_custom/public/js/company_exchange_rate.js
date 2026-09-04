@@ -42,6 +42,25 @@ function enable_wide_journal_grid(frm) {
 	$(frm.fields_dict.accounts.wrapper).addClass("accounting-custom-wide-journal-grid");
 	install_wide_column_renderer(grid);
 	requestAnimationFrame(() => enable_journal_grid_wheel_scroll(frm));
+	install_journal_link_dropdown_space(frm);
+}
+
+function install_journal_link_dropdown_space(frm) {
+	const wrapper = $(frm.fields_dict.accounts?.wrapper);
+	const container = wrapper.find(".form-grid-container");
+	if (!container.length || wrapper.data("accounting-custom-dropdown-space")) return;
+
+	wrapper.data("accounting-custom-dropdown-space", true);
+	wrapper.on("focusin.accountingCustom", ".awesomplete input", () => {
+		container.addClass("link-dropdown-open");
+	});
+	wrapper.on("focusout.accountingCustom", ".awesomplete input", () => {
+		setTimeout(() => {
+			if (!wrapper.find(".awesomplete input:focus").length) {
+				container.removeClass("link-dropdown-open");
+			}
+		}, 250);
+	});
 }
 
 function install_journal_width_validation_override(grid) {
