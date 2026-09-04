@@ -7,6 +7,10 @@ from accounting_custom.accounting.donation_gl import (
 	get_account_details,
 	get_mode_of_payment_account,
 )
+from accounting_custom.accounting.standard_exchange_rate import _get_rate
+
+
+ROUND_OFF_ACCOUNT_NUMBER = "67500002"
 
 
 class AccountingCurrencyExchange(Document):
@@ -41,21 +45,37 @@ class AccountingCurrencyExchange(Document):
 			frappe.throw(_("{0} must belong to company {1}.").format(label, self.company))
 
 	def _journal_exchange_rates(self):
-		"""Derive balanced line rates from the two entered transaction amounts."""
-		from_amount = flt(self.from_amount)
-		to_amount = flt(self.to_amount)
-		if self.from_currency == self.company_currency:
-			return 1, from_amount / to_amount
-		if self.to_currency == self.company_currency:
-			return to_amount / from_amount, 1
-		# When neither side is the company currency, use the source amount as the
-		# balancing base and derive the target line rate from the entered amounts.
-		return 1, from_amount / to_amount
+		"""Value both currency legs using the configured company exchange rates."""
+		return (
+			_get_rate(self.company, self.from_currency, self.company_currency, self.posting_date),
+			_get_rate(self.company, self.to_currency, self.company_currency, self.posting_date),
+		)
+
+	def _get_round_off_account(self):
+		account = frappe.db.get_value(
+			"Account",
+			{
+				"company": self.company,
+				"account_number": ROUND_OFF_ACCOUNT_NUMBER,
+				"is_group": 0,
+			},
+			"name",
+		)
+		if not account:
+			frappe.throw(
+				_("Round Off account number {0} was not found for company {1}.").format(
+					ROUND_OFF_ACCOUNT_NUMBER, self.company
+				)
+			)
+		return account
 
 	def on_submit(self):
 		if self.journal_entry:
 			frappe.throw(_("A Journal Entry is already linked to this Accounting Currency Exchange."))
 		source_rate, target_rate = self._journal_exchange_rates()
+		source_base = flt(self.from_amount) * source_rate
+		target_base = flt(self.to_amount) * target_rate
+		rounding_difference = source_base - target_base
 		journal = frappe.get_doc({
 			"doctype": "Journal Entry",
 			"voucher_type": "Journal Entry",
@@ -78,6 +98,19 @@ class AccountingCurrencyExchange(Document):
 			"credit_in_account_currency": self.from_amount,
 			"cost_center": self.from_cost_center,
 		})
+		if abs(rounding_difference) > 0.000000001:
+			rounding_row = {
+				"account": self._get_round_off_account(),
+				"account_currency": self.company_currency,
+				"exchange_rate": 1,
+				"cost_center": self.to_cost_center,
+				"user_remark": _("Currency exchange rounding difference"),
+			}
+			if rounding_difference > 0:
+				rounding_row["debit_in_account_currency"] = rounding_difference
+			else:
+				rounding_row["credit_in_account_currency"] = abs(rounding_difference)
+			journal.append("accounts", rounding_row)
 		journal.flags.ignore_company_exchange_rate = True
 		journal.flags.ignore_permissions = True
 		journal.insert()
