@@ -11,6 +11,10 @@ REQUIRED_DOCTYPES = {
 	"Accounting Payment Entry": {
 		"approval_status", "approved_by", "approved_on", "finance_notes", "reference_no",
 	},
+	"Accounting Receipt Entry": {
+		"company", "posting_date", "reference_no", "custom_accounting_rows_copy",
+		"approval_status", "currency_totals", "total_debit", "total_credit",
+	},
 	"Accounting Currency Exchange": {"company", "posting_date", "from_mode_of_payment", "source_account", "from_currency", "from_amount", "from_cost_center", "to_mode_of_payment", "target_account", "to_currency", "to_cost_center", "to_amount", "remarks", "journal_entry"},
 	"Collector Handover": {"company", "collector", "lines", "received_by"},
 	"Collector Handover Detail": {

@@ -205,7 +205,11 @@ def backfill_arabic_amounts():
 
 @frappe.whitelist()
 def set_approval_status(name, action, notes=None):
-	doc = frappe.get_doc("Accounting Payment Entry", name)
+	return _set_approval_status("Accounting Payment Entry", name, action, notes)
+
+
+def _set_approval_status(doctype, name, action, notes=None):
+	doc = frappe.get_doc(doctype, name)
 	if doc.docstatus != 0:
 		frappe.throw(_("Only draft payments can be reviewed."))
 	roles = set(frappe.get_roles())

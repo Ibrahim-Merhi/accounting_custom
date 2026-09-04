@@ -155,8 +155,23 @@ def get_transactions(filters):
 			from `tabAccounting Payment Entry` entry
 			inner join `tabAccounting Payment Detail` payment on payment.parent = entry.name
 			where {company_condition('entry', filters)} and entry.posting_date = %(date)s
-				and entry.docstatus < 2 and payment.currency in ('LBP', 'USD')
+				and entry.docstatus < 2 and payment.parenttype = 'Accounting Payment Entry'
+				and payment.currency in ('LBP', 'USD')
 			group by entry.company, entry.name, payment.currency
+
+			union all
+
+			select entry.company, receipt.currency, 'Accounting Receipt Entry' voucher_type,
+				entry.name voucher_no, coalesce(max(receipt.party_name), max(receipt.party), '') party,
+				coalesce(entry.remarks, '') description,
+				sum(receipt.amount) incoming, null outgoing,
+				entry.creation, case entry.docstatus when 0 then 'Draft' else 'Submitted' end status
+			from `tabAccounting Receipt Entry` entry
+			inner join `tabAccounting Payment Detail` receipt on receipt.parent = entry.name
+			where {company_condition('entry', filters)} and entry.posting_date = %(date)s
+				and entry.docstatus < 2 and receipt.parenttype = 'Accounting Receipt Entry'
+				and receipt.currency in ('LBP', 'USD')
+			group by entry.company, entry.name, receipt.currency
 
 			union all
 

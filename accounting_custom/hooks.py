@@ -146,6 +146,9 @@ doc_events = {
 	"Accounting Payment Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_accounting_payment_entry_series",
 	},
+	"Accounting Receipt Entry": {
+		"before_naming": "accounting_custom.naming.company_series.set_accounting_receipt_entry_series",
+	},
 	"Account": {
 		"validate": "accounting_custom.accounting.cost_center.set_arabic_account_name",
 	},

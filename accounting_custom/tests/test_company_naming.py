@@ -6,6 +6,7 @@ import frappe
 
 from accounting_custom.naming.company_series import (
 	set_accounting_payment_entry_series,
+	set_accounting_receipt_entry_series,
 	set_company_series,
 	set_donation_entry_series,
 )
@@ -46,3 +47,9 @@ class TestCompanyNaming(TestCase):
 
 		self.assertEqual(payment.naming_series, "ITHD-ACC-APE-.YYYY.-.#####")
 		self.assertEqual(donation.naming_series, "ITHD-ACC-DON-.YYYY.-.#####")
+
+	@patch("accounting_custom.naming.company_series.frappe.get_cached_value", return_value="ITHD")
+	def test_accounting_receipt_pattern(self, _get_cached_value):
+		receipt = SimpleNamespace(company="Company", doctype="Accounting Receipt Entry")
+		set_accounting_receipt_entry_series(receipt)
+		self.assertEqual(receipt.naming_series, "ITHD-ACC-ARE-.YYYY.-.#####")
