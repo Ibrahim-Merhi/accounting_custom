@@ -1,3 +1,5 @@
+import re
+
 import frappe
 
 
@@ -60,15 +62,76 @@ def ensure_arabic_voucher_print_formats():
 
 
 def _add_organization_details(html):
-	if "للدعوة والتعليم الشرعي والمؤسسات الخيرية" in html:
-		return html
-	return html.replace(
-		"جمعية الاتحاد الإسلامي",
-		"""جمعية الاتحاد الإسلامي
-            <span style="font-size:14px;font-weight:700;">للدعوة والتعليم الشرعي والمؤسسات الخيرية</span>
-            <span style="font-size:13px;font-weight:700;">لبنان - علم وخبر ١٤٥/أد</span>""",
-		1,
+	panel = """<div class="organization-name organization-layout-v2">
+            <span class="organization-primary">جمعية الاتحاد الإسلامي</span>
+            <span class="organization-secondary">للدعوة والتعليم الشرعي والمؤسسات الخيرية</span>
+            <span class="organization-registration">لبنان - علم وخبر ١٤٥/أد</span>
+        </div>"""
+	html = re.sub(
+		r'<div class="organization-name(?: organization-layout-v2)?">.*?</div>',
+		panel,
+		html,
+		count=1,
+		flags=re.DOTALL,
 	)
+	if "ITIHAD-ORGANIZATION-LAYOUT-V2" in html:
+		return html
+	styles = """
+/* ITIHAD-ORGANIZATION-LAYOUT-V2 */
+.receipt-main {
+    margin-right: 164px !important;
+}
+.organization-box {
+    width: 150px !important;
+    background: #fff !important;
+    color: #111 !important;
+    border: 2px solid #111 !important;
+}
+.organization-name.organization-layout-v2 {
+    writing-mode: horizontal-tb !important;
+    transform: none !important;
+    display: flex !important;
+    flex-direction: row !important;
+    direction: ltr !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px;
+    padding: 8px 5px;
+    box-sizing: border-box;
+    background: #fff !important;
+    color: #111 !important;
+}
+.organization-layout-v2 > span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #111 !important;
+    text-align: center;
+    white-space: nowrap;
+}
+.organization-layout-v2 .organization-primary {
+    flex: 0 0 52%;
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.05;
+}
+.organization-layout-v2 .organization-secondary {
+    flex: 0 0 29%;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.15;
+}
+.organization-layout-v2 .organization-registration {
+    flex: 0 0 15%;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+"""
+	return html.replace("</style>", f"{styles}\n</style>", 1)
 
 
 def _add_voucher_number(html):
