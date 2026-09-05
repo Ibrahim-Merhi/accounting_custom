@@ -136,12 +136,14 @@ def get_transactions(filters):
 		select movement.* from (
 			select gle.company, gle.account_currency currency, 'Journal Entry' voucher_type,
 				gle.voucher_no, '' party,
-				coalesce(max(gle.remarks), 'Currency Exchange') description,
+				coalesce(max(nullif(line.user_remark, '')), '') description,
 				sum(gle.debit_in_account_currency) incoming,
 				sum(gle.credit_in_account_currency) outgoing,
 				min(gle.creation) creation, 'Submitted' status
 			from `tabGL Entry` gle
 			inner join `tabAccount` account on account.name = gle.account
+			left join `tabJournal Entry Account` line
+				on line.name = gle.voucher_detail_no and line.parent = gle.voucher_no
 			where {company_condition('gle', filters)} and gle.posting_date = %(date)s
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and gle.account_currency in ('LBP', 'USD')
@@ -152,7 +154,7 @@ def get_transactions(filters):
 
 			select journal.company, line.account_currency currency, 'Journal Entry' voucher_type,
 				journal.name voucher_no, '' party,
-				coalesce(journal.user_remark, 'Journal Entry') description,
+				coalesce(max(nullif(line.user_remark, '')), '') description,
 				sum(line.debit_in_account_currency) incoming,
 				sum(line.credit_in_account_currency) outgoing,
 				journal.creation, 'Draft' status

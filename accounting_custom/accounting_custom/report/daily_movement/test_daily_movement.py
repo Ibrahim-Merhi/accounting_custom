@@ -38,6 +38,10 @@ class TestDailyMovement(FrappeTestCase):
 
 		self.assertIn("`tabJournal Entry`", query)
 		self.assertIn("gle.voucher_type = 'Journal Entry'", query)
+		self.assertIn("line.name = gle.voucher_detail_no", query)
+		self.assertEqual(query.count("max(nullif(line.user_remark, ''))"), 2)
+		self.assertNotIn("max(gle.remarks)", query)
+		self.assertNotIn("journal.user_remark", query)
 		self.assertNotIn("`tabDonation Entry`", query)
 		self.assertNotIn("`tabAccounting Payment Entry`", query)
 		self.assertNotIn("`tabAccounting Receipt Entry`", query)
