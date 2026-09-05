@@ -136,14 +136,24 @@ def get_transactions(filters):
 		select movement.* from (
 			select gle.company, gle.account_currency currency, 'Journal Entry' voucher_type,
 				gle.voucher_no, '' party,
-				coalesce(max(nullif(line.user_remark, '')), '') description,
+				coalesce(
+					max(nullif(line.user_remark, '')),
+					trim(replace(max(nullif(gle.remarks, '')), 'Note:', '')),
+					''
+				) description,
 				sum(gle.debit_in_account_currency) incoming,
 				sum(gle.credit_in_account_currency) outgoing,
 				min(gle.creation) creation, 'Submitted' status
 			from `tabGL Entry` gle
 			inner join `tabAccount` account on account.name = gle.account
-			left join `tabJournal Entry Account` line
-				on line.name = gle.voucher_detail_no and line.parent = gle.voucher_no
+			left join (
+				select parent, account, account_currency,
+					max(nullif(user_remark, '')) user_remark
+				from `tabJournal Entry Account`
+				group by parent, account, account_currency
+			) line on line.parent = gle.voucher_no
+				and line.account = gle.account
+				and line.account_currency = gle.account_currency
 			where {company_condition('gle', filters)} and gle.posting_date = %(date)s
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and gle.account_currency in ('LBP', 'USD')
@@ -154,7 +164,11 @@ def get_transactions(filters):
 
 			select journal.company, line.account_currency currency, 'Journal Entry' voucher_type,
 				journal.name voucher_no, '' party,
-				coalesce(max(nullif(line.user_remark, '')), '') description,
+				coalesce(
+					max(nullif(line.user_remark, '')),
+					trim(replace(max(nullif(journal.user_remark, '')), 'Note:', '')),
+					''
+				) description,
 				sum(line.debit_in_account_currency) incoming,
 				sum(line.credit_in_account_currency) outgoing,
 				journal.creation, 'Draft' status
