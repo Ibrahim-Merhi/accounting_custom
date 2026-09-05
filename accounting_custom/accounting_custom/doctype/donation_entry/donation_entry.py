@@ -21,15 +21,19 @@ from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
 
 class DonationEntry(AccountsController):
-	def before_insert(self):
-		if self.amended_from:
+	def before_validate(self):
+		if self.docstatus == 0 and self.amended_from:
 			# An amendment is a new accounting document and must go through the
 			# approval cycle again. Never carry approval/link state from the
-			# cancelled donation into its replacement.
+			# cancelled donation into its replacement. This must run before
+			# Frappe validates links, otherwise the cancelled Journal Entry link
+			# prevents the amended draft from being saved.
 			self.approval_status = "Draft"
 			self.approved_by = None
 			self.approved_on = None
 			self.journal_entry = None
+
+	def before_insert(self):
 		if not self.collector:
 			self.collector = frappe.db.get_value(
 				"Collector Profile",

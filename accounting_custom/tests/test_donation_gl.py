@@ -120,7 +120,8 @@ class TestDonationGL(TestCase):
 			approved_on="2026-09-05", journal_entry="JV-00001",
 		)
 
-		DonationEntry.before_insert(doc)
+		doc.docstatus = 0
+		DonationEntry.before_validate(doc)
 
 		self.assertEqual(doc.approval_status, "Draft")
 		self.assertIsNone(doc.approved_by)
