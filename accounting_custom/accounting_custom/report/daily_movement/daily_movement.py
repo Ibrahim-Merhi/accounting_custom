@@ -134,47 +134,6 @@ def get_transactions(filters):
 	rows = frappe.db.sql(
 		f"""
 		select movement.* from (
-			select donation.company, payment.currency, 'Donation Entry' voucher_type,
-				donation.name voucher_no, coalesce(donation.donor_name, donation.donor, '') party,
-				coalesce(donation.remarks, '') description,
-				sum(payment.donation_amount) incoming, null outgoing,
-				donation.creation, case donation.docstatus when 0 then 'Draft' else 'Submitted' end status
-			from `tabDonation Entry` donation
-			inner join `tabDonation Payment Detail` payment on payment.parent = donation.name
-			where {company_condition('donation', filters)} and donation.posting_date = %(date)s
-				and donation.docstatus < 2 and payment.currency in ('LBP', 'USD')
-			group by donation.company, donation.name, payment.currency
-
-			union all
-
-			select entry.company, payment.currency, 'Accounting Payment Entry' voucher_type,
-				entry.name voucher_no, coalesce(max(payment.party_name), max(payment.party), '') party,
-				coalesce(entry.remarks, '') description,
-				null incoming, sum(payment.amount) outgoing,
-				entry.creation, case entry.docstatus when 0 then 'Draft' else 'Submitted' end status
-			from `tabAccounting Payment Entry` entry
-			inner join `tabAccounting Payment Detail` payment on payment.parent = entry.name
-			where {company_condition('entry', filters)} and entry.posting_date = %(date)s
-				and entry.docstatus < 2 and payment.parenttype = 'Accounting Payment Entry'
-				and payment.currency in ('LBP', 'USD')
-			group by entry.company, entry.name, payment.currency
-
-			union all
-
-			select entry.company, receipt.currency, 'Accounting Receipt Entry' voucher_type,
-				entry.name voucher_no, coalesce(max(receipt.party_name), max(receipt.party), '') party,
-				coalesce(entry.remarks, '') description,
-				sum(receipt.amount) incoming, null outgoing,
-				entry.creation, case entry.docstatus when 0 then 'Draft' else 'Submitted' end status
-			from `tabAccounting Receipt Entry` entry
-			inner join `tabAccounting Payment Detail` receipt on receipt.parent = entry.name
-			where {company_condition('entry', filters)} and entry.posting_date = %(date)s
-				and entry.docstatus < 2 and receipt.parenttype = 'Accounting Receipt Entry'
-				and receipt.currency in ('LBP', 'USD')
-			group by entry.company, entry.name, receipt.currency
-
-			union all
-
 			select gle.company, gle.account_currency currency, 'Journal Entry' voucher_type,
 				gle.voucher_no, '' party,
 				coalesce(max(gle.remarks), 'Currency Exchange') description,

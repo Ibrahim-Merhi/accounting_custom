@@ -7,6 +7,7 @@ from accounting_custom.accounting_custom.report.daily_movement.daily_movement im
 	company_condition,
 	execute,
 	get_selected_companies,
+	get_transactions,
 )
 
 
@@ -23,6 +24,23 @@ class TestDailyMovement(FrappeTestCase):
 		self.assertEqual(get_selected_companies('["Itihad", "Namaa", "Other"]'), ("Itihad", "Other"))
 		self.assertEqual(get_selected_companies("Itihad"), ("Itihad",))
 		self.assertEqual(get_selected_companies(None), ())
+
+	@patch("frappe.db.sql", return_value=[])
+	def test_transactions_are_limited_to_journal_entries(self, db_sql):
+		get_transactions(
+			frappe._dict(
+				companies=("Test",),
+				excluded_company="Namaa",
+				date="2026-09-01",
+			)
+		)
+		query = db_sql.call_args.args[0]
+
+		self.assertIn("`tabJournal Entry`", query)
+		self.assertIn("gle.voucher_type = 'Journal Entry'", query)
+		self.assertNotIn("`tabDonation Entry`", query)
+		self.assertNotIn("`tabAccounting Payment Entry`", query)
+		self.assertNotIn("`tabAccounting Receipt Entry`", query)
 
 	@patch(
 		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
