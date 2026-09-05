@@ -11,7 +11,7 @@ frappe.ui.form.on("Donation Entry", {
 		add_quick_donor_action(frm);
 		set_queries(frm);
 		if (frm.doc.donor) load_donor_accounts(frm);
-		if (frm.doc.company) fetch_company_currency(frm);
+		if (frm.doc.docstatus === 0 && frm.doc.company) fetch_company_currency(frm);
 		if (!frm.is_new() && [1, 2].includes(frm.doc.docstatus)) add_ledger_button(frm);
 	},
 
@@ -177,6 +177,7 @@ function load_donor_accounts(frm, auto_select = false) {
 }
 
 function fetch_company_currency(frm) {
+	if (frm.doc.docstatus !== 0) return;
 	frappe.db.get_value("Company", frm.doc.company, "default_currency").then((r) => {
 		if (r.message?.default_currency) {
 			frm.set_value("custom_company_currency", r.message.default_currency);
@@ -200,10 +201,12 @@ function set_payment_currency(frm, row) {
 }
 
 function refresh_payment_rates(frm) {
+	if (frm.doc.docstatus !== 0) return;
 	(frm.doc.payments || []).forEach((row) => set_payment_rate(frm, row));
 }
 
 function set_payment_rate(frm, row) {
+	if (frm.doc.docstatus !== 0) return;
 	if (!frm.doc.company || !frm.doc.posting_date || !frm.doc.custom_company_currency || !row.currency) return;
 	frappe.call({
 		method: "accounting_custom.api.exchange_rate.get_company_exchange_rate",

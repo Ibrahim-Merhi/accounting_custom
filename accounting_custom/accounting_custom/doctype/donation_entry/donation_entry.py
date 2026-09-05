@@ -51,6 +51,11 @@ class DonationEntry(AccountsController):
 			self.treasury_status = "Direct Receipt"
 
 	def validate(self):
+		# Never recalculate financial values during Update After Submit. Apart
+		# from being immutable, binary floating-point conversion can turn an
+		# unchanged value such as 13.96625 into 13.966249999999999.
+		if getattr(self, "_action", None) == "update_after_submit":
+			return
 		self.set_custom_company_currency()
 		validate_accounting_payment_branch(self)
 		self.validate_header()

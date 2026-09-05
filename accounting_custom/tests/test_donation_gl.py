@@ -127,3 +127,8 @@ class TestDonationGL(TestCase):
 		self.assertIsNone(doc.approved_by)
 		self.assertIsNone(doc.approved_on)
 		self.assertIsNone(doc.journal_entry)
+
+	def test_update_after_submit_does_not_recalculate_amounts(self):
+		doc = SimpleNamespace(_action="update_after_submit")
+
+		DonationEntry.validate(doc)
