@@ -7,6 +7,7 @@ from accounting_custom.accounting.donation_gl import (
 	get_account_details,
 	get_mode_of_payment_account,
 )
+from accounting_custom.accounting.journal_posting import cancel_linked_journal_entry
 from accounting_custom.accounting.standard_exchange_rate import _get_rate
 
 
@@ -118,12 +119,7 @@ class AccountingCurrencyExchange(Document):
 		self.db_set("journal_entry", journal.name, update_modified=False)
 
 	def before_cancel(self):
-		if not self.journal_entry:
-			return
-		journal = frappe.get_doc("Journal Entry", self.journal_entry)
-		if journal.docstatus == 1:
-			journal.flags.ignore_permissions = True
-			journal.cancel()
+		cancel_linked_journal_entry(self)
 
 
 @frappe.whitelist()

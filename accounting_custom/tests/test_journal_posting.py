@@ -46,3 +46,4 @@ class TestLinkedJournalPosting(TestCase):
 
 		journal.cancel.assert_called_once_with()
 		self.assertEqual(journal.ignore_linked_doctypes, ("Donation Entry",))
+		self.assertTrue(journal.flags.ignore_links)

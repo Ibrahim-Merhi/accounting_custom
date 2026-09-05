@@ -54,4 +54,9 @@ def cancel_linked_journal_entry(source_doc):
 		# The submitted source document links to this Journal Entry. Allow the
 		# generated entry to be cancelled as part of cancelling that source.
 		journal.ignore_linked_doctypes = (source_doc.doctype,)
+		# Frappe checks backlinks again while cancelling. This flag is scoped to
+		# this in-memory generated Journal Entry and prevents the source/JV link
+		# from creating a cancellation deadlock. Journal Entry's own on_cancel
+		# still reverses its accounting ledger entries normally.
+		journal.flags.ignore_links = True
 		journal.cancel()
