@@ -120,6 +120,13 @@ frappe.ui.form.on("Accounting Payment Detail", {
 	party(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		if (!row.party_type || !row.party) return;
+		if (row.party_type === "Custodies") {
+			frappe.db.get_value("Custodies", row.party, ["custody_name", "account"]).then((r) => {
+				frappe.model.set_value(cdt, cdn, "party_name", r.message?.custody_name || row.party);
+				frappe.model.set_value(cdt, cdn, "account", r.message?.account || null);
+			});
+			return;
+		}
 		const fields = {
 			Employee: "employee_name", Supplier: "supplier_name",
 			Institution: "institution_name", Beneficiary: "full_name_ar", Custodies: "custody_name",

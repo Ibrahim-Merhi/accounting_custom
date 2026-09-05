@@ -4,7 +4,7 @@
  "autoname": "field:custody_name",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["custody_name", "company", "disabled"],
+ "field_order": ["custody_name", "company", "account", "disabled"],
  "fields": [
   {
    "fieldname": "custody_name",
@@ -22,6 +22,14 @@
    "in_standard_filter": 1,
    "label": "Company",
    "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Receivable Account",
+   "options": "Account",
    "reqd": 1
   },
   {

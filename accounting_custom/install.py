@@ -63,11 +63,14 @@ def ensure_party_type_permissions():
 	"""Allow accounting administrators to configure Party Types from Desk."""
 	from frappe.permissions import add_permission, update_permission_property
 
-	for role in ("System Manager", "Accounts Manager"):
+	for role in ("System Manager", "Accounts Manager", "Finance Officer", "Treasurer"):
 		filters = {"parent": "Party Type", "role": role, "permlevel": 0, "if_owner": 0}
 		if not frappe.db.exists("Custom DocPerm", filters):
 			add_permission("Party Type", role, 0, "read")
-		for permission in ("read", "write", "create", "delete", "report", "export"):
+		permissions = ["read", "write", "create", "report", "export"]
+		if role in ("System Manager", "Accounts Manager"):
+			permissions.append("delete")
+		for permission in permissions:
 			update_permission_property(
 				"Party Type", role, 0, permission, 1, validate=False
 			)

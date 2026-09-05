@@ -107,6 +107,10 @@ class AccountingPaymentEntry(AccountsController):
 				frappe.throw(_("Row {0}: Party Type {1} is not configured.").format(row.idx, row.party_type))
 			if not frappe.db.exists(row.party_type, row.party):
 				frappe.throw(_("Row {0}: Party does not exist.").format(row.idx))
+			if row.party_type == "Custodies":
+				custody_account = frappe.db.get_value("Custodies", row.party, "account")
+				if custody_account != row.account:
+					frappe.throw(_("Row {0}: Account must match the Receivable Account configured for this custody.").format(row.idx))
 			if account_details and account_details.account_type in ("Receivable", "Payable"):
 				party_account_type = frappe.db.get_value("Party Type", row.party_type, "account_type")
 				if party_account_type != account_details.account_type:

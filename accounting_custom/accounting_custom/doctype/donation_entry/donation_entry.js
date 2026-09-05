@@ -4,6 +4,8 @@ frappe.ui.form.on("Donation Entry", {
 	},
 
 	refresh(frm) {
+		frm.set_df_property("custom_branch", "hidden", 0);
+		frm.toggle_display("custom_branch", true);
 		prepare_compact_layout(frm);
 		add_approval_actions(frm);
 		add_quick_donor_action(frm);

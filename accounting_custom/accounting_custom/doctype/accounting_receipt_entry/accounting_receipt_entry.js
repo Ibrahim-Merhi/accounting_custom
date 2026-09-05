@@ -67,6 +67,13 @@ frappe.ui.form.on("Accounting Payment Detail", {
 	party(frm, cdt, cdn) {
 		if (frm.doctype !== "Accounting Receipt Entry") return;
 		const row = locals[cdt][cdn];
+		if (row.party_type === "Custodies" && row.party) {
+			frappe.db.get_value("Custodies", row.party, ["custody_name", "account"]).then((r) => {
+				frappe.model.set_value(cdt, cdn, "party_name", r.message?.custody_name || row.party);
+				frappe.model.set_value(cdt, cdn, "account", r.message?.account || null);
+			});
+			return;
+		}
 		const fields = { Employee: "employee_name", Supplier: "supplier_name", Institution: "institution_name", Beneficiary: "full_name_ar", Custodies: "custody_name" };
 		if (row.party_type && row.party) {
 			const name_field = fields[row.party_type];
