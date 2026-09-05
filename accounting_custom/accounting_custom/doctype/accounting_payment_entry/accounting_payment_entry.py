@@ -35,6 +35,24 @@ PARTY_COMPANY_FIELDS = {
 
 
 class AccountingPaymentEntry(AccountsController):
+	def _reset_amendment_state(self):
+		if self.docstatus != 0 or not self.amended_from:
+			return
+		self.approval_status = "Draft"
+		self.approved_by = None
+		self.approved_on = None
+		self.journal_entry = None
+
+	def _validate_links(self):
+		# Frappe validates links before before_validate during insert. Remove
+		# the cancelled generated Journal Entry from an amended draft first.
+		self._reset_amendment_state()
+		super()._validate_links()
+
+	def before_validate(self):
+		# An amendment must be reviewed and approved as a new transaction.
+		self._reset_amendment_state()
+
 	def validate(self):
 		self.set_custom_company_currency()
 		validate_accounting_payment_branch(self)

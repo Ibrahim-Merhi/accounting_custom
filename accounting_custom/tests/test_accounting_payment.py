@@ -11,6 +11,20 @@ from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accoun
 
 
 class TestAccountingPaymentGL(TestCase):
+	def test_amendment_starts_new_approval_cycle(self):
+		doc = SimpleNamespace(
+			docstatus=0, amended_from="APE-00001", approval_status="Approved",
+			approved_by="user@example.com", approved_on="2026-09-05",
+			journal_entry="JV-00001",
+		)
+
+		AccountingPaymentEntry._reset_amendment_state(doc)
+
+		self.assertEqual(doc.approval_status, "Draft")
+		self.assertIsNone(doc.approved_by)
+		self.assertIsNone(doc.approved_on)
+		self.assertIsNone(doc.journal_entry)
+
 	@patch.object(frappe.db, "has_column")
 	@patch.object(frappe.db, "table_exists", return_value=False)
 	def test_backfill_skips_missing_table_during_install(self, table_exists, has_column):
