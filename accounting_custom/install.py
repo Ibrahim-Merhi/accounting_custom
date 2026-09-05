@@ -63,6 +63,23 @@ def ensure_party_type_permissions():
 	"""Allow accounting administrators to configure Party Types from Desk."""
 	from frappe.permissions import add_permission, update_permission_property
 
+	# ERPNext marks Party Type as setup-only (`in_create`), which suppresses the
+	# List View Add button even when a role has create permission. This managed
+	# override makes it a normal configurable master for accounting users.
+	property_setter = "Party Type-main-in_create"
+	if frappe.db.exists("Property Setter", property_setter):
+		frappe.db.set_value(
+			"Property Setter", property_setter, "value", "0", update_modified=False
+		)
+	else:
+		frappe.make_property_setter({
+			"doctype": "Party Type",
+			"doctype_or_field": "DocType",
+			"property": "in_create",
+			"property_type": "Check",
+			"value": "0",
+		})
+
 	for role in ("System Manager", "Accounts Manager", "Finance Officer", "Treasurer"):
 		filters = {"parent": "Party Type", "role": role, "permlevel": 0, "if_owner": 0}
 		if not frappe.db.exists("Custom DocPerm", filters):
