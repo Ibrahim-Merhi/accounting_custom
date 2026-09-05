@@ -1,8 +1,13 @@
 from types import SimpleNamespace
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from accounting_custom.accounting.backfill_journals import _get_gl_rows
+import frappe
+
+from accounting_custom.accounting.backfill_journals import (
+	_get_gl_rows,
+	_normalize_legacy_parties,
+)
 
 
 class TestJournalBackfill(TestCase):
@@ -16,3 +21,20 @@ class TestJournalBackfill(TestCase):
 		for doctype in ("Accounting Payment Entry", "Accounting Receipt Entry"):
 			doc = SimpleNamespace(doctype=doctype, get_gl_entries=lambda: [doctype])
 			self.assertEqual(_get_gl_rows(doc), [doctype])
+
+	@patch("accounting_custom.accounting.backfill_journals.frappe")
+	def test_receivable_mismatch_maps_to_custody_by_account(self, frappe_mock):
+		get_value = Mock()
+		get_value.side_effect = ["Receivable", "Payable", "Sheikh Hassan Katerji"]
+		frappe_mock.db.get_value = get_value
+		doc = SimpleNamespace(company="Itihad")
+		row = frappe._dict(
+			account="46990001 - Sheikh Hassan Katerji - ITHD",
+			party_type="Institution",
+			party="Institution 1",
+		)
+
+		_normalize_legacy_parties(doc, [row])
+
+		self.assertEqual(row.party_type, "Custodies")
+		self.assertEqual(row.party, "Sheikh Hassan Katerji")

@@ -66,6 +66,7 @@ def backfill_linked_journal_entries(dry_run=1, confirm=0, limit=0):
 				if doc.docstatus != 1 or doc.get("journal_entry"):
 					continue
 				gl_rows = _get_gl_rows(doc)
+				_normalize_legacy_parties(doc, gl_rows)
 				had_legacy_gl = _has_active_legacy_gl(doctype, name)
 				if had_legacy_gl:
 					make_reverse_gl_entries(
@@ -106,3 +107,31 @@ def _has_active_legacy_gl(doctype, name):
 		"GL Entry",
 		{"voucher_type": doctype, "voucher_no": name, "is_cancelled": 0},
 	))
+
+
+def _normalize_legacy_parties(doc, gl_rows):
+	"""Map legacy Receivable rows to the Custodies master by account.
+
+	Old receipts may have used a Payable party type against a Receivable account.
+	For backfill only, a configured Custodies record provides the valid party
+	without modifying the historical source document.
+	"""
+	for row in gl_rows:
+		if not row.get("party_type") or not row.get("party"):
+			continue
+		account_type = frappe.db.get_value("Account", row.account, "account_type")
+		party_account_type = frappe.db.get_value(
+			"Party Type", row.party_type, "account_type"
+		)
+		if account_type == party_account_type:
+			continue
+		if account_type != "Receivable":
+			continue
+		custody = frappe.db.get_value(
+			"Custodies",
+			{"company": doc.company, "account": row.account, "disabled": 0},
+			"name",
+		)
+		if custody:
+			row.party_type = "Custodies"
+			row.party = custody
