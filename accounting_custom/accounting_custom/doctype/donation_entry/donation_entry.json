@@ -13,6 +13,7 @@
   "column_break_cxbv",
   "posting_date",
   "reference_no",
+  "journal_entry",
   "custom_hijri_date",
   "donor_type",
   "amended_from",
@@ -277,6 +278,14 @@
    "fieldtype": "Data",
    "label": "Reference Number",
    "reqd": 0
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "read_only": 1
   },
   {
    "fieldname": "project",

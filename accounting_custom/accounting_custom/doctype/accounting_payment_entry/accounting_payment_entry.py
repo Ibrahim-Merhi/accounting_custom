@@ -3,7 +3,6 @@ from frappe import _
 from frappe.desk.reportview import get_match_cond
 from frappe.utils import flt, now_datetime
 
-from erpnext.accounts.general_ledger import make_gl_entries, make_reverse_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
 from accounting_custom.accounting.branch import validate_accounting_payment_branch
@@ -13,6 +12,10 @@ from accounting_custom.accounting.donation_gl import (
 	get_mode_of_payment_currency,
 )
 from accounting_custom.api.exchange_rate import get_company_exchange_rate
+from accounting_custom.accounting.journal_posting import (
+	cancel_linked_journal_entry,
+	create_linked_journal_entry,
+)
 from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
 
@@ -62,9 +65,7 @@ class AccountingPaymentEntry(AccountsController):
 		)
 
 	def on_submit(self):
-		if frappe.db.exists("GL Entry", {"voucher_type": self.doctype, "voucher_no": self.name, "is_cancelled": 0}):
-			frappe.throw(_("Active accounting entries already exist for {0}.").format(self.name))
-		make_gl_entries(self.get_gl_entries(), merge_entries=False, update_outstanding="No")
+		create_linked_journal_entry(self, self.get_gl_entries())
 
 	def before_submit(self):
 		for row in self.custom_accounting_rows_copy:
@@ -75,9 +76,8 @@ class AccountingPaymentEntry(AccountsController):
 		if self.approval_status != "Approved":
 			frappe.throw(_("Finance approval is required before submitting this payment."))
 
-	def on_cancel(self):
-		self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
-		make_reverse_gl_entries(voucher_type=self.doctype, voucher_no=self.name, update_outstanding="No")
+	def before_cancel(self):
+		cancel_linked_journal_entry(self)
 
 	def set_custom_company_currency(self):
 		self.custom_company_currency = frappe.db.get_value("Company", self.company, "default_currency")

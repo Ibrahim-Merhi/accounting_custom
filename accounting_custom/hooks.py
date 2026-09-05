@@ -291,7 +291,7 @@ after_migrate = "accounting_custom.install.after_migrate"
 fixtures = [
 	{
 		"dt": "Print Format",
-		"filters": [["name", "in", ["سند قبض", "سند صرف", "Journal Voucher"]]],
+		"filters": [["name", "in", ["سند قبض", "سند صرف", "سند قبض محاسبي", "Journal Voucher"]]],
 	},
 	{
 		"dt": "Property Setter",

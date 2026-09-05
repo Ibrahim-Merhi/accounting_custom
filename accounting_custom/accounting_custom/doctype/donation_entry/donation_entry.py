@@ -5,13 +5,16 @@ from frappe.utils import flt, now_datetime
 from erpnext.controllers.accounts_controller import AccountsController
 
 from accounting_custom.accounting.donation_gl import (
-	cancel_gl_entries,
+	build_gl_entries,
 	get_account_details,
 	get_mode_of_payment_currency,
 	get_mode_of_payment_account,
-	post_gl_entries,
 )
 from accounting_custom.accounting.donor_accounts import get_donor_account
+from accounting_custom.accounting.journal_posting import (
+	cancel_linked_journal_entry,
+	create_linked_journal_entry,
+)
 from accounting_custom.api.exchange_rate import get_company_exchange_rate
 from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
@@ -49,11 +52,10 @@ class DonationEntry(AccountsController):
 		self.validate_donor_account()
 
 	def on_submit(self):
-		post_gl_entries(self)
+		create_linked_journal_entry(self, build_gl_entries(self))
 
-	def on_cancel(self):
-		self.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
-		cancel_gl_entries(self)
+	def before_cancel(self):
+		cancel_linked_journal_entry(self)
 
 	def set_custom_company_currency(self):
 		if not self.company:

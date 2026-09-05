@@ -226,12 +226,17 @@ function set_hijri_date(frm) {
 }
 
 function add_ledger_button(frm) {
+	if (frm.doc.journal_entry) {
+		frm.add_custom_button(__("View Journal Entry"), () => {
+			frappe.set_route("Form", "Journal Entry", frm.doc.journal_entry);
+		});
+	}
 	frm.add_custom_button(__("View Ledger"), () => {
 		frappe.set_route("query-report", "General Ledger", {
 			company: frm.doc.company,
 			from_date: frm.doc.posting_date,
 			to_date: frm.doc.posting_date,
-			voucher_no: frm.doc.name,
+			voucher_no: frm.doc.journal_entry || frm.doc.name,
 			add_values_in_transaction_currency: 1,
 			show_cancelled_entries: frm.doc.docstatus === 2 ? 1 : 0,
 		});

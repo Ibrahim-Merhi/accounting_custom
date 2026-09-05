@@ -7,13 +7,13 @@ REQUIRED_DOCTYPES = {
 	"Accounting User Guide": {"guide_content"},
 	"Collector Profile": {"user", "company", "default_donor_account", "custody_accounts"},
 	"Collector Custody Account": {"currency", "account"},
-	"Donation Entry": {"collector", "approval_status", "finance_notes", "treasury_status", "reference_no"},
+	"Donation Entry": {"collector", "approval_status", "finance_notes", "treasury_status", "reference_no", "journal_entry"},
 	"Accounting Payment Entry": {
-		"approval_status", "approved_by", "approved_on", "finance_notes", "reference_no",
+		"approval_status", "approved_by", "approved_on", "finance_notes", "reference_no", "journal_entry",
 	},
 	"Accounting Receipt Entry": {
 		"company", "posting_date", "reference_no", "custom_accounting_rows_copy",
-		"approval_status", "currency_totals", "total_debit", "total_credit",
+		"approval_status", "currency_totals", "total_debit", "total_credit", "journal_entry",
 	},
 	"Accounting Currency Exchange": {"company", "posting_date", "from_mode_of_payment", "source_account", "from_currency", "from_amount", "from_cost_center", "to_mode_of_payment", "target_account", "to_currency", "to_cost_center", "to_amount", "remarks", "journal_entry"},
 	"Collector Handover": {"company", "collector", "lines", "received_by"},
@@ -62,6 +62,7 @@ REQUIRED_CUSTOM_FIELDS = {
 REQUIRED_PRINT_FORMATS = {
 	"سند قبض": "Donation Entry",
 	"سند صرف": "Accounting Payment Entry",
+	"سند قبض محاسبي": "Accounting Receipt Entry",
 	"Journal Voucher": "Journal Entry",
 }
 

@@ -8,12 +8,17 @@ frappe.ui.form.on("Accounting Receipt Entry", {
 		if (frm.doc.posting_date) set_receipt_hijri_date(frm);
 		setTimeout(() => ensure_receipt_row(frm), 0);
 		if (!frm.is_new() && frm.doc.docstatus !== 0) {
+			if (frm.doc.journal_entry) {
+				frm.add_custom_button(__("View Journal Entry"), () => {
+					frappe.set_route("Form", "Journal Entry", frm.doc.journal_entry);
+				});
+			}
 			frm.add_custom_button(__("Ledger"), () => {
 				frappe.route_options = {
 					company: frm.doc.company,
 					from_date: frm.doc.posting_date,
 					to_date: moment(frm.doc.modified).format("YYYY-MM-DD"),
-					voucher_no: frm.doc.name,
+					voucher_no: frm.doc.journal_entry || frm.doc.name,
 					group_by: "",
 					show_cancelled_entries: frm.doc.docstatus === 2,
 				};

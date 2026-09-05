@@ -50,6 +50,11 @@ function add_payment_approval_actions(frm) {
 
 function add_accounting_buttons(frm) {
 	if (frm.is_new() || frm.doc.docstatus === 0) return;
+	if (frm.doc.journal_entry) {
+		frm.add_custom_button(__("View Journal Entry"), () => {
+			frappe.set_route("Form", "Journal Entry", frm.doc.journal_entry);
+		});
+	}
 
 	frm.add_custom_button(
 		__("Ledger"),
@@ -58,7 +63,7 @@ function add_accounting_buttons(frm) {
 				company: frm.doc.company,
 				from_date: frm.doc.posting_date,
 				to_date: moment(frm.doc.modified).format("YYYY-MM-DD"),
-				voucher_no: frm.doc.name,
+				voucher_no: frm.doc.journal_entry || frm.doc.name,
 				group_by: "",
 				show_cancelled_entries: frm.doc.docstatus === 2,
 			};

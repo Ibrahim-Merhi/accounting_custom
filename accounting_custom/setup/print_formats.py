@@ -3,6 +3,7 @@ import frappe
 
 RECEIPT_NAME = "سند قبض"
 PAYMENT_NAME = "سند صرف"
+ACCOUNTING_RECEIPT_NAME = "سند قبض محاسبي"
 
 
 def ensure_arabic_voucher_print_formats():
@@ -10,7 +11,7 @@ def ensure_arabic_voucher_print_formats():
 		return
 
 	receipt = frappe.get_doc("Print Format", RECEIPT_NAME)
-	receipt_html = _add_voucher_number(receipt.html)
+	receipt_html = _add_organization_details(_add_voucher_number(receipt.html))
 	if receipt_html != receipt.html:
 		receipt.db_set("html", receipt_html, update_modified=False)
 
@@ -41,6 +42,33 @@ def ensure_arabic_voucher_print_formats():
 		frappe.get_doc({"doctype": "Print Format", "name": PAYMENT_NAME, **values}).insert(
 			ignore_permissions=True
 		)
+
+	if frappe.db.exists("DocType", "Accounting Receipt Entry"):
+		receipt_values = {
+			**values,
+			"doc_type": "Accounting Receipt Entry",
+			"html": _accounting_receipt_html(receipt_html),
+		}
+		if frappe.db.exists("Print Format", ACCOUNTING_RECEIPT_NAME):
+			frappe.db.set_value(
+				"Print Format", ACCOUNTING_RECEIPT_NAME, receipt_values, update_modified=False
+			)
+		else:
+			frappe.get_doc({
+				"doctype": "Print Format", "name": ACCOUNTING_RECEIPT_NAME, **receipt_values,
+			}).insert(ignore_permissions=True)
+
+
+def _add_organization_details(html):
+	if "للدعوة والتعليم الشرعي والمؤسسات الخيرية" in html:
+		return html
+	return html.replace(
+		"جمعية الاتحاد الإسلامي",
+		"""جمعية الاتحاد الإسلامي
+            <span style="font-size:14px;font-weight:700;">للدعوة والتعليم الشرعي والمؤسسات الخيرية</span>
+            <span style="font-size:13px;font-weight:700;">لبنان - علم وخبر ١٤٥/أد</span>""",
+		1,
+	)
 
 
 def _add_voucher_number(html):
@@ -81,4 +109,38 @@ def _payment_html(html):
 	html = html.replace("{{ donor_phone }}", '{{ doc.custom_branch or "" }}', 1)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
 	html = html.replace("المستلم", "المستفيد", 1)
+	return html
+
+
+def _accounting_receipt_html(html):
+	old_amounts = """{% if doc.payments %}
+    {% set usd_amount = doc.payments
+        | selectattr("currency", "equalto", "USD")
+        | sum(attribute="donation_amount") %}
+    {% set lbp_amount = doc.payments
+        | selectattr("currency", "equalto", "LBP")
+        | sum(attribute="donation_amount") %}
+{% else %}
+    {% set usd_amount = doc.donation_amount if doc.currency == "USD" else 0 %}
+    {% set lbp_amount = doc.donation_amount if doc.currency == "LBP" else 0 %}
+{% endif %}"""
+	new_amounts = """{% set usd_amount = doc.currency_totals
+    | selectattr("currency", "equalto", "USD")
+    | sum(attribute="total_debit") %}
+{% set lbp_amount = doc.currency_totals
+    | selectattr("currency", "equalto", "LBP")
+    | sum(attribute="total_debit") %}"""
+
+	html = html.replace("ITIHAD - DONATION ENTRY RECEIPT", "ITIHAD - ACCOUNTING RECEIPT ENTRY")
+	html = html.replace('"Donation Entry",\n    doc.name,', '"Accounting Receipt Entry",\n    doc.name,', 1)
+	html = html.replace(old_amounts, new_amounts, 1)
+	html = html.replace(
+		'{{ doc.donor_name or doc.donor or "" }}',
+		'{{ doc.custom_accounting_rows_copy | map(attribute="party_name") | select | unique | join("، ") }}',
+		1,
+	)
+	html = html.replace("DONOR NAME + PHONE", "RECEIPT PARTY + REFERENCE")
+	html = html.replace("رقم الهاتف:", "الفرع:", 1)
+	html = html.replace("{{ donor_phone }}", '{{ doc.custom_branch or "" }}', 1)
+	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
 	return html
