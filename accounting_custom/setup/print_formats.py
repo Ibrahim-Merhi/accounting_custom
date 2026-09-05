@@ -79,10 +79,10 @@ def _add_organization_details(html):
 	styles = """
 /* ITIHAD-ORGANIZATION-LAYOUT-V2 */
 .receipt-main {
-    margin-right: 164px !important;
+    margin-right: 126px !important;
 }
 .organization-box {
-    width: 150px !important;
+    width: 112px !important;
     background: #fff !important;
     color: #111 !important;
     border: 2px solid #111 !important;
@@ -95,8 +95,8 @@ def _add_organization_details(html):
     direction: ltr !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 3px;
-    padding: 8px 5px;
+    gap: 2px;
+    padding: 7px 3px;
     box-sizing: border-box;
     background: #fff !important;
     color: #111 !important;
@@ -114,19 +114,19 @@ def _add_organization_details(html):
 }
 .organization-layout-v2 .organization-primary {
     flex: 0 0 52%;
-    font-size: 32px;
+    font-size: 27px;
     font-weight: 800;
     line-height: 1.05;
 }
 .organization-layout-v2 .organization-secondary {
     flex: 0 0 29%;
-    font-size: 17px;
+    font-size: 14px;
     font-weight: 700;
     line-height: 1.15;
 }
 .organization-layout-v2 .organization-registration {
     flex: 0 0 15%;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1.1;
 }
