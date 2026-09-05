@@ -45,7 +45,9 @@ doctype_js = {
 }
 
 extend_bootinfo = "accounting_custom.accounting.cost_center.extend_bootinfo"
-# doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
+doctype_list_js = {
+	"Party Type": "public/js/party_type_list.js",
+}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 

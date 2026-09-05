@@ -80,7 +80,7 @@ def ensure_party_type_permissions():
 			"value": "0",
 		})
 
-	for role in ("System Manager", "Accounts Manager", "Finance Officer", "Treasurer"):
+	for role in ("System Manager", "Accounts Manager", "Accounts User", "Finance Officer", "Treasurer"):
 		filters = {"parent": "Party Type", "role": role, "permlevel": 0, "if_owner": 0}
 		if not frappe.db.exists("Custom DocPerm", filters):
 			add_permission("Party Type", role, 0, "read")
