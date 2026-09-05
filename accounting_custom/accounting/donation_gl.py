@@ -74,6 +74,7 @@ def build_gl_entries(doc):
 			"voucher_no": doc.name,
 			"cost_center": payment.cost_center,
 			"project": doc.project,
+			"custom_branch": getattr(doc, "custom_branch", None),
 			"is_opening": "No",
 		}
 

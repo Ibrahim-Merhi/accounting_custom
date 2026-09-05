@@ -11,6 +11,7 @@ from accounting_custom.accounting.donation_gl import (
 	get_mode_of_payment_account,
 )
 from accounting_custom.accounting.donor_accounts import get_donor_account
+from accounting_custom.accounting.branch import validate_accounting_payment_branch
 from accounting_custom.accounting.journal_posting import (
 	cancel_linked_journal_entry,
 	create_linked_journal_entry,
@@ -32,6 +33,7 @@ class DonationEntry(AccountsController):
 
 	def validate(self):
 		self.set_custom_company_currency()
+		validate_accounting_payment_branch(self)
 		self.validate_header()
 		self.set_payment_amounts()
 		self.sync_legacy_payment_fields()

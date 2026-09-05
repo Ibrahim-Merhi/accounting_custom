@@ -7,6 +7,7 @@ REQUIRED_DOCTYPES = {
 	"Accounting User Guide": {"guide_content"},
 	"Collector Profile": {"user", "company", "default_donor_account", "custody_accounts"},
 	"Collector Custody Account": {"currency", "account"},
+	"Custodies": {"custody_name", "company", "disabled"},
 	"Donation Entry": {"collector", "approval_status", "finance_notes", "treasury_status", "reference_no", "journal_entry"},
 	"Accounting Payment Entry": {
 		"approval_status", "approved_by", "approved_on", "finance_notes", "reference_no", "journal_entry",

@@ -10,7 +10,7 @@
   {"columns":2,"fieldname":"account","fieldtype":"Link","in_list_view":1,"label":"Account","options":"Account"},
   {"columns":1,"fieldname":"currency","fieldtype":"Link","in_list_view":1,"label":"Currency","options":"Currency","read_only":1,"reqd":1},
   {"columns":1,"fieldname":"amount","fieldtype":"Currency","in_list_view":1,"label":"Amount","options":"currency","reqd":1},
-  {"columns":1,"fieldname":"party_type","fieldtype":"Select","in_list_view":1,"label":"Party Type","options":"\nEmployee\nSupplier\nInstitution\nBeneficiary"},
+  {"columns":1,"fieldname":"party_type","fieldtype":"Link","in_list_view":1,"label":"Party Type","options":"DocType"},
   {"columns":2,"fieldname":"party","fieldtype":"Dynamic Link","in_list_view":1,"label":"Party","options":"party_type"},
   {"fieldname":"party_name","fieldtype":"Data","label":"Party Name","read_only":1},
   {"default":"1","fieldname":"exchange_rate","fieldtype":"Float","hidden":1,"label":"Exchange Rate","precision":"9","read_only":1},

@@ -16,6 +16,8 @@ SECTIONS = [
 		("Accounting Payment Entry", "DocType"),
 		("Accounting Receipt Entry", "DocType"),
 		("Accounting Currency Exchange", "DocType"),
+		("Custodies", "DocType"),
+		("Party Type", "DocType"),
 		("Payment Memo", "DocType"),
 	]),
 	("Payroll", [

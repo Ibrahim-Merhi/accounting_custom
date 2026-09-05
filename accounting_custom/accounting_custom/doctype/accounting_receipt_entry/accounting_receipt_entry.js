@@ -67,10 +67,15 @@ frappe.ui.form.on("Accounting Payment Detail", {
 	party(frm, cdt, cdn) {
 		if (frm.doctype !== "Accounting Receipt Entry") return;
 		const row = locals[cdt][cdn];
-		const fields = { Employee: "employee_name", Supplier: "supplier_name", Institution: "institution_name", Beneficiary: "full_name_ar" };
-		if (row.party_type && row.party && fields[row.party_type]) {
-			frappe.db.get_value(row.party_type, row.party, fields[row.party_type]).then((r) => {
-				frappe.model.set_value(cdt, cdn, "party_name", r.message?.[fields[row.party_type]] || row.party);
+		const fields = { Employee: "employee_name", Supplier: "supplier_name", Institution: "institution_name", Beneficiary: "full_name_ar", Custodies: "custody_name" };
+		if (row.party_type && row.party) {
+			const name_field = fields[row.party_type];
+			if (!name_field) {
+				frappe.model.set_value(cdt, cdn, "party_name", row.party);
+				return;
+			}
+			frappe.db.get_value(row.party_type, row.party, name_field).then((r) => {
+				frappe.model.set_value(cdt, cdn, "party_name", r.message?.[name_field] || row.party);
 			});
 		}
 	},
@@ -88,7 +93,8 @@ function set_receipt_queries(frm) {
 		if (row.party_type === "Employee") return { filters: { company: frm.doc.company } };
 		if (row.party_type === "Supplier") return { query: "accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.supplier_by_company_query", filters: { company: frm.doc.company } };
 		if (row.party_type === "Institution") return { filters: { company: frm.doc.company, disabled: 0 } };
-		return { filters: { name: ["=", ""] } };
+		if (row.party_type === "Custodies") return { filters: { company: frm.doc.company, disabled: 0 } };
+		return {};
 	});
 }
 

@@ -24,11 +24,13 @@ PARTY_NAME_FIELDS = {
 	"Supplier": "supplier_name",
 	"Institution": "institution_name",
 	"Beneficiary": "full_name_ar",
+	"Custodies": "custody_name",
 }
 
 PARTY_COMPANY_FIELDS = {
 	"Employee": "company",
 	"Institution": "company",
+	"Custodies": "company",
 }
 
 
@@ -86,7 +88,9 @@ class AccountingPaymentEntry(AccountsController):
 
 	def validate_row(self, row):
 		if row.account:
-			get_account_details(row.account, self.company)
+			account_details = get_account_details(row.account, self.company)
+		else:
+			account_details = None
 		mode_account = get_mode_of_payment_account(row.mode_of_payment, self.company)
 		get_account_details(mode_account, self.company)
 		row.currency = get_mode_of_payment_currency(row.mode_of_payment, self.company)
@@ -97,10 +101,18 @@ class AccountingPaymentEntry(AccountsController):
 		if flt(row.amount) <= 0:
 			frappe.throw(_("Row {0}: Amount must be greater than zero.").format(row.idx))
 		if row.party_type or row.party:
-			if row.party_type not in PARTY_NAME_FIELDS or not row.party:
+			if not row.party_type or not row.party:
 				frappe.throw(_("Row {0}: Select a valid Party Type and Party.").format(row.idx))
+			if not frappe.db.exists("Party Type", row.party_type):
+				frappe.throw(_("Row {0}: Party Type {1} is not configured.").format(row.idx, row.party_type))
 			if not frappe.db.exists(row.party_type, row.party):
 				frappe.throw(_("Row {0}: Party does not exist.").format(row.idx))
+			if account_details and account_details.account_type in ("Receivable", "Payable"):
+				party_account_type = frappe.db.get_value("Party Type", row.party_type, "account_type")
+				if party_account_type != account_details.account_type:
+					frappe.throw(_("Row {0}: Account and Party Type must both be {1}.").format(
+						row.idx, account_details.account_type
+					))
 			if row.party_type == "Supplier":
 				party_company_exists = frappe.db.exists(
 					"Party Account",
@@ -114,7 +126,12 @@ class AccountingPaymentEntry(AccountsController):
 				)
 				if party_company != self.company:
 					frappe.throw(_("Row {0}: Party does not belong to the selected company.").format(row.idx))
-			row.party_name = frappe.db.get_value(row.party_type, row.party, PARTY_NAME_FIELDS[row.party_type]) or row.party
+			name_field = PARTY_NAME_FIELDS.get(row.party_type)
+			if not name_field:
+				name_field = frappe.get_cached_value("DocType", row.party_type, "title_field")
+			row.party_name = (
+				frappe.db.get_value(row.party_type, row.party, name_field) if name_field else row.party
+			) or row.party
 		rate = get_company_exchange_rate(self.company, row.currency, self.custom_company_currency, self.posting_date)
 		row.exchange_rate = flt(rate["exchange_rate"])
 		row.base_amount = flt(row.amount) * row.exchange_rate

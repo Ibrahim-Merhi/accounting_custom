@@ -42,14 +42,14 @@ JOURNAL_VOUCHER_HTML = r"""
 
   <table class="jv-table">
     <colgroup>
-      <col style="width:7%"><col style="width:22%"><col style="width:7%"><col style="width:8%">
-      <col style="width:7%"><col style="width:7%"><col style="width:5%"><col style="width:9%">
-      <col style="width:7%"><col style="width:7%"><col style="width:7%"><col style="width:7%">
+      <col style="width:8%"><col style="width:25%"><col style="width:8%"><col style="width:9%">
+      <col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%">
+      <col style="width:8%"><col style="width:8%">
     </colgroup>
     <thead>
       <tr>
         <th>Account</th><th>Name / Narration</th><th>V. Date</th><th>Job</th>
-        <th>Ref.</th><th>User Ref.</th><th>Type</th><th>Foreign Currency</th>
+        <th>Ref.</th><th>Foreign Currency</th>
         <th>LBP Debit</th><th>LBP Credit</th><th>USD Debit</th><th>USD Credit</th>
       </tr>
     </thead>
@@ -75,9 +75,7 @@ JOURNAL_VOUCHER_HTML = r"""
         </td>
         <td class="center">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yyyy") }}</td>
         <td>{{ row.project or row.cost_center or "" }}</td>
-        <td>{{ row.reference_name or "" }}</td>
-        <td>{{ row.user_remark or "" }}</td>
-        <td class="center">GJV</td>
+        <td>{{ row.reference_no or "" }}</td>
         <td class="number">{% if row.account_currency not in ("LBP", "USD") %}{{ row.debit_in_account_currency or row.credit_in_account_currency or 0 }} {{ row.account_currency }}{% endif %}</td>
         <td class="number">{% if lbp_debit %}{{ frappe.utils.fmt_money(lbp_debit, currency="") }}{% endif %}</td>
         <td class="number">{% if lbp_credit %}{{ frappe.utils.fmt_money(lbp_credit, currency="") }}{% endif %}</td>
@@ -86,7 +84,7 @@ JOURNAL_VOUCHER_HTML = r"""
       </tr>
     {% endfor %}
       <tr>
-        <td colspan="8" class="jv-total-label">Total :</td>
+        <td colspan="6" class="jv-total-label">Total :</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.lbp_debit, currency="") }}</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.lbp_credit, currency="") }}</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.usd_debit, currency="") }}</td>

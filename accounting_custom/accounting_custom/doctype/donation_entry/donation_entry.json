@@ -27,6 +27,7 @@
   "treasury_status",
   "section_break_rcro",
   "company",
+  "custom_branch",
   "donor_account",
   "project",
   "details_column_break",
@@ -116,6 +117,13 @@
    "fieldtype": "Link",
    "label": "Company",
    "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "custom_branch",
+   "fieldtype": "Link",
+   "label": "Branch",
+   "options": "Branch",
    "reqd": 1
   },
   {

@@ -171,7 +171,7 @@ def _payment_html(html):
 	html = html.replace("رقم الهاتف:", "الفرع:", 1)
 	html = html.replace("{{ donor_phone }}", '{{ doc.custom_branch or "" }}', 1)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
-	html = html.replace("المستلم", "المستفيد", 1)
+	html = html.replace('{{ user.full_name or "" }}', "", 1)
 	return html
 
 

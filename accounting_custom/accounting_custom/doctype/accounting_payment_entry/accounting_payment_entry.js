@@ -122,10 +122,15 @@ frappe.ui.form.on("Accounting Payment Detail", {
 		if (!row.party_type || !row.party) return;
 		const fields = {
 			Employee: "employee_name", Supplier: "supplier_name",
-			Institution: "institution_name", Beneficiary: "full_name_ar",
+			Institution: "institution_name", Beneficiary: "full_name_ar", Custodies: "custody_name",
 		};
-		frappe.db.get_value(row.party_type, row.party, fields[row.party_type]).then((r) => {
-			frappe.model.set_value(cdt, cdn, "party_name", r.message?.[fields[row.party_type]] || row.party);
+		const name_field = fields[row.party_type];
+		if (!name_field) {
+			frappe.model.set_value(cdt, cdn, "party_name", row.party);
+			return;
+		}
+		frappe.db.get_value(row.party_type, row.party, name_field).then((r) => {
+			frappe.model.set_value(cdt, cdn, "party_name", r.message?.[name_field] || row.party);
 		});
 	},
 
@@ -200,7 +205,8 @@ function set_payment_queries(frm) {
 			filters: { company: frm.doc.company },
 		};
 		if (row.party_type === "Institution") return { filters: { company: frm.doc.company, disabled: 0 } };
-		return { filters: { name: ["=", ""] } };
+		if (row.party_type === "Custodies") return { filters: { company: frm.doc.company, disabled: 0 } };
+		return {};
 	});
 }
 

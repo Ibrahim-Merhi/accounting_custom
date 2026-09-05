@@ -34,6 +34,7 @@ def create_linked_journal_entry(source_doc, gl_rows):
 			"project": gl_row.get("project"),
 			"custom_branch": gl_row.get("custom_branch"),
 			"user_remark": gl_row.get("remarks"),
+			"reference_no": gl_row.get("reference_no") or source_doc.get("reference_no"),
 		})
 
 	journal.flags.ignore_company_exchange_rate = True

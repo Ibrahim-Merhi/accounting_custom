@@ -25,6 +25,7 @@ frappe.ui.form.on("Donation Entry", {
 
 	company(frm) {
 		frm.set_value("donor_account", null);
+		frm.set_value("custom_branch", null);
 		frm.clear_table("payments");
 		frm.refresh_field("payments");
 		if (frm.doc.company) {
@@ -135,6 +136,9 @@ function set_queries(frm) {
 		filters: frm.donor_companies.length ? { name: ["in", frm.donor_companies] } : { name: ["=", ""] },
 	}));
 	frm.set_query("donor_account", () => account_query(frm.doc.company));
+	frm.set_query("custom_branch", () => ({
+		filters: frm.doc.company ? { custom_company: frm.doc.company } : { name: ["=", ""] },
+	}));
 	frm.set_query("project", () => ({ filters: frm.doc.company ? { company: frm.doc.company } : { name: ["=", ""] } }));
 	frm.set_query("mode_of_payment", "payments", () => mode_of_payment_query(frm.doc.company));
 	frm.set_query("cost_center", "payments", () => ({

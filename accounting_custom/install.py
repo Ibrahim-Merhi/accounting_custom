@@ -20,6 +20,7 @@ PARTY_TYPES = {
 	"Supplier": "Payable",
 	"Institution": "Payable",
 	"Beneficiary": "Payable",
+	"Custodies": "Receivable",
 }
 
 
@@ -33,6 +34,7 @@ def after_migrate():
 
 def setup_accounting_customizations():
 	ensure_accounting_roles()
+	ensure_party_type_permissions()
 	ensure_custom_fields()
 	backfill_arabic_names()
 	ensure_party_types()
@@ -53,6 +55,23 @@ def ensure_party_types():
 			frappe.get_doc(
 				{"doctype": "Party Type", "party_type": party_type, "account_type": account_type}
 			).insert(ignore_permissions=True)
+		elif frappe.db.get_value("Party Type", party_type, "account_type") != account_type:
+			frappe.db.set_value("Party Type", party_type, "account_type", account_type)
+
+
+def ensure_party_type_permissions():
+	"""Allow accounting administrators to configure Party Types from Desk."""
+	from frappe.permissions import add_permission, update_permission_property
+
+	for role in ("System Manager", "Accounts Manager"):
+		filters = {"parent": "Party Type", "role": role, "permlevel": 0, "if_owner": 0}
+		if not frappe.db.exists("Custom DocPerm", filters):
+			add_permission("Party Type", role, 0, "read")
+		for permission in ("read", "write", "create", "delete", "report", "export"):
+			update_permission_property(
+				"Party Type", role, 0, permission, 1, validate=False
+			)
+	frappe.clear_cache(doctype="Party Type")
 
 
 def ensure_accounting_roles():
