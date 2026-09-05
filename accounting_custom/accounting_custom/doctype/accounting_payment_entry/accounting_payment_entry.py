@@ -36,7 +36,7 @@ PARTY_COMPANY_FIELDS = {
 
 class AccountingPaymentEntry(AccountsController):
 	def _reset_amendment_state(self):
-		if self.docstatus != 0 or not self.amended_from:
+		if self.docstatus != 0 or not self.amended_from or not self.is_new():
 			return
 		self.approval_status = "Draft"
 		self.approved_by = None
@@ -253,13 +253,13 @@ def _set_approval_status(doctype, name, action, notes=None):
 		frappe.throw(_("Only draft payments can be reviewed."))
 	roles = set(frappe.get_roles())
 	if action == "Submit for Finance Approval":
-		if not ({"Accounts User", "Accounts Manager", "Finance Officer", "System Manager"} & roles):
+		if not ({"Accounts User", "Accounts Manager", "Finance Officer", "Treasurer", "System Manager"} & roles):
 			frappe.throw(_("You cannot submit this payment for approval."))
 		if doc.approval_status not in ("Draft", "Returned"):
 			frappe.throw(_("This payment is already in review."))
 		doc.approval_status = "Pending Finance Approval"
 	elif action in ("Approve", "Return", "Reject"):
-		if not ({"Finance Officer", "Accounts Manager", "System Manager"} & roles):
+		if not ({"Finance Officer", "Accounts Manager", "Treasurer", "System Manager"} & roles):
 			frappe.throw(_("Finance Officer permission is required."))
 		if doc.approval_status != "Pending Finance Approval":
 			frappe.throw(_("This payment is not awaiting Finance approval."))

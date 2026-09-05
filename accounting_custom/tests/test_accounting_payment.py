@@ -15,7 +15,7 @@ class TestAccountingPaymentGL(TestCase):
 		doc = SimpleNamespace(
 			docstatus=0, amended_from="APE-00001", approval_status="Approved",
 			approved_by="user@example.com", approved_on="2026-09-05",
-			journal_entry="JV-00001",
+			journal_entry="JV-00001", is_new=lambda: True,
 		)
 
 		AccountingPaymentEntry._reset_amendment_state(doc)
@@ -24,6 +24,18 @@ class TestAccountingPaymentGL(TestCase):
 		self.assertIsNone(doc.approved_by)
 		self.assertIsNone(doc.approved_on)
 		self.assertIsNone(doc.journal_entry)
+
+	def test_saved_amendment_keeps_approval_progress(self):
+		doc = SimpleNamespace(
+			docstatus=0, amended_from="APE-00001",
+			approval_status="Pending Finance Approval",
+			approved_by=None, approved_on=None, journal_entry=None,
+			is_new=lambda: False,
+		)
+
+		AccountingPaymentEntry._reset_amendment_state(doc)
+
+		self.assertEqual(doc.approval_status, "Pending Finance Approval")
 
 	@patch.object(frappe.db, "has_column")
 	@patch.object(frappe.db, "table_exists", return_value=False)

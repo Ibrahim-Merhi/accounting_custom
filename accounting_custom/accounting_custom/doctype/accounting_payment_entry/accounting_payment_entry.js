@@ -41,7 +41,7 @@ function add_payment_approval_actions(frm) {
 	if (["Draft", "Returned"].includes(frm.doc.approval_status)) {
 		frm.add_custom_button(__("Submit for Finance Approval"), () => move("Submit for Finance Approval"), __("Approval"));
 	}
-	if (frm.doc.approval_status === "Pending Finance Approval" && roles.some((role) => ["Finance Officer", "Accounts Manager", "System Manager"].includes(role))) {
+	if (frm.doc.approval_status === "Pending Finance Approval" && roles.some((role) => ["Finance Officer", "Accounts Manager", "Treasurer", "System Manager"].includes(role))) {
 		["Approve", "Return", "Reject"].forEach((action) => {
 			frm.add_custom_button(__(action), () => move(action), __("Approval"));
 		});

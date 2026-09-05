@@ -117,7 +117,7 @@ class TestDonationGL(TestCase):
 		doc = SimpleNamespace(
 			amended_from="DON-2026-00001", collector="COLLECTOR-1",
 			approval_status="Approved", approved_by="user@example.com",
-			approved_on="2026-09-05", journal_entry="JV-00001",
+			approved_on="2026-09-05", journal_entry="JV-00001", is_new=lambda: True,
 		)
 
 		doc.docstatus = 0

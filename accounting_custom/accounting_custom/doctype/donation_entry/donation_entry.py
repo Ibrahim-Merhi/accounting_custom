@@ -22,7 +22,7 @@ from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
 class DonationEntry(AccountsController):
 	def _reset_amendment_state(self):
-		if self.docstatus != 0 or not self.amended_from:
+		if self.docstatus != 0 or not self.amended_from or not self.is_new():
 			return
 		self.approval_status = "Draft"
 		self.approved_by = None
