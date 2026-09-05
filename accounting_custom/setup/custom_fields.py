@@ -60,7 +60,7 @@ CUSTOM_FIELDS = {
 	"Donor": [
 		{
 			"fieldname": "custom_phone_numper", "label": "Phone Number", "fieldtype": "Data",
-			"insert_after": "donor_name", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1,
+			"insert_after": "donor_name", "in_list_view": 1, "in_standard_filter": 1, "reqd": 0,
 		},
 		{
 			"fieldname": "custom_accounts_section", "label": "Accounts Section",
@@ -151,7 +151,7 @@ def remove_legacy_donation_requirements():
 def configure_quick_donor_creation():
 	if not frappe.db.exists("DocType", "Donor"):
 		return
-	for fieldname in ("donor_type", "professional_title", "email"):
+	for fieldname in ("donor_type", "professional_title", "email", "custom_phone_numper"):
 		property_name = f"Donor-{fieldname}-reqd"
 		if frappe.db.exists("Property Setter", property_name):
 			frappe.db.set_value(

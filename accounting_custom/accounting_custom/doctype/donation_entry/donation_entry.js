@@ -71,7 +71,7 @@ function add_quick_donor_action(frm) {
 			title: __("Quick Donor"),
 			fields: [
 				{ fieldname: "donor_name", fieldtype: "Data", label: __("Donor Name"), reqd: 1 },
-				{ fieldname: "phone_number", fieldtype: "Data", label: __("Phone Number"), reqd: 1 },
+				{ fieldname: "phone_number", fieldtype: "Data", label: __("Phone Number") },
 				{ fieldname: "company", fieldtype: "Link", label: __("Company"), options: "Company", reqd: 1, default: frm.doc.company },
 			],
 			primary_action_label: __("Create and Select"),

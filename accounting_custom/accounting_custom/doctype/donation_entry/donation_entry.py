@@ -181,13 +181,13 @@ def set_approval_status(name, action, notes=None):
 
 
 @frappe.whitelist()
-def quick_create_donor(donor_name, phone_number, company):
+def quick_create_donor(donor_name, phone_number=None, company=None):
 	if "Collector" not in set(frappe.get_roles()):
 		frappe.throw(_("Collector permission is required to create a quick donor."))
 	donor_name = (donor_name or "").strip()
 	phone_number = (phone_number or "").strip()
-	if not donor_name or not phone_number:
-		frappe.throw(_("Donor Name and Phone Number are required."))
+	if not donor_name:
+		frappe.throw(_("Donor Name is required."))
 	collector = frappe.db.get_value(
 		"Collector Profile",
 		{"user": frappe.session.user, "company": company, "active": 1},
@@ -196,9 +196,10 @@ def quick_create_donor(donor_name, phone_number, company):
 	)
 	if not collector:
 		frappe.throw(_("An active Collector Profile is required for the selected company."))
-	existing = frappe.db.get_value(
-		"Donor", {"donor_name": donor_name, "custom_phone_numper": phone_number}, "name"
-	)
+	donor_filters = {"donor_name": donor_name}
+	if phone_number:
+		donor_filters["custom_phone_numper"] = phone_number
+	existing = frappe.db.get_value("Donor", donor_filters, "name")
 	if existing:
 		if not frappe.db.exists(
 			"Party Account", {"parenttype": "Donor", "parent": existing, "company": company}
@@ -211,7 +212,7 @@ def quick_create_donor(donor_name, phone_number, company):
 		return {"name": existing, "donor_name": donor_name}
 	doc = frappe.get_doc({
 		"doctype": "Donor", "donor_name": donor_name,
-		"custom_phone_numper": phone_number,
+		"custom_phone_numper": phone_number or None,
 	})
 	doc.append("custom_accounts", {
 		"company": company, "account": collector.default_donor_account,
