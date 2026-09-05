@@ -10,6 +10,7 @@ from accounting_custom.accounting.donation_gl import (
 	get_mode_of_payment_currency,
 	post_gl_entries,
 )
+from accounting_custom.accounting_custom.doctype.donation_entry.donation_entry import DonationEntry
 
 
 class TestDonationGL(TestCase):
@@ -111,3 +112,17 @@ class TestDonationGL(TestCase):
 		reverse.assert_called_once_with(
 			voucher_type="Donation Entry", voucher_no="DON-2026-00001", update_outstanding="No"
 		)
+
+	def test_amendment_starts_a_new_approval_cycle(self):
+		doc = SimpleNamespace(
+			amended_from="DON-2026-00001", collector="COLLECTOR-1",
+			approval_status="Approved", approved_by="user@example.com",
+			approved_on="2026-09-05", journal_entry="JV-00001",
+		)
+
+		DonationEntry.before_insert(doc)
+
+		self.assertEqual(doc.approval_status, "Draft")
+		self.assertIsNone(doc.approved_by)
+		self.assertIsNone(doc.approved_on)
+		self.assertIsNone(doc.journal_entry)
