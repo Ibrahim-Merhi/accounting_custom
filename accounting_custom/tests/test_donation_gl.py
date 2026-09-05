@@ -121,7 +121,7 @@ class TestDonationGL(TestCase):
 		)
 
 		doc.docstatus = 0
-		DonationEntry.before_validate(doc)
+		DonationEntry._reset_amendment_state(doc)
 
 		self.assertEqual(doc.approval_status, "Draft")
 		self.assertIsNone(doc.approved_by)
