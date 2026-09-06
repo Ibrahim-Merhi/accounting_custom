@@ -14,7 +14,9 @@ from accounting_custom.accounting.donation_gl import (
 from accounting_custom.api.exchange_rate import get_company_exchange_rate
 from accounting_custom.accounting.journal_posting import (
 	cancel_linked_journal_entry,
-	create_linked_journal_entry,
+	delete_linked_draft_journal_entry,
+	submit_linked_journal_entry,
+	sync_linked_draft_journal_entry,
 )
 from accounting_custom.utils.arabic_amount import arabic_amount_in_words
 
@@ -85,7 +87,11 @@ class AccountingPaymentEntry(AccountsController):
 		)
 
 	def on_submit(self):
-		create_linked_journal_entry(self, self.get_gl_entries())
+		submit_linked_journal_entry(self, self.get_gl_entries())
+
+	def on_update(self):
+		if self.docstatus == 0:
+			sync_linked_draft_journal_entry(self, self.get_gl_entries())
 
 	def before_submit(self):
 		for row in self.custom_accounting_rows_copy:
@@ -98,6 +104,10 @@ class AccountingPaymentEntry(AccountsController):
 
 	def before_cancel(self):
 		cancel_linked_journal_entry(self)
+
+	def on_trash(self):
+		delete_linked_draft_journal_entry(self)
+		super().on_trash()
 
 	def set_custom_company_currency(self):
 		self.custom_company_currency = frappe.db.get_value("Company", self.company, "default_currency")

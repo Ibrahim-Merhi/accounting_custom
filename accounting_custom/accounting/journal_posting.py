@@ -3,20 +3,14 @@ from frappe import _
 from frappe.utils import flt
 
 
-def create_linked_journal_entry(source_doc, gl_rows):
-	if source_doc.journal_entry:
-		frappe.throw(_("A Journal Entry is already linked to {0}.").format(source_doc.name))
-
-	journal = frappe.get_doc({
-		"doctype": "Journal Entry",
-		"voucher_type": "Journal Entry",
-		"company": source_doc.company,
-		"posting_date": source_doc.posting_date,
-		"multi_currency": 1,
-		"user_remark": source_doc.remarks or _("Created from {0} {1}").format(
-			source_doc.doctype, source_doc.name
-		),
-	})
+def _set_journal_values(journal, source_doc, gl_rows):
+	journal.company = source_doc.company
+	journal.posting_date = source_doc.posting_date
+	journal.multi_currency = 1
+	journal.user_remark = source_doc.remarks or _("Created from {0} {1}").format(
+		source_doc.doctype, source_doc.name
+	)
+	journal.set("accounts", [])
 	for gl_row in gl_rows:
 		account_amount = flt(
 			gl_row.debit_in_account_currency or gl_row.credit_in_account_currency
@@ -36,13 +30,59 @@ def create_linked_journal_entry(source_doc, gl_rows):
 			"user_remark": gl_row.get("remarks"),
 			"reference_no": gl_row.get("reference_no") or source_doc.get("reference_no"),
 		})
-
 	journal.flags.ignore_company_exchange_rate = True
 	journal.flags.ignore_permissions = True
+
+
+def create_linked_journal_entry(source_doc, gl_rows, submit=True):
+	if source_doc.journal_entry:
+		frappe.throw(_("A Journal Entry is already linked to {0}.").format(source_doc.name))
+
+	journal = frappe.get_doc({
+		"doctype": "Journal Entry",
+		"voucher_type": "Journal Entry",
+	})
+	_set_journal_values(journal, source_doc, gl_rows)
 	journal.insert()
-	journal.submit()
 	source_doc.db_set("journal_entry", journal.name, update_modified=False)
+	if submit:
+		journal.submit()
 	return journal.name
+
+
+def sync_linked_draft_journal_entry(source_doc, gl_rows):
+	if source_doc.docstatus != 0:
+		return source_doc.journal_entry
+	if not source_doc.journal_entry:
+		return create_linked_journal_entry(source_doc, gl_rows, submit=False)
+	journal = frappe.get_doc("Journal Entry", source_doc.journal_entry)
+	if journal.docstatus != 0:
+		frappe.throw(_("Linked Journal Entry {0} must be Draft.").format(journal.name))
+	_set_journal_values(journal, source_doc, gl_rows)
+	journal.save(ignore_permissions=True)
+	return journal.name
+
+
+def submit_linked_journal_entry(source_doc, gl_rows):
+	if not source_doc.journal_entry:
+		return create_linked_journal_entry(source_doc, gl_rows)
+	journal = frappe.get_doc("Journal Entry", source_doc.journal_entry)
+	if journal.docstatus != 0:
+		frappe.throw(_("Linked Journal Entry {0} must be Draft.").format(journal.name))
+	_set_journal_values(journal, source_doc, gl_rows)
+	journal.save(ignore_permissions=True)
+	journal.submit()
+	return journal.name
+
+
+def delete_linked_draft_journal_entry(source_doc):
+	if not source_doc.journal_entry:
+		return
+	journal = frappe.get_doc("Journal Entry", source_doc.journal_entry)
+	if journal.docstatus != 0:
+		return
+	journal.flags.ignore_links = True
+	journal.delete(ignore_permissions=True)
 
 
 def cancel_linked_journal_entry(source_doc):

@@ -14,7 +14,9 @@ from accounting_custom.accounting.donor_accounts import get_donor_account
 from accounting_custom.accounting.branch import validate_accounting_payment_branch
 from accounting_custom.accounting.journal_posting import (
 	cancel_linked_journal_entry,
-	create_linked_journal_entry,
+	delete_linked_draft_journal_entry,
+	submit_linked_journal_entry,
+	sync_linked_draft_journal_entry,
 )
 from accounting_custom.api.exchange_rate import get_company_exchange_rate
 from accounting_custom.utils.arabic_amount import arabic_amount_in_words
@@ -78,10 +80,18 @@ class DonationEntry(AccountsController):
 		self.validate_donor_account()
 
 	def on_submit(self):
-		create_linked_journal_entry(self, build_gl_entries(self))
+		submit_linked_journal_entry(self, build_gl_entries(self))
+
+	def on_update(self):
+		if self.docstatus == 0:
+			sync_linked_draft_journal_entry(self, build_gl_entries(self))
 
 	def before_cancel(self):
 		cancel_linked_journal_entry(self)
+
+	def on_trash(self):
+		delete_linked_draft_journal_entry(self)
+		super().on_trash()
 
 	def set_custom_company_currency(self):
 		if not self.company:
