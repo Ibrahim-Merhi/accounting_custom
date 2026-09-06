@@ -54,6 +54,5 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "custody_name",
  "track_changes": 1
 }
