@@ -38,6 +38,8 @@ class TestDailyMovement(FrappeTestCase):
 
 		self.assertIn("`tabJournal Entry`", query)
 		self.assertIn("gle.voucher_type = 'Journal Entry'", query)
+		self.assertIn("coalesce(gle.party_type, '') = ''", query)
+		self.assertIn("coalesce(line.party_type, '') = ''", query)
 		self.assertIn("line.parent = gle.voucher_no", query)
 		self.assertIn("line.account = gle.account", query)
 		self.assertEqual(query.count("max(nullif(line.user_remark, ''))"), 2)

@@ -120,6 +120,7 @@ def get_balances(filters):
 		where {company_condition('gle', filters)}
 			and gle.posting_date < %(date)s
 			and gle.is_cancelled = 0
+			and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 			and gle.account_currency in ('LBP', 'USD')
 			and {treasury_account_condition()}
 		group by gle.company, gle.account_currency
@@ -156,6 +157,7 @@ def get_transactions(filters):
 				and line.account_currency = gle.account_currency
 			where {company_condition('gle', filters)} and gle.posting_date = %(date)s
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
+				and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 				and gle.account_currency in ('LBP', 'USD')
 				and {treasury_account_condition()}
 			group by gle.company, gle.voucher_no, gle.account_currency
@@ -176,7 +178,9 @@ def get_transactions(filters):
 			inner join `tabJournal Entry Account` line on line.parent = journal.name
 			inner join `tabAccount` account on account.name = line.account
 			where {company_condition('journal', filters)} and journal.posting_date = %(date)s
-				and journal.docstatus = 0 and line.account_currency in ('LBP', 'USD')
+				and journal.docstatus = 0
+				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''
+				and line.account_currency in ('LBP', 'USD')
 				and (
 					account.account_type in ('Cash', 'Bank')
 					or line.account in (select custody.account from `tabCollector Custody Account` custody)

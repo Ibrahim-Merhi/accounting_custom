@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_import": 1,
+ "allow_rename": 1,
  "autoname": "field:custody_name",
  "doctype": "DocType",
  "engine": "InnoDB",
