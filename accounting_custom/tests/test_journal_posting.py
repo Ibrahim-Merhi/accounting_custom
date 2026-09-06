@@ -47,3 +47,19 @@ class TestLinkedJournalPosting(TestCase):
 		journal.cancel.assert_called_once_with()
 		self.assertEqual(journal.ignore_linked_doctypes, ("Donation Entry",))
 		self.assertTrue(journal.flags.ignore_links)
+		self.assertEqual(
+			source.ignore_linked_doctypes,
+			("GL Entry", "Payment Ledger Entry"),
+		)
+
+	def test_cancel_without_journal_allows_reversed_legacy_ledger_links(self):
+		source = SimpleNamespace(
+			doctype="Accounting Receipt Entry", journal_entry=None,
+		)
+
+		cancel_linked_journal_entry(source)
+
+		self.assertEqual(
+			source.ignore_linked_doctypes,
+			("GL Entry", "Payment Ledger Entry"),
+		)

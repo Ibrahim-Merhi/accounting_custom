@@ -46,6 +46,12 @@ def create_linked_journal_entry(source_doc, gl_rows):
 
 
 def cancel_linked_journal_entry(source_doc):
+	# Ledger records are immutable audit records. ERPNext keeps submitted
+	# Payment Ledger Entries after reversal (marked delinked), but its generic
+	# backlink check would still block cancellation of the source document.
+	# Ignore those ledger doctypes for this cancellation only; do not delete
+	# them and let Journal Entry cancellation create the normal reversals.
+	source_doc.ignore_linked_doctypes = ("GL Entry", "Payment Ledger Entry")
 	if not source_doc.journal_entry:
 		return
 	journal = frappe.get_doc("Journal Entry", source_doc.journal_entry)
