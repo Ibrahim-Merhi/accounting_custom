@@ -3,7 +3,9 @@ import json
 import frappe
 
 
-OBSOLETE_WORKSPACE_TARGETS = {"Currency Exchange"}
+OBSOLETE_WORKSPACE_TARGETS = {
+	"Currency Exchange", "Daily Movement", "Daily Movement Other Currency",
+}
 
 
 SECTIONS = [
@@ -36,8 +38,7 @@ SECTIONS = [
 		("Project Donation Summary", "Report"),
 	]),
 	("Treasury and Approval Reports", [
-		("Daily Movement", "Report"),
-		("Daily Movement Other Currency", "Report"),
+		("All Daily Movement", "Report"),
 		("Daily Treasury Report", "Report"),
 		("Pending Accounting Approvals", "Report"),
 		("Open Custodies", "Report"),

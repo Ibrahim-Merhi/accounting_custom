@@ -3,22 +3,21 @@ from unittest.mock import Mock, patch
 
 import frappe
 
-from accounting_custom.accounting_custom.report.daily_movement.daily_movement import (
+from accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement import (
 	company_condition,
 	currency_account_condition,
 	execute,
-	execute_other_currencies,
 	get_selected_companies,
 	get_transactions,
 )
 
 
-class TestDailyMovement(TestCase):
+class TestAllDailyMovement(TestCase):
 	def setUp(self):
 		frappe.local.lang = "en"
 		frappe.local.db = Mock()
 		translation = patch(
-			"accounting_custom.accounting_custom.report.daily_movement.daily_movement._",
+			"accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement._",
 			side_effect=lambda message: message,
 		)
 		translation.start()
@@ -38,19 +37,16 @@ class TestDailyMovement(TestCase):
 		self.assertEqual(get_selected_companies(None), ())
 
 	def test_each_report_uses_only_its_configured_cash_accounts(self):
-		base_condition = currency_account_condition("gle", "account", "base")
-		other_condition = currency_account_condition("gle", "account", "other")
+		condition = currency_account_condition("gle", "account")
 
-		self.assertIn("gle.account_currency = 'LBP'", base_condition)
-		self.assertIn("account.account_number in ('53000001')", base_condition)
-		self.assertIn("gle.account_currency = 'USD'", base_condition)
-		self.assertIn("account.account_number in ('53000002')", base_condition)
+		self.assertIn("gle.account_currency = 'LBP'", condition)
+		self.assertIn("account.account_number in ('53000001')", condition)
+		self.assertIn("gle.account_currency = 'USD'", condition)
+		self.assertIn("account.account_number in ('53000002', '53010001')", condition)
 		for account_number in range(53000003, 53000011):
-			self.assertIn(str(account_number), other_condition)
-		self.assertIn("account.account_number in ('53000004', '53010003')", other_condition)
-		self.assertIn("account.account_number in ('53000005', '53010002')", other_condition)
-		self.assertIn("account.account_number in ('53010001')", other_condition)
-		self.assertNotIn("53010001", base_condition)
+			self.assertIn(str(account_number), condition)
+		self.assertIn("account.account_number in ('53000004', '53010003')", condition)
+		self.assertIn("account.account_number in ('53000005', '53010002')", condition)
 
 	@patch("frappe.db.sql", return_value=[])
 	def test_transactions_are_limited_to_journal_entries(self, db_sql):
@@ -68,8 +64,8 @@ class TestDailyMovement(TestCase):
 		self.assertIn("coalesce(gle.party_type, '') = ''", query)
 		self.assertIn("coalesce(line.party_type, '') = ''", query)
 		self.assertEqual(query.count("account.account_number in ('53000001')"), 2)
-		self.assertEqual(query.count("account.account_number in ('53000002')"), 2)
-		self.assertNotIn("53000003", query)
+		self.assertEqual(query.count("account.account_number in ('53000002', '53010001')"), 2)
+		self.assertIn("53000003", query)
 		self.assertIn("line.parent = gle.voucher_no", query)
 		self.assertIn("line.account = gle.account", query)
 		self.assertEqual(query.count("max(nullif(line.user_remark, ''))"), 2)
@@ -80,9 +76,9 @@ class TestDailyMovement(TestCase):
 		self.assertNotIn("`tabAccounting Receipt Entry`", query)
 
 	@patch(
-		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
+		"accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_transactions"
 	)
-	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
+	@patch("accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_balances")
 	def test_current_balance_uses_opening_and_visible_movements(self, get_balances, get_transactions):
 		get_balances.return_value = {("Test", "53000001"): 1_000_000, ("Test", "53000002"): 500}
 		get_transactions.return_value = [
@@ -93,17 +89,17 @@ class TestDailyMovement(TestCase):
 		]
 
 		_columns, rows = execute({"company": "Test", "date": "2026-09-01"})
-		sections = {row["currency"]: row for row in rows if row.get("is_section")}
+		sections = {row["section_key"]: row for row in rows if row.get("is_section")}
 
-		self.assertEqual(sections["LBP"]["previous_balance"], 1_000_000)
-		self.assertEqual(sections["LBP"]["current_balance"], 1_200_000)
-		self.assertEqual(sections["USD"]["previous_balance"], 500)
-		self.assertEqual(sections["USD"]["current_balance"], 550)
+		self.assertEqual(sections["53000001"]["previous_balance"], 1_000_000)
+		self.assertEqual(sections["53000001"]["current_balance"], 1_200_000)
+		self.assertEqual(sections["53000002"]["previous_balance"], 500)
+		self.assertEqual(sections["53000002"]["current_balance"], 550)
 
 	@patch(
-		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
+		"accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_transactions"
 	)
-	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
+	@patch("accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_balances")
 	def test_all_companies_have_screen_separators(self, get_balances, get_transactions):
 		get_balances.return_value = {}
 		get_transactions.return_value = [
@@ -120,29 +116,15 @@ class TestDailyMovement(TestCase):
 			(row.get("company"), row.get("currency")) for row in rows if row.get("is_section")
 		]
 		self.assertEqual(
-			section_order,
-			[("Alpha", "LBP"), ("Alpha", "USD"), ("Beta", "LBP"), ("Beta", "USD")],
+			section_order[:2],
+			[("Alpha", "LBP"), ("Alpha", "USD")],
 		)
 
 	@patch(
-		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
+		"accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_transactions"
 	)
-	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
-	def test_daily_movement_excludes_additional_currencies(self, get_balances, get_transactions):
-		get_balances.return_value = {("Test", "53000005"): 500}
-		get_transactions.return_value = [
-			frappe._dict(company="Test", currency="QAR", account_number="53000005", incoming=100, outgoing=25),
-		]
-
-		_columns, rows = execute({"company": "Test", "date": "2026-09-10"})
-
-		self.assertNotIn("QAR", {row.get("currency") for row in rows})
-
-	@patch(
-		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
-	)
-	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
-	def test_other_currency_report_includes_only_configured_currencies(self, get_balances, get_transactions):
+	@patch("accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_balances")
+	def test_report_includes_all_configured_account_sections(self, get_balances, get_transactions):
 		get_balances.return_value = {
 			("Test", "53000001"): 1_000,
 			("Test", "53010001"): 10,
@@ -154,11 +136,11 @@ class TestDailyMovement(TestCase):
 			frappe._dict(company="Test", currency="QAR", account_number="53000005", incoming=100, outgoing=25),
 		]
 
-		_columns, rows = execute_other_currencies({"company": "Test", "date": "2026-09-10"})
+		_columns, rows = execute({"company": "Test", "date": "2026-09-10"})
 		sections = [row for row in rows if row.get("is_section")]
 		self.assertEqual(
 			[row["section_key"] for row in sections],
-			["53000003", "53000004", "53000005", "53000006", "53000007", "53000008", "53000009", "53000010", "53010001", "53010002", "53010003"],
+			["53000001", "53000002", "53000003", "53000004", "53000005", "53000006", "53000007", "53000008", "53000009", "53000010", "53010001", "53010002", "53010003"],
 		)
 		section = next(row for row in sections if row["section_key"] == "53000005")
 

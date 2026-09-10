@@ -41,7 +41,7 @@ REQUIRED_ROLES = {
 }
 
 REQUIRED_REPORTS = {
-	"Daily Movement", "Daily Movement Other Currency", "Daily Treasury Report", "Collector Collections", "Donor Donation History",
+	"All Daily Movement", "Daily Treasury Report", "Collector Collections", "Donor Donation History",
 	"Project Donation Summary", "Pending Accounting Approvals", "Open Custodies",
 	"Weekly Cost Center Comparison", "Weekly Cash Bank Comparison",
 	"Monthly Cost Center Movement", "Monthly Cash Bank Balance",

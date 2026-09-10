@@ -24,7 +24,9 @@ OTHER_ACCOUNT_NUMBERS = {
 	"AUD": ("53000010",),
 	"USD": ("53010001",),
 }
-OTHER_REPORT_SECTIONS = (
+ALL_REPORT_SECTIONS = (
+	("LBP", "53000001", None, None),
+	("USD", "53000002", None, None),
 	("EUR", "53000003", None, None),
 	("SAR", "53000004", None, None),
 	("QAR", "53000005", None, None),
@@ -40,7 +42,7 @@ OTHER_REPORT_SECTIONS = (
 EXCLUDED_COMPANY = "Namaa"
 
 
-def execute(filters=None, currency_scope="base"):
+def execute(filters=None):
 	filters = frappe._dict(filters or {})
 	if not filters.date:
 		return get_columns(), []
@@ -49,7 +51,6 @@ def execute(filters=None, currency_scope="base"):
 	if requested_companies and not filters.companies:
 		return get_columns(), []
 	filters.excluded_company = EXCLUDED_COMPANY
-	filters.currency_scope = currency_scope
 
 	opening_balances = get_balances(filters)
 	transactions = get_transactions(filters)
@@ -65,10 +66,7 @@ def execute(filters=None, currency_scope="base"):
 		companies = sorted(available_companies)
 
 	rows = []
-	if currency_scope == "other":
-		sections = OTHER_REPORT_SECTIONS
-	else:
-		sections = tuple((code, BASE_ACCOUNT_NUMBERS[code][0], None, None) for code, _label in BASE_CURRENCIES)
+	sections = ALL_REPORT_SECTIONS
 	opening_date = formatdate(add_days(filters.date, -1), "dd-MM-yyyy")
 	for company in companies:
 		rows.append({
@@ -119,10 +117,6 @@ def execute(filters=None, currency_scope="base"):
 				"is_total": 1,
 			})
 	return get_columns(), rows
-
-
-def execute_other_currencies(filters=None):
-	return execute(filters, currency_scope="other")
 
 
 def get_currency_display_name(currency, locale):
@@ -183,10 +177,11 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 	)"""
 
 
-def currency_account_condition(alias="gle", account_alias="account", currency_scope="base"):
-	account_numbers = (
-		OTHER_ACCOUNT_NUMBERS if currency_scope == "other" else BASE_ACCOUNT_NUMBERS
-	)
+def currency_account_condition(alias="gle", account_alias="account"):
+	account_numbers = {
+		currency: BASE_ACCOUNT_NUMBERS.get(currency, ()) + OTHER_ACCOUNT_NUMBERS.get(currency, ())
+		for currency in BASE_ACCOUNT_NUMBERS.keys() | OTHER_ACCOUNT_NUMBERS.keys()
+	}
 	mapped_accounts = "\n\t\tor ".join(
 		f"({alias}.account_currency = '{currency}' and "
 		f"{account_alias}.account_number in ({', '.join(repr(number) for number in numbers)}))"
@@ -209,7 +204,7 @@ def get_balances(filters):
 			and gle.is_cancelled = 0
 			and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 			and coalesce(gle.account_currency, '') != ''
-			and {currency_account_condition(currency_scope=filters.currency_scope)}
+			and {currency_account_condition()}
 		group by gle.company, account.account_number
 		""",
 		filters,
@@ -246,7 +241,7 @@ def get_transactions(filters):
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 				and coalesce(gle.account_currency, '') != ''
-				and {currency_account_condition(currency_scope=filters.currency_scope)}
+				and {currency_account_condition()}
 			group by gle.company, gle.voucher_no, gle.account_currency, account.account_number
 
 			union all
@@ -268,7 +263,7 @@ def get_transactions(filters):
 				and journal.docstatus = 0
 				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''
 				and coalesce(line.account_currency, '') != ''
-				and {currency_account_condition('line', currency_scope=filters.currency_scope)}
+				and {currency_account_condition('line')}
 			group by journal.company, journal.name, line.account_currency, account.account_number
 		) movement
 		where coalesce(movement.incoming, 0) > 0 or coalesce(movement.outgoing, 0) > 0

@@ -1,4 +1,4 @@
-const daily_movement_other_currency_print_format = `
+const all_daily_movement_print_format = `
 		<style>
 			@page { size: A4 portrait; margin: 9mm; }
 			.daily-movement-print { direction: rtl; width: 100%; font-family: Tahoma, Arial, sans-serif; color: #111; font-size: 13px; }
@@ -33,7 +33,7 @@ const daily_movement_other_currency_print_format = `
 		<div class="daily-movement-print">
 			<button type="button" class="print-action" onclick="window.print()">طباعة</button>
 			<div class="report-head">
-				<div class="title-block"><h1>الحركة اليومية للعملات الأخرى</h1><div class="subtitle">بيان حركة الصندوق للعملات غير الدولار والليرة اللبنانية</div></div>
+				<div class="title-block"><h1>الحركة اليومية الشاملة</h1><div class="subtitle">بيان حركة الصندوق اليومية لجميع العملات</div></div>
 				<div class="meta"><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
 			</div>
 			{% var display_amount = value => format_number(value, null, 2).replace(/\.00$/, ""); %}
@@ -86,8 +86,8 @@ const daily_movement_other_currency_print_format = `
 			<div class="print-footer">تم إصدار هذا التقرير من نظام المحاسبة</div>
 		</div>`;
 
-frappe.query_reports["Daily Movement Other Currency"] = {
-	html_format: daily_movement_other_currency_print_format,
+frappe.query_reports["All Daily Movement"] = {
+	html_format: all_daily_movement_print_format,
 	onload(report) {
 		const print_arabic_report = (movement_only = false) => {
 			const report_data = report.data || [];
@@ -101,8 +101,8 @@ frappe.query_reports["Daily Movement Other Currency"] = {
 				: report_data;
 			report.make_access_log?.("Print", "PDF");
 			frappe.render_grid({
-				template: daily_movement_other_currency_print_format,
-				title: "الحركة اليومية للعملات الأخرى",
+				template: all_daily_movement_print_format,
+				title: "الحركة اليومية الشاملة",
 				subtitle: "",
 				print_settings: { orientation: "Portrait" },
 				landscape: false,

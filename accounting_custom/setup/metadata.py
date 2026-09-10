@@ -11,8 +11,7 @@ PRINT_FORMATS = {
 REPORTS = {
 	"Balance Sheet by Cost Center": "GL Entry",
 	"Collector Collections": "Donation Entry",
-	"Daily Movement": "GL Entry",
-	"Daily Movement Other Currency": "GL Entry",
+	"All Daily Movement": "GL Entry",
 	"Daily Treasury Report": "Accounting Payment Entry",
 	"Donor Donation History": "Donation Entry",
 	"Monthly Cash Bank Balance": "GL Entry",
@@ -27,6 +26,7 @@ REPORTS = {
 
 def ensure_visible_metadata():
 	"""Keep app-owned formats and reports visible in their standard list views."""
+	frappe.db.delete("Report", {"name": ["in", ["Daily Movement", "Daily Movement Other Currency"]]})
 	for name, doc_type in PRINT_FORMATS.items():
 		if frappe.db.exists("Print Format", name):
 			frappe.db.set_value(
