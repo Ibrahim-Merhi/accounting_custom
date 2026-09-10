@@ -1,17 +1,28 @@
-from unittest.mock import patch
+from unittest import TestCase
+from unittest.mock import Mock, patch
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
 
 from accounting_custom.accounting_custom.report.daily_movement.daily_movement import (
 	company_condition,
+	currency_account_condition,
 	execute,
 	get_selected_companies,
 	get_transactions,
 )
 
 
-class TestDailyMovement(FrappeTestCase):
+class TestDailyMovement(TestCase):
+	def setUp(self):
+		frappe.local.lang = "en"
+		frappe.local.db = Mock()
+		translation = patch(
+			"accounting_custom.accounting_custom.report.daily_movement.daily_movement._",
+			side_effect=lambda message: message,
+		)
+		translation.start()
+		self.addCleanup(translation.stop)
+
 	def test_company_condition_supports_one_or_all_except_namaa(self):
 		selected = company_condition("gle", frappe._dict(companies=("Itihad", "Other")))
 		all_companies = company_condition("gle", frappe._dict(companies=()))
@@ -24,6 +35,12 @@ class TestDailyMovement(FrappeTestCase):
 		self.assertEqual(get_selected_companies('["Itihad", "Namaa", "Other"]'), ("Itihad", "Other"))
 		self.assertEqual(get_selected_companies("Itihad"), ("Itihad",))
 		self.assertEqual(get_selected_companies(None), ())
+
+	def test_usd_is_limited_to_the_configured_cash_account(self):
+		condition = currency_account_condition("gle", "account")
+
+		self.assertIn("gle.account_currency != 'USD'", condition)
+		self.assertIn("account.account_number = '53000002'", condition)
 
 	@patch("frappe.db.sql", return_value=[])
 	def test_transactions_are_limited_to_journal_entries(self, db_sql):
@@ -40,6 +57,7 @@ class TestDailyMovement(FrappeTestCase):
 		self.assertIn("gle.voucher_type = 'Journal Entry'", query)
 		self.assertIn("coalesce(gle.party_type, '') = ''", query)
 		self.assertIn("coalesce(line.party_type, '') = ''", query)
+		self.assertEqual(query.count("account.account_number = '53000002'"), 2)
 		self.assertIn("line.parent = gle.voucher_no", query)
 		self.assertIn("line.account = gle.account", query)
 		self.assertEqual(query.count("max(nullif(line.user_remark, ''))"), 2)
@@ -93,3 +111,21 @@ class TestDailyMovement(FrappeTestCase):
 			section_order,
 			[("Alpha", "LBP"), ("Alpha", "USD"), ("Beta", "LBP"), ("Beta", "USD")],
 		)
+
+	@patch(
+		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
+	)
+	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
+	def test_additional_currencies_get_their_own_section(self, get_balances, get_transactions):
+		get_balances.return_value = {("Test", "QAR"): 500}
+		get_transactions.return_value = [
+			frappe._dict(company="Test", currency="QAR", incoming=100, outgoing=25),
+		]
+
+		_columns, rows = execute({"company": "Test", "date": "2026-09-10"})
+		section = next(row for row in rows if row.get("is_section") and row["currency"] == "QAR")
+
+		self.assertEqual(section["description"], "QAR")
+		self.assertEqual(section["previous_balance"], 500)
+		self.assertEqual(section["current_balance"], 575)
+		self.assertEqual(section["opening_date"], "09-09-2026")

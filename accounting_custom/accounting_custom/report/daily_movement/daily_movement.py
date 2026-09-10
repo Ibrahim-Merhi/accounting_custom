@@ -1,12 +1,14 @@
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import add_days, flt, formatdate
 
 
-CURRENCIES = (
+BASE_CURRENCIES = (
 	("LBP", "Lebanese Pound Section"),
 	("USD", "US Dollar Section"),
 )
+CURRENCY_LABELS = dict(BASE_CURRENCIES)
+USD_CASH_ACCOUNT_NUMBER = "53000002"
 EXCLUDED_COMPANY = "Namaa"
 
 
@@ -34,12 +36,17 @@ def execute(filters=None):
 		companies = sorted(available_companies)
 
 	rows = []
+	available_currencies = {currency for _company, currency in opening_balances}
+	available_currencies.update(row.currency for row in transactions if row.currency)
+	currencies = [code for code, _label in BASE_CURRENCIES]
+	currencies.extend(sorted(available_currencies.difference(currencies)))
+	opening_date = formatdate(add_days(filters.date, -1), "dd-MM-yyyy")
 	for company in companies:
 		rows.append({
 			"description": _("Company: {0}").format(company),
 			"is_company": 1,
 		})
-		for currency, section_label in CURRENCIES:
+		for currency in currencies:
 			currency_rows = [
 				row for row in transactions
 				if row.company == company and row.currency == currency
@@ -51,9 +58,10 @@ def execute(filters=None):
 			rows.append({
 				"company": company,
 				"currency": currency,
-				"description": _(section_label),
+				"description": _(CURRENCY_LABELS.get(currency, currency)),
 				"previous_balance": previous,
 				"current_balance": current,
+				"opening_date": opening_date,
 				"is_section": 1,
 			})
 			rows.extend(currency_rows)
@@ -110,6 +118,13 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 	)"""
 
 
+def currency_account_condition(alias="gle", account_alias="account"):
+	return (
+		f"({alias}.account_currency != 'USD' "
+		f"or {account_alias}.account_number = '{USD_CASH_ACCOUNT_NUMBER}')"
+	)
+
+
 def get_balances(filters):
 	rows = frappe.db.sql(
 		f"""
@@ -121,7 +136,8 @@ def get_balances(filters):
 			and gle.posting_date < %(date)s
 			and gle.is_cancelled = 0
 			and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
-			and gle.account_currency in ('LBP', 'USD')
+			and coalesce(gle.account_currency, '') != ''
+			and {currency_account_condition()}
 			and {treasury_account_condition()}
 		group by gle.company, gle.account_currency
 		""",
@@ -158,7 +174,8 @@ def get_transactions(filters):
 			where {company_condition('gle', filters)} and gle.posting_date = %(date)s
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
-				and gle.account_currency in ('LBP', 'USD')
+				and coalesce(gle.account_currency, '') != ''
+				and {currency_account_condition()}
 				and {treasury_account_condition()}
 			group by gle.company, gle.voucher_no, gle.account_currency
 
@@ -180,7 +197,8 @@ def get_transactions(filters):
 			where {company_condition('journal', filters)} and journal.posting_date = %(date)s
 				and journal.docstatus = 0
 				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''
-				and line.account_currency in ('LBP', 'USD')
+				and coalesce(line.account_currency, '') != ''
+				and {currency_account_condition('line')}
 				and (
 					account.account_type in ('Cash', 'Bank')
 					or line.account in (select custody.account from `tabCollector Custody Account` custody)
