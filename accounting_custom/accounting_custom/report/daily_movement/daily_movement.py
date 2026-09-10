@@ -8,6 +8,7 @@ BASE_CURRENCIES = (
 	("LBP", "Lebanese Pound Section"),
 	("USD", "US Dollar Section"),
 )
+OTHER_CURRENCIES = ("EUR", "SAR", "QAR", "KWD", "GBP", "TRY", "CAD", "AUD")
 CURRENCY_LABELS = dict(BASE_CURRENCIES)
 DAILY_MOVEMENT_ACCOUNT_NUMBERS = {
 	"LBP": "53000001",
@@ -51,7 +52,7 @@ def execute(filters=None, currency_scope="base"):
 	available_currencies = {currency for _company, currency in opening_balances}
 	available_currencies.update(row.currency for row in transactions if row.currency)
 	if currency_scope == "other":
-		currencies = sorted(available_currencies.difference(CURRENCY_LABELS))
+		currencies = [currency for currency in OTHER_CURRENCIES if currency in available_currencies]
 	else:
 		currencies = [code for code, _label in BASE_CURRENCIES]
 	opening_date = formatdate(add_days(filters.date, -1), "dd-MM-yyyy")

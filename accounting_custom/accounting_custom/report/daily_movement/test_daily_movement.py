@@ -138,12 +138,18 @@ class TestDailyMovement(TestCase):
 		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
 	)
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
-	def test_other_currency_report_excludes_lbp_and_usd(self, get_balances, get_transactions):
-		get_balances.return_value = {("Test", "LBP"): 1_000, ("Test", "USD"): 10, ("Test", "QAR"): 500}
+	def test_other_currency_report_includes_only_configured_currencies(self, get_balances, get_transactions):
+		get_balances.return_value = {
+			("Test", "LBP"): 1_000,
+			("Test", "USD"): 10,
+			("Test", "QAR"): 500,
+			("Test", "JPY"): 1_000,
+		}
 		get_transactions.return_value = [
 			frappe._dict(company="Test", currency="LBP", incoming=100, outgoing=None),
 			frappe._dict(company="Test", currency="USD", incoming=10, outgoing=None),
 			frappe._dict(company="Test", currency="QAR", incoming=100, outgoing=25),
+			frappe._dict(company="Test", currency="JPY", incoming=100, outgoing=None),
 		]
 
 		_columns, rows = execute_other_currencies({"company": "Test", "date": "2026-09-10"})
