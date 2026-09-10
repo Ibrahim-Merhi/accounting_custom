@@ -9,8 +9,18 @@ BASE_CURRENCIES = (
 	("USD", "US Dollar Section"),
 )
 CURRENCY_LABELS = dict(BASE_CURRENCIES)
-LBP_CASH_ACCOUNT_NUMBER = "53000001"
-USD_CASH_ACCOUNT_NUMBER = "53000002"
+DAILY_MOVEMENT_ACCOUNT_NUMBERS = {
+	"LBP": "53000001",
+	"USD": "53000002",
+	"EUR": "53000003",
+	"SAR": "53000004",
+	"QAR": "53000005",
+	"KWD": "53000006",
+	"GBP": "53000007",
+	"TRY": "53000008",
+	"CAD": "53000009",
+	"AUD": "53000010",
+}
 EXCLUDED_COMPANY = "Namaa"
 
 
@@ -153,12 +163,15 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 
 
 def currency_account_condition(alias="gle", account_alias="account"):
+	mapped_currencies = ", ".join(f"'{currency}'" for currency in DAILY_MOVEMENT_ACCOUNT_NUMBERS)
+	mapped_accounts = "\n\t\tor ".join(
+		f"({alias}.account_currency = '{currency}' "
+		f"and {account_alias}.account_number = '{account_number}')"
+		for currency, account_number in DAILY_MOVEMENT_ACCOUNT_NUMBERS.items()
+	)
 	return f"""(
-		{alias}.account_currency not in ('LBP', 'USD')
-		or ({alias}.account_currency = 'LBP'
-			and {account_alias}.account_number = '{LBP_CASH_ACCOUNT_NUMBER}')
-		or ({alias}.account_currency = 'USD'
-			and {account_alias}.account_number = '{USD_CASH_ACCOUNT_NUMBER}')
+		{alias}.account_currency not in ({mapped_currencies})
+		or {mapped_accounts}
 	)"""
 
 
