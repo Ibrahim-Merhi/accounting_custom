@@ -300,7 +300,7 @@ fixtures = [
 		"filters": [
 			["doc_type", "=", "Donor"],
 			["field_name", "=", "email"],
-			["property", "=", "unique"],
+			["property", "in", ["unique", "reqd"]],
 		],
 	},
 ]

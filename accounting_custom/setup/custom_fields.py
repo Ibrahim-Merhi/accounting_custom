@@ -155,7 +155,10 @@ def configure_quick_donor_creation():
 		property_name = f"Donor-{fieldname}-reqd"
 		if frappe.db.exists("Property Setter", property_name):
 			frappe.db.set_value(
-				"Property Setter", property_name, "value", "0", update_modified=False
+				"Property Setter",
+				property_name,
+				{"value": "0", "property_type": "Check"},
+				update_modified=False,
 			)
 		else:
 			frappe.make_property_setter({
