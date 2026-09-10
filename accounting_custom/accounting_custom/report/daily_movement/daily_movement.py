@@ -8,7 +8,6 @@ BASE_CURRENCIES = (
 	("LBP", "Lebanese Pound Section"),
 	("USD", "US Dollar Section"),
 )
-OTHER_CURRENCIES = ("EUR", "SAR", "QAR", "KWD", "GBP", "TRY", "CAD", "AUD", "USD")
 CURRENCY_LABELS = dict(BASE_CURRENCIES)
 BASE_ACCOUNT_NUMBERS = {
 	"LBP": ("53000001",),
@@ -25,6 +24,19 @@ OTHER_ACCOUNT_NUMBERS = {
 	"AUD": ("53000010",),
 	"USD": ("53010001",),
 }
+OTHER_REPORT_SECTIONS = (
+	("EUR", "53000003", None, None),
+	("SAR", "53000004", None, None),
+	("QAR", "53000005", None, None),
+	("KWD", "53000006", None, None),
+	("GBP", "53000007", None, None),
+	("TRY", "53000008", None, None),
+	("CAD", "53000009", None, None),
+	("AUD", "53000010", None, None),
+	("USD", "53010001", "US Dollar External", "الدولار الأمريكي الخارجي"),
+	("QAR", "53010002", "Qatari Riyal External", "الريال القطري الخارجي"),
+	("SAR", "53010003", "Saudi Riyal External", "الريال السعودي الخارجي"),
+)
 EXCLUDED_COMPANY = "Namaa"
 
 
@@ -53,38 +65,39 @@ def execute(filters=None, currency_scope="base"):
 		companies = sorted(available_companies)
 
 	rows = []
-	available_currencies = {currency for _company, currency in opening_balances}
-	available_currencies.update(row.currency for row in transactions if row.currency)
 	if currency_scope == "other":
-		currencies = list(OTHER_CURRENCIES)
+		sections = OTHER_REPORT_SECTIONS
 	else:
-		currencies = [code for code, _label in BASE_CURRENCIES]
+		sections = tuple((code, BASE_ACCOUNT_NUMBERS[code][0], None, None) for code, _label in BASE_CURRENCIES)
 	opening_date = formatdate(add_days(filters.date, -1), "dd-MM-yyyy")
 	for company in companies:
 		rows.append({
 			"description": _("Company: {0}").format(company),
 			"is_company": 1,
 		})
-		for currency in currencies:
+		for currency, account_number, custom_name, custom_name_ar in sections:
 			currency_rows = [
 				row for row in transactions
-				if row.company == company and row.currency == currency
+				if row.company == company and row.account_number == account_number
 			]
-			is_external_usd = currency_scope == "other" and currency == "USD"
-			currency_name = "US Dollar External" if is_external_usd else get_currency_display_name(currency, "en")
-			currency_name_ar = "الدولار الأمريكي الخارجي" if is_external_usd else get_currency_display_name(currency, "ar")
+			section_key = account_number
+			currency_name = custom_name or get_currency_display_name(currency, "en")
+			currency_name_ar = custom_name_ar or get_currency_display_name(currency, "ar")
 			currency_symbol = get_currency_display_symbol(currency)
 			for row in currency_rows:
 				row.currency_name = currency_name
 				row.currency_name_ar = currency_name_ar
 				row.currency_symbol = currency_symbol
+				row.section_key = section_key
 			incoming = sum(flt(row.incoming) for row in currency_rows)
 			outgoing = sum(flt(row.outgoing) for row in currency_rows)
-			previous = flt(opening_balances.get((company, currency)))
+			previous = flt(opening_balances.get((company, account_number)))
 			current = previous + incoming - outgoing
 			rows.append({
 				"company": company,
 				"currency": currency,
+				"account_number": account_number,
+				"section_key": section_key,
 				"currency_name": currency_name,
 				"currency_name_ar": currency_name_ar,
 				"currency_symbol": currency_symbol,
@@ -98,6 +111,8 @@ def execute(filters=None, currency_scope="base"):
 			rows.append({
 				"company": company,
 				"currency": currency,
+				"account_number": account_number,
+				"section_key": section_key,
 				"description": _("Daily Movement Total"),
 				"incoming": incoming or None,
 				"outgoing": outgoing or None,
@@ -185,7 +200,7 @@ def currency_account_condition(alias="gle", account_alias="account", currency_sc
 def get_balances(filters):
 	rows = frappe.db.sql(
 		f"""
-		select gle.company, gle.account_currency currency,
+		select gle.company, account.account_number,
 			sum(gle.debit_in_account_currency - gle.credit_in_account_currency) balance
 		from `tabGL Entry` gle
 		inner join `tabAccount` account on account.name = gle.account
@@ -195,19 +210,19 @@ def get_balances(filters):
 			and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 			and coalesce(gle.account_currency, '') != ''
 			and {currency_account_condition(currency_scope=filters.currency_scope)}
-		group by gle.company, gle.account_currency
+		group by gle.company, account.account_number
 		""",
 		filters,
 		as_dict=True,
 	)
-	return {(row.company, row.currency): row.balance for row in rows}
+	return {(row.company, row.account_number): row.balance for row in rows}
 
 
 def get_transactions(filters):
 	rows = frappe.db.sql(
 		f"""
 		select movement.* from (
-			select gle.company, gle.account_currency currency, 'Journal Entry' voucher_type,
+			select gle.company, gle.account_currency currency, account.account_number, 'Journal Entry' voucher_type,
 				gle.voucher_no, '' party,
 				coalesce(
 					max(nullif(line.user_remark, '')),
@@ -232,11 +247,11 @@ def get_transactions(filters):
 				and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 				and coalesce(gle.account_currency, '') != ''
 				and {currency_account_condition(currency_scope=filters.currency_scope)}
-			group by gle.company, gle.voucher_no, gle.account_currency
+			group by gle.company, gle.voucher_no, gle.account_currency, account.account_number
 
 			union all
 
-			select journal.company, line.account_currency currency, 'Journal Entry' voucher_type,
+			select journal.company, line.account_currency currency, account.account_number, 'Journal Entry' voucher_type,
 				journal.name voucher_no, '' party,
 				coalesce(
 					max(nullif(line.user_remark, '')),
@@ -254,7 +269,7 @@ def get_transactions(filters):
 				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''
 				and coalesce(line.account_currency, '') != ''
 				and {currency_account_condition('line', currency_scope=filters.currency_scope)}
-			group by journal.company, journal.name, line.account_currency
+			group by journal.company, journal.name, line.account_currency, account.account_number
 		) movement
 		where coalesce(movement.incoming, 0) > 0 or coalesce(movement.outgoing, 0) > 0
 		order by movement.company, movement.currency, movement.creation, movement.voucher_no

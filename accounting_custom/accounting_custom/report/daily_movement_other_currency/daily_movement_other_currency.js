@@ -37,18 +37,19 @@ const daily_movement_other_currency_print_format = `
 				<div class="meta"><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
 			</div>
 			{% var display_amount = value => format_number(value, null, 2).replace(/\.00$/, ""); %}
-			{% var currencies = [...new Set(original_data.filter(row => row.currency).map(row => row.currency))]; %}
-			{% for item in currencies %}
-				{% var sections = original_data.filter(row => row.currency === item && row.is_section); %}
-				{% var transactions = original_data.filter(row => row.currency === item && row.voucher_no); %}
-				{% var currency_symbol = sections[0]?.currency_symbol || item; %}
-				{% var currency_name = sections[0]?.currency_name_ar || sections[0]?.currency_name || item; %}
+			{% var section_keys = [...new Set(original_data.filter(row => row.section_key).map(row => row.section_key))]; %}
+			{% for item in section_keys %}
+				{% var sections = original_data.filter(row => row.section_key === item && row.is_section); %}
+				{% var transactions = original_data.filter(row => row.section_key === item && row.voucher_no); %}
+				{% var currency_code = sections[0]?.currency || ""; %}
+				{% var currency_symbol = sections[0]?.currency_symbol || currency_code; %}
+				{% var currency_name = sections[0]?.currency_name_ar || sections[0]?.currency_name || currency_code; %}
 				{% var previous = sections.reduce((sum, row) => sum + Number(row.previous_balance || 0), 0); %}
 				{% var incoming = transactions.reduce((sum, row) => sum + Number(row.incoming || 0), 0); %}
 				{% var outgoing = transactions.reduce((sum, row) => sum + Number(row.outgoing || 0), 0); %}
 				{% var opening_date = sections.find(row => row.opening_date)?.opening_date || ""; %}
 				<div class="currency-section">
-					<div class="section-title">{{ currency_name }} ({{ item }})</div>
+					<div class="section-title">{{ currency_name }} ({{ currency_code }})</div>
 					<div class="summary">
 						<div class="summary-item"><span class="summary-label">الرصيد السابق{% if opening_date %} حتى {{ opening_date }}{% endif %}</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(previous) }}</span></div>
 						<div class="summary-item"><span class="summary-label">الرصيد الحالي</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(previous + incoming - outgoing) }}</span></div>
@@ -90,13 +91,13 @@ frappe.query_reports["Daily Movement Other Currency"] = {
 	onload(report) {
 		const print_arabic_report = (movement_only = false) => {
 			const report_data = report.data || [];
-			const active_currencies = new Set(
+			const active_sections = new Set(
 				report_data
 					.filter((row) => row.voucher_no && (Number(row.incoming || 0) || Number(row.outgoing || 0)))
-					.map((row) => row.currency)
+					.map((row) => row.section_key)
 			);
 			const print_data = movement_only
-				? report_data.filter((row) => !row.currency || active_currencies.has(row.currency))
+				? report_data.filter((row) => !row.section_key || active_sections.has(row.section_key))
 				: report_data;
 			report.make_access_log?.("Print", "PDF");
 			frappe.render_grid({

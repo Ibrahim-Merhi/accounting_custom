@@ -84,12 +84,12 @@ class TestDailyMovement(TestCase):
 	)
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
 	def test_current_balance_uses_opening_and_visible_movements(self, get_balances, get_transactions):
-		get_balances.return_value = {("Test", "LBP"): 1_000_000, ("Test", "USD"): 500}
+		get_balances.return_value = {("Test", "53000001"): 1_000_000, ("Test", "53000002"): 500}
 		get_transactions.return_value = [
-			frappe._dict(currency="LBP", incoming=300_000, outgoing=None),
-			frappe._dict(currency="LBP", incoming=None, outgoing=100_000),
-			frappe._dict(currency="USD", incoming=100, outgoing=None),
-			frappe._dict(currency="USD", incoming=None, outgoing=50),
+			frappe._dict(currency="LBP", account_number="53000001", incoming=300_000, outgoing=None),
+			frappe._dict(currency="LBP", account_number="53000001", incoming=None, outgoing=100_000),
+			frappe._dict(currency="USD", account_number="53000002", incoming=100, outgoing=None),
+			frappe._dict(currency="USD", account_number="53000002", incoming=None, outgoing=50),
 		]
 
 		_columns, rows = execute({"company": "Test", "date": "2026-09-01"})
@@ -107,8 +107,8 @@ class TestDailyMovement(TestCase):
 	def test_all_companies_have_screen_separators(self, get_balances, get_transactions):
 		get_balances.return_value = {}
 		get_transactions.return_value = [
-			frappe._dict(company="Alpha", currency="LBP", incoming=10, outgoing=None),
-			frappe._dict(company="Beta", currency="LBP", incoming=20, outgoing=None),
+			frappe._dict(company="Alpha", currency="LBP", account_number="53000001", incoming=10, outgoing=None),
+			frappe._dict(company="Beta", currency="LBP", account_number="53000001", incoming=20, outgoing=None),
 		]
 
 		_columns, rows = execute({"date": "2026-09-01"})
@@ -129,9 +129,9 @@ class TestDailyMovement(TestCase):
 	)
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
 	def test_daily_movement_excludes_additional_currencies(self, get_balances, get_transactions):
-		get_balances.return_value = {("Test", "QAR"): 500}
+		get_balances.return_value = {("Test", "53000005"): 500}
 		get_transactions.return_value = [
-			frappe._dict(company="Test", currency="QAR", incoming=100, outgoing=25),
+			frappe._dict(company="Test", currency="QAR", account_number="53000005", incoming=100, outgoing=25),
 		]
 
 		_columns, rows = execute({"company": "Test", "date": "2026-09-10"})
@@ -144,25 +144,23 @@ class TestDailyMovement(TestCase):
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
 	def test_other_currency_report_includes_only_configured_currencies(self, get_balances, get_transactions):
 		get_balances.return_value = {
-			("Test", "LBP"): 1_000,
-			("Test", "USD"): 10,
-			("Test", "QAR"): 500,
-			("Test", "JPY"): 1_000,
+			("Test", "53000001"): 1_000,
+			("Test", "53010001"): 10,
+			("Test", "53000005"): 500,
 		}
 		get_transactions.return_value = [
-			frappe._dict(company="Test", currency="LBP", incoming=100, outgoing=None),
-			frappe._dict(company="Test", currency="USD", incoming=10, outgoing=None),
-			frappe._dict(company="Test", currency="QAR", incoming=100, outgoing=25),
-			frappe._dict(company="Test", currency="JPY", incoming=100, outgoing=None),
+			frappe._dict(company="Test", currency="LBP", account_number="53000001", incoming=100, outgoing=None),
+			frappe._dict(company="Test", currency="USD", account_number="53010001", incoming=10, outgoing=None),
+			frappe._dict(company="Test", currency="QAR", account_number="53000005", incoming=100, outgoing=25),
 		]
 
 		_columns, rows = execute_other_currencies({"company": "Test", "date": "2026-09-10"})
 		sections = [row for row in rows if row.get("is_section")]
 		self.assertEqual(
-			[row["currency"] for row in sections],
-			["EUR", "SAR", "QAR", "KWD", "GBP", "TRY", "CAD", "AUD", "USD"],
+			[row["section_key"] for row in sections],
+			["53000003", "53000004", "53000005", "53000006", "53000007", "53000008", "53000009", "53000010", "53010001", "53010002", "53010003"],
 		)
-		section = next(row for row in sections if row["currency"] == "QAR")
+		section = next(row for row in sections if row["section_key"] == "53000005")
 
 		self.assertEqual(section["currency_name"], "Qatari Riyal")
 		self.assertTrue(section["currency_name_ar"])
@@ -170,5 +168,9 @@ class TestDailyMovement(TestCase):
 		self.assertEqual(section["previous_balance"], 500)
 		self.assertEqual(section["current_balance"], 575)
 		self.assertEqual(section["opening_date"], "09-09-2026")
-		external_usd = next(row for row in sections if row["currency"] == "USD")
+		external_usd = next(row for row in sections if row["section_key"] == "53010001")
 		self.assertEqual(external_usd["currency_name"], "US Dollar External")
+		external_qar = next(row for row in sections if row["section_key"] == "53010002")
+		external_sar = next(row for row in sections if row["section_key"] == "53010003")
+		self.assertEqual(external_qar["currency_name"], "Qatari Riyal External")
+		self.assertEqual(external_sar["currency_name"], "Saudi Riyal External")
