@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import frappe
 
@@ -11,29 +11,6 @@ from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accoun
 
 
 class TestAccountingPaymentGL(TestCase):
-	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.sync_linked_draft_journal_entry")
-	def test_incomplete_draft_saves_without_creating_journal(self, sync_journal):
-		doc = SimpleNamespace(
-			custom_accounting_rows_copy=[SimpleNamespace(account=None, cost_center=None)],
-			journal_entry=None,
-		)
-
-		AccountingPaymentEntry.sync_draft_journal_entry(doc)
-
-		sync_journal.assert_not_called()
-
-	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.delete_linked_draft_journal_entry")
-	def test_incomplete_draft_removes_stale_draft_journal(self, delete_journal):
-		doc = SimpleNamespace(
-			custom_accounting_rows_copy=[SimpleNamespace(account=None, cost_center="Main")],
-			journal_entry="JV-0001", db_set=Mock(),
-		)
-
-		AccountingPaymentEntry.sync_draft_journal_entry(doc)
-
-		delete_journal.assert_called_once_with(doc)
-		doc.db_set.assert_called_once_with("journal_entry", None, update_modified=False)
-
 	def test_amendment_starts_new_approval_cycle(self):
 		doc = SimpleNamespace(
 			docstatus=0, amended_from="APE-00001", approval_status="Approved",

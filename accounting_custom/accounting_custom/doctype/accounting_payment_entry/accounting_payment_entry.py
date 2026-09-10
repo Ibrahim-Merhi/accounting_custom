@@ -91,19 +91,7 @@ class AccountingPaymentEntry(AccountsController):
 
 	def on_update(self):
 		if self.docstatus == 0:
-			self.sync_draft_journal_entry()
-
-	def sync_draft_journal_entry(self):
-		rows_are_complete = self.custom_accounting_rows_copy and all(
-			row.account and row.cost_center for row in self.custom_accounting_rows_copy
-		)
-		if rows_are_complete:
 			sync_linked_draft_journal_entry(self, self.get_gl_entries())
-		elif self.journal_entry:
-			# Never leave a stale Draft Journal Entry in Daily Movement after an
-			# accounting row becomes incomplete again.
-			delete_linked_draft_journal_entry(self)
-			self.db_set("journal_entry", None, update_modified=False)
 
 	def before_submit(self):
 		for row in self.custom_accounting_rows_copy:
