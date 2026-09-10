@@ -37,6 +37,7 @@ SECTIONS = [
 	]),
 	("Treasury and Approval Reports", [
 		("Daily Movement", "Report"),
+		("Daily Movement Other Currency", "Report"),
 		("Daily Treasury Report", "Report"),
 		("Pending Accounting Approvals", "Report"),
 		("Open Custodies", "Report"),

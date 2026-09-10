@@ -1,4 +1,5 @@
 import frappe
+from babel.numbers import get_currency_name, get_currency_symbol
 from frappe import _
 from frappe.utils import add_days, flt, formatdate
 
@@ -12,7 +13,7 @@ USD_CASH_ACCOUNT_NUMBER = "53000002"
 EXCLUDED_COMPANY = "Namaa"
 
 
-def execute(filters=None):
+def execute(filters=None, currency_scope="base"):
 	filters = frappe._dict(filters or {})
 	if not filters.date:
 		return get_columns(), []
@@ -38,8 +39,10 @@ def execute(filters=None):
 	rows = []
 	available_currencies = {currency for _company, currency in opening_balances}
 	available_currencies.update(row.currency for row in transactions if row.currency)
-	currencies = [code for code, _label in BASE_CURRENCIES]
-	currencies.extend(sorted(available_currencies.difference(currencies)))
+	if currency_scope == "other":
+		currencies = sorted(available_currencies.difference(CURRENCY_LABELS))
+	else:
+		currencies = [code for code, _label in BASE_CURRENCIES]
 	opening_date = formatdate(add_days(filters.date, -1), "dd-MM-yyyy")
 	for company in companies:
 		rows.append({
@@ -51,6 +54,13 @@ def execute(filters=None):
 				row for row in transactions
 				if row.company == company and row.currency == currency
 			]
+			currency_name = get_currency_display_name(currency, "en")
+			currency_name_ar = get_currency_display_name(currency, "ar")
+			currency_symbol = get_currency_display_symbol(currency)
+			for row in currency_rows:
+				row.currency_name = currency_name
+				row.currency_name_ar = currency_name_ar
+				row.currency_symbol = currency_symbol
 			incoming = sum(flt(row.incoming) for row in currency_rows)
 			outgoing = sum(flt(row.outgoing) for row in currency_rows)
 			previous = flt(opening_balances.get((company, currency)))
@@ -58,7 +68,10 @@ def execute(filters=None):
 			rows.append({
 				"company": company,
 				"currency": currency,
-				"description": _(CURRENCY_LABELS.get(currency, currency)),
+				"currency_name": currency_name,
+				"currency_name_ar": currency_name_ar,
+				"currency_symbol": currency_symbol,
+				"description": _(CURRENCY_LABELS.get(currency, currency_name)),
 				"previous_balance": previous,
 				"current_balance": current,
 				"opening_date": opening_date,
@@ -74,6 +87,26 @@ def execute(filters=None):
 				"is_total": 1,
 			})
 	return get_columns(), rows
+
+
+def execute_other_currencies(filters=None):
+	return execute(filters, currency_scope="other")
+
+
+def get_currency_display_name(currency, locale):
+	try:
+		return get_currency_name(currency, locale=locale) or currency
+	except (LookupError, TypeError, ValueError):
+		return currency
+
+
+def get_currency_display_symbol(currency):
+	if currency == "LBP":
+		return "ل.ل"
+	try:
+		return get_currency_symbol(currency, locale="en") or currency
+	except (LookupError, TypeError, ValueError):
+		return currency
 
 
 def get_columns():

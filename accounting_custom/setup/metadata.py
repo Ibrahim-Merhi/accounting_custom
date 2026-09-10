@@ -12,6 +12,7 @@ REPORTS = {
 	"Balance Sheet by Cost Center": "GL Entry",
 	"Collector Collections": "Donation Entry",
 	"Daily Movement": "GL Entry",
+	"Daily Movement Other Currency": "GL Entry",
 	"Daily Treasury Report": "Accounting Payment Entry",
 	"Donor Donation History": "Donation Entry",
 	"Monthly Cash Bank Balance": "GL Entry",

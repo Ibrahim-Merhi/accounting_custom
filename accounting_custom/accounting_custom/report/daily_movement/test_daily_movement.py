@@ -7,6 +7,7 @@ from accounting_custom.accounting_custom.report.daily_movement.daily_movement im
 	company_condition,
 	currency_account_condition,
 	execute,
+	execute_other_currencies,
 	get_selected_companies,
 	get_transactions,
 )
@@ -116,16 +117,36 @@ class TestDailyMovement(TestCase):
 		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
 	)
 	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
-	def test_additional_currencies_get_their_own_section(self, get_balances, get_transactions):
+	def test_daily_movement_excludes_additional_currencies(self, get_balances, get_transactions):
 		get_balances.return_value = {("Test", "QAR"): 500}
 		get_transactions.return_value = [
 			frappe._dict(company="Test", currency="QAR", incoming=100, outgoing=25),
 		]
 
 		_columns, rows = execute({"company": "Test", "date": "2026-09-10"})
-		section = next(row for row in rows if row.get("is_section") and row["currency"] == "QAR")
 
-		self.assertEqual(section["description"], "QAR")
+		self.assertNotIn("QAR", {row.get("currency") for row in rows})
+
+	@patch(
+		"accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_transactions"
+	)
+	@patch("accounting_custom.accounting_custom.report.daily_movement.daily_movement.get_balances")
+	def test_other_currency_report_excludes_lbp_and_usd(self, get_balances, get_transactions):
+		get_balances.return_value = {("Test", "LBP"): 1_000, ("Test", "USD"): 10, ("Test", "QAR"): 500}
+		get_transactions.return_value = [
+			frappe._dict(company="Test", currency="LBP", incoming=100, outgoing=None),
+			frappe._dict(company="Test", currency="USD", incoming=10, outgoing=None),
+			frappe._dict(company="Test", currency="QAR", incoming=100, outgoing=25),
+		]
+
+		_columns, rows = execute_other_currencies({"company": "Test", "date": "2026-09-10"})
+		sections = [row for row in rows if row.get("is_section")]
+		self.assertEqual([row["currency"] for row in sections], ["QAR"])
+		section = sections[0]
+
+		self.assertEqual(section["currency_name"], "Qatari Riyal")
+		self.assertTrue(section["currency_name_ar"])
+		self.assertEqual(section["currency_symbol"], "QAR")
 		self.assertEqual(section["previous_balance"], 500)
 		self.assertEqual(section["current_balance"], 575)
 		self.assertEqual(section["opening_date"], "09-09-2026")
