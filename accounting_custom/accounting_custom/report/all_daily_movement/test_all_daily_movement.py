@@ -93,6 +93,7 @@ class TestAllDailyMovement(TestCase):
 
 		self.assertEqual(sections["53000001"]["previous_balance"], 1_000_000)
 		self.assertEqual(sections["53000001"]["current_balance"], 1_200_000)
+		self.assertEqual(sections["53000001"]["currency_name_ar"], "الليرة اللبنانية")
 		self.assertEqual(sections["53000002"]["previous_balance"], 500)
 		self.assertEqual(sections["53000002"]["current_balance"], 550)
 

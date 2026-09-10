@@ -9,6 +9,18 @@ BASE_CURRENCIES = (
 	("USD", "US Dollar Section"),
 )
 CURRENCY_LABELS = dict(BASE_CURRENCIES)
+ARABIC_CURRENCY_NAMES = {
+	"LBP": "الليرة اللبنانية",
+	"USD": "الدولار الأمريكي",
+	"EUR": "اليورو",
+	"SAR": "الريال السعودي",
+	"QAR": "الريال القطري",
+	"KWD": "الدينار الكويتي",
+	"GBP": "الجنيه الإسترليني",
+	"TRY": "الليرة التركية",
+	"CAD": "الدولار الكندي",
+	"AUD": "الدولار الأسترالي",
+}
 BASE_ACCOUNT_NUMBERS = {
 	"LBP": ("53000001",),
 	"USD": ("53000002",),
@@ -80,7 +92,9 @@ def execute(filters=None):
 			]
 			section_key = account_number
 			currency_name = custom_name or get_currency_display_name(currency, "en")
-			currency_name_ar = custom_name_ar or get_currency_display_name(currency, "ar")
+			currency_name_ar = custom_name_ar or ARABIC_CURRENCY_NAMES.get(
+				currency, get_currency_display_name(currency, "ar")
+			)
 			currency_symbol = get_currency_display_symbol(currency)
 			for row in currency_rows:
 				row.currency_name = currency_name
