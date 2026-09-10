@@ -37,10 +37,13 @@ class TestDailyMovement(TestCase):
 		self.assertEqual(get_selected_companies("Itihad"), ("Itihad",))
 		self.assertEqual(get_selected_companies(None), ())
 
-	def test_usd_is_limited_to_the_configured_cash_account(self):
+	def test_lbp_and_usd_are_limited_to_their_configured_cash_accounts(self):
 		condition = currency_account_condition("gle", "account")
 
-		self.assertIn("gle.account_currency != 'USD'", condition)
+		self.assertIn("gle.account_currency not in ('LBP', 'USD')", condition)
+		self.assertIn("gle.account_currency = 'LBP'", condition)
+		self.assertIn("account.account_number = '53000001'", condition)
+		self.assertIn("gle.account_currency = 'USD'", condition)
 		self.assertIn("account.account_number = '53000002'", condition)
 
 	@patch("frappe.db.sql", return_value=[])
@@ -58,6 +61,7 @@ class TestDailyMovement(TestCase):
 		self.assertIn("gle.voucher_type = 'Journal Entry'", query)
 		self.assertIn("coalesce(gle.party_type, '') = ''", query)
 		self.assertIn("coalesce(line.party_type, '') = ''", query)
+		self.assertEqual(query.count("account.account_number = '53000001'"), 2)
 		self.assertEqual(query.count("account.account_number = '53000002'"), 2)
 		self.assertIn("line.parent = gle.voucher_no", query)
 		self.assertIn("line.account = gle.account", query)

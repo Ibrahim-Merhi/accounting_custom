@@ -9,6 +9,7 @@ BASE_CURRENCIES = (
 	("USD", "US Dollar Section"),
 )
 CURRENCY_LABELS = dict(BASE_CURRENCIES)
+LBP_CASH_ACCOUNT_NUMBER = "53000001"
 USD_CASH_ACCOUNT_NUMBER = "53000002"
 EXCLUDED_COMPANY = "Namaa"
 
@@ -152,10 +153,13 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 
 
 def currency_account_condition(alias="gle", account_alias="account"):
-	return (
-		f"({alias}.account_currency != 'USD' "
-		f"or {account_alias}.account_number = '{USD_CASH_ACCOUNT_NUMBER}')"
-	)
+	return f"""(
+		{alias}.account_currency not in ('LBP', 'USD')
+		or ({alias}.account_currency = 'LBP'
+			and {account_alias}.account_number = '{LBP_CASH_ACCOUNT_NUMBER}')
+		or ({alias}.account_currency = 'USD'
+			and {account_alias}.account_number = '{USD_CASH_ACCOUNT_NUMBER}')
+	)"""
 
 
 def get_balances(filters):
