@@ -88,7 +88,16 @@ const daily_movement_other_currency_print_format = `
 frappe.query_reports["Daily Movement Other Currency"] = {
 	html_format: daily_movement_other_currency_print_format,
 	onload(report) {
-		const print_arabic_report = () => {
+		const print_arabic_report = (movement_only = false) => {
+			const report_data = report.data || [];
+			const active_currencies = new Set(
+				report_data
+					.filter((row) => row.voucher_no && (Number(row.incoming || 0) || Number(row.outgoing || 0)))
+					.map((row) => row.currency)
+			);
+			const print_data = movement_only
+				? report_data.filter((row) => !row.currency || active_currencies.has(row.currency))
+				: report_data;
 			report.make_access_log?.("Print", "PDF");
 			frappe.render_grid({
 				template: daily_movement_other_currency_print_format,
@@ -99,16 +108,23 @@ frappe.query_reports["Daily Movement Other Currency"] = {
 				filters: report.get_filter_values(),
 				data: report.get_data_for_print(),
 				columns: report.columns,
-				original_data: report.data,
+				original_data: print_data,
 				report,
 				can_use_smaller_font: 0,
 			});
 		};
+		const print_all_currencies = () => print_arabic_report(false);
+		const print_active_currencies = () => print_arabic_report(true);
 
 		// Frappe's print dialog forces the generic grid when it supplies columns.
 		// Keep every print path for this report on the dedicated Arabic format.
-		report.print_report = print_arabic_report;
-		report.page.add_inner_button(__("Arabic Print"), print_arabic_report, __("Print"));
+		report.print_report = print_all_currencies;
+		report.page.add_inner_button(
+			__("Arabic - All Currencies"), print_all_currencies, __("Print")
+		);
+		report.page.add_inner_button(
+			__("Arabic - Currencies With Movement Only"), print_active_currencies, __("Print")
+		);
 	},
 	filters: [
 		{

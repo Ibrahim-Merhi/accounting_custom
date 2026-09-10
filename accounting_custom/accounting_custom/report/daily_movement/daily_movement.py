@@ -8,19 +8,22 @@ BASE_CURRENCIES = (
 	("LBP", "Lebanese Pound Section"),
 	("USD", "US Dollar Section"),
 )
-OTHER_CURRENCIES = ("EUR", "SAR", "QAR", "KWD", "GBP", "TRY", "CAD", "AUD")
+OTHER_CURRENCIES = ("EUR", "SAR", "QAR", "KWD", "GBP", "TRY", "CAD", "AUD", "USD")
 CURRENCY_LABELS = dict(BASE_CURRENCIES)
-DAILY_MOVEMENT_ACCOUNT_NUMBERS = {
-	"LBP": "53000001",
-	"USD": "53000002",
-	"EUR": "53000003",
-	"SAR": "53000004",
-	"QAR": "53000005",
-	"KWD": "53000006",
-	"GBP": "53000007",
-	"TRY": "53000008",
-	"CAD": "53000009",
-	"AUD": "53000010",
+BASE_ACCOUNT_NUMBERS = {
+	"LBP": ("53000001",),
+	"USD": ("53000002",),
+}
+OTHER_ACCOUNT_NUMBERS = {
+	"EUR": ("53000003",),
+	"SAR": ("53000004", "53010003"),
+	"QAR": ("53000005", "53010002"),
+	"KWD": ("53000006",),
+	"GBP": ("53000007",),
+	"TRY": ("53000008",),
+	"CAD": ("53000009",),
+	"AUD": ("53000010",),
+	"USD": ("53010001",),
 }
 EXCLUDED_COMPANY = "Namaa"
 
@@ -34,6 +37,7 @@ def execute(filters=None, currency_scope="base"):
 	if requested_companies and not filters.companies:
 		return get_columns(), []
 	filters.excluded_company = EXCLUDED_COMPANY
+	filters.currency_scope = currency_scope
 
 	opening_balances = get_balances(filters)
 	transactions = get_transactions(filters)
@@ -52,7 +56,7 @@ def execute(filters=None, currency_scope="base"):
 	available_currencies = {currency for _company, currency in opening_balances}
 	available_currencies.update(row.currency for row in transactions if row.currency)
 	if currency_scope == "other":
-		currencies = [currency for currency in OTHER_CURRENCIES if currency in available_currencies]
+		currencies = list(OTHER_CURRENCIES)
 	else:
 		currencies = [code for code, _label in BASE_CURRENCIES]
 	opening_date = formatdate(add_days(filters.date, -1), "dd-MM-yyyy")
@@ -66,8 +70,9 @@ def execute(filters=None, currency_scope="base"):
 				row for row in transactions
 				if row.company == company and row.currency == currency
 			]
-			currency_name = get_currency_display_name(currency, "en")
-			currency_name_ar = get_currency_display_name(currency, "ar")
+			is_external_usd = currency_scope == "other" and currency == "USD"
+			currency_name = "US Dollar External" if is_external_usd else get_currency_display_name(currency, "en")
+			currency_name_ar = "الدولار الأمريكي الخارجي" if is_external_usd else get_currency_display_name(currency, "ar")
 			currency_symbol = get_currency_display_symbol(currency)
 			for row in currency_rows:
 				row.currency_name = currency_name
@@ -163,16 +168,17 @@ def treasury_account_condition(alias="gle", account_alias="account"):
 	)"""
 
 
-def currency_account_condition(alias="gle", account_alias="account"):
-	mapped_currencies = ", ".join(f"'{currency}'" for currency in DAILY_MOVEMENT_ACCOUNT_NUMBERS)
+def currency_account_condition(alias="gle", account_alias="account", currency_scope="base"):
+	account_numbers = (
+		OTHER_ACCOUNT_NUMBERS if currency_scope == "other" else BASE_ACCOUNT_NUMBERS
+	)
 	mapped_accounts = "\n\t\tor ".join(
-		f"({alias}.account_currency = '{currency}' "
-		f"and {account_alias}.account_number = '{account_number}')"
-		for currency, account_number in DAILY_MOVEMENT_ACCOUNT_NUMBERS.items()
+		f"({alias}.account_currency = '{currency}' and "
+		f"{account_alias}.account_number in ({', '.join(repr(number) for number in numbers)}))"
+		for currency, numbers in account_numbers.items()
 	)
 	return f"""(
-		{alias}.account_currency not in ({mapped_currencies})
-		or {mapped_accounts}
+		{mapped_accounts}
 	)"""
 
 
@@ -188,8 +194,7 @@ def get_balances(filters):
 			and gle.is_cancelled = 0
 			and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 			and coalesce(gle.account_currency, '') != ''
-			and {currency_account_condition()}
-			and {treasury_account_condition()}
+			and {currency_account_condition(currency_scope=filters.currency_scope)}
 		group by gle.company, gle.account_currency
 		""",
 		filters,
@@ -226,8 +231,7 @@ def get_transactions(filters):
 				and gle.is_cancelled = 0 and gle.voucher_type = 'Journal Entry'
 				and coalesce(gle.party_type, '') = '' and coalesce(gle.party, '') = ''
 				and coalesce(gle.account_currency, '') != ''
-				and {currency_account_condition()}
-				and {treasury_account_condition()}
+				and {currency_account_condition(currency_scope=filters.currency_scope)}
 			group by gle.company, gle.voucher_no, gle.account_currency
 
 			union all
@@ -249,16 +253,7 @@ def get_transactions(filters):
 				and journal.docstatus = 0
 				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''
 				and coalesce(line.account_currency, '') != ''
-				and {currency_account_condition('line')}
-				and (
-					account.account_type in ('Cash', 'Bank')
-					or line.account in (select custody.account from `tabCollector Custody Account` custody)
-					or line.account in (
-						select mode_account.default_account
-						from `tabMode of Payment Account` mode_account
-						where mode_account.company = journal.company
-					)
-				)
+				and {currency_account_condition('line', currency_scope=filters.currency_scope)}
 			group by journal.company, journal.name, line.account_currency
 		) movement
 		where coalesce(movement.incoming, 0) > 0 or coalesce(movement.outgoing, 0) > 0
