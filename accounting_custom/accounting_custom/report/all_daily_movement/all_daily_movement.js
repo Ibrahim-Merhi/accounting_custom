@@ -56,6 +56,7 @@ const all_daily_movement_print_format = `
 						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(incoming) }}</span></div>
 						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(outgoing) }}</span></div>
 					</div>
+					{% if filters.show_details %}
 					<table class="transactions">
 						<colgroup><col style="width:54%"><col style="width:23%"><col style="width:23%"></colgroup>
 						<thead><tr><th>الوصف</th><th>الوارد</th><th>الصادر</th></tr></thead>
@@ -69,6 +70,7 @@ const all_daily_movement_print_format = `
 						{% endif %}
 						</tbody>
 					</table>
+					{% endif %}
 				</div>
 			{% endfor %}
 			<div class="signatures">
@@ -106,7 +108,10 @@ frappe.query_reports["All Daily Movement"] = {
 				subtitle: "",
 				print_settings: { orientation: "Portrait" },
 				landscape: false,
-				filters: report.get_filter_values(),
+				filters: {
+					...report.get_filter_values(),
+					show_details: movement_only ? 1 : 0,
+				},
 				data: report.get_data_for_print(),
 				columns: report.columns,
 				original_data: print_data,
