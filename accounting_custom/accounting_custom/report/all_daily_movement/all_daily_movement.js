@@ -6,6 +6,16 @@ const get_arabic_weekday = (date_value) => {
 	);
 };
 
+const get_arabic_display_date = (date_value) => {
+	if (!date_value) return "";
+	const arabic_digits = "٠١٢٣٤٥٦٧٨٩";
+	const normalized_date = date_value.replaceAll("-", "/").replace(
+		/\d/g,
+		(digit) => arabic_digits[Number(digit)]
+	);
+	return `${get_arabic_weekday(date_value)} ${normalized_date}`;
+};
+
 const all_daily_movement_print_format = `
 		<style>
 			@page { size: A4 portrait; margin: 9mm; }
@@ -42,7 +52,7 @@ const all_daily_movement_print_format = `
 			<button type="button" class="print-action" onclick="window.print()">طباعة</button>
 			<div class="report-head">
 				<div class="title-block"><h1>الحركة اليومية الشاملة</h1><div class="subtitle">بيان حركة الصندوق اليومية لجميع العملات</div></div>
-				<div class="meta"><span><strong>التاريخ:</strong> {{ filters.day_name }}، {{ filters.date }}</span></div>
+				<div class="meta"><span>{{ filters.formatted_date }}</span></div>
 			</div>
 			{% var display_amount = value => format_number(value, null, 2).replace(/\.00$/, ""); %}
 			{% var section_keys = [...new Set(original_data.filter(row => row.section_key).map(row => row.section_key))]; %}
@@ -126,6 +136,7 @@ frappe.query_reports["All Daily Movement"] = {
 				filters: {
 					...report.get_filter_values(),
 					day_name: get_arabic_weekday(report.get_filter_value("date")),
+					formatted_date: get_arabic_display_date(report.get_filter_value("date")),
 					show_details: movement_only ? 1 : 0,
 				},
 				data: report.get_data_for_print(),
