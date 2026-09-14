@@ -8,11 +8,7 @@ const get_arabic_weekday = (date_value) => {
 
 const get_arabic_display_date = (date_value) => {
 	if (!date_value) return "";
-	const arabic_digits = "٠١٢٣٤٥٦٧٨٩";
-	const normalized_date = date_value.replaceAll("-", "/").replace(
-		/\d/g,
-		(digit) => arabic_digits[Number(digit)]
-	);
+	const normalized_date = date_value.replaceAll("-", "/");
 	return `${get_arabic_weekday(date_value)} ${normalized_date}`;
 };
 
