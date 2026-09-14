@@ -1,3 +1,11 @@
+const get_arabic_weekday = (date_value) => {
+	if (!date_value) return "";
+	const [year, month, day] = date_value.split("-").map(Number);
+	return new Intl.DateTimeFormat("ar-LB", { weekday: "long" }).format(
+		new Date(year, month - 1, day)
+	);
+};
+
 const all_daily_movement_print_format = `
 		<style>
 			@page { size: A4 portrait; margin: 9mm; }
@@ -34,7 +42,7 @@ const all_daily_movement_print_format = `
 			<button type="button" class="print-action" onclick="window.print()">طباعة</button>
 			<div class="report-head">
 				<div class="title-block"><h1>الحركة اليومية الشاملة</h1><div class="subtitle">بيان حركة الصندوق اليومية لجميع العملات</div></div>
-				<div class="meta"><span><strong>التاريخ:</strong> {{ filters.date }}</span></div>
+				<div class="meta"><span><strong>التاريخ:</strong> {{ filters.day_name }}، {{ filters.date }}</span></div>
 			</div>
 			{% var display_amount = value => format_number(value, null, 2).replace(/\.00$/, ""); %}
 			{% var section_keys = [...new Set(original_data.filter(row => row.section_key).map(row => row.section_key))]; %}
@@ -91,6 +99,9 @@ const all_daily_movement_print_format = `
 frappe.query_reports["All Daily Movement"] = {
 	html_format: all_daily_movement_print_format,
 	onload(report) {
+		report.get_filter("day_name")?.set_input(
+			get_arabic_weekday(report.get_filter_value("date"))
+		);
 		const print_arabic_report = (movement_only = false) => {
 			const report_data = report.data || [];
 			const active_sections = new Set(
@@ -114,6 +125,7 @@ frappe.query_reports["All Daily Movement"] = {
 				landscape: false,
 				filters: {
 					...report.get_filter_values(),
+					day_name: get_arabic_weekday(report.get_filter_value("date")),
 					show_details: movement_only ? 1 : 0,
 				},
 				data: report.get_data_for_print(),
@@ -152,6 +164,19 @@ frappe.query_reports["All Daily Movement"] = {
 			fieldtype: "Date",
 			reqd: 1,
 			default: frappe.datetime.get_today(),
+			on_change(query_report) {
+				query_report.get_filter("day_name")?.set_input(
+					get_arabic_weekday(query_report.get_filter_value("date"))
+				);
+				query_report.refresh();
+			},
+		},
+		{
+			fieldname: "day_name",
+			label: __("Day"),
+			fieldtype: "Data",
+			read_only: 1,
+			default: get_arabic_weekday(frappe.datetime.get_today()),
 		},
 	],
 	formatter(value, row, column, data, default_formatter) {
