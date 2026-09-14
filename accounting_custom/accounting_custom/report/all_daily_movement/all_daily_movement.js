@@ -56,7 +56,7 @@ const all_daily_movement_print_format = `
 						<div class="summary-item"><span class="summary-label">إجمالي الوارد</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(incoming) }}</span></div>
 						<div class="summary-item"><span class="summary-label">إجمالي الصادر</span><span class="summary-value">{{ currency_symbol }} {{ display_amount(outgoing) }}</span></div>
 					</div>
-					{% if filters.show_details %}
+					{% if filters.show_details && transactions.length %}
 					<table class="transactions">
 						<colgroup><col style="width:54%"><col style="width:23%"><col style="width:23%"></colgroup>
 						<thead><tr><th>الوصف</th><th>الوارد</th><th>الصادر</th></tr></thead>
@@ -98,6 +98,10 @@ frappe.query_reports["All Daily Movement"] = {
 					.filter((row) => row.voucher_no && (Number(row.incoming || 0) || Number(row.outgoing || 0)))
 					.map((row) => row.section_key)
 			);
+			// The primary LBP and USD cash balances must always be present in the
+			// movement-only print, even on dates without transactions.
+			active_sections.add("53000001");
+			active_sections.add("53000002");
 			const print_data = movement_only
 				? report_data.filter((row) => !row.section_key || active_sections.has(row.section_key))
 				: report_data;
