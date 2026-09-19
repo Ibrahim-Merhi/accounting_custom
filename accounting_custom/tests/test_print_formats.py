@@ -5,6 +5,7 @@ from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
 	_islam_forum_html,
 	_muntada_voucher_html,
+	_payment_html,
 	_standard_company_html,
 )
 
@@ -71,6 +72,12 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("علم وخبر ٣٢٥ أ٫د", html)
 		self.assertIn("al_muntada_islam_forum_grayscale.png", html)
 		self.assertIn("STANDARD BODY", html)
+
+	def test_payment_format_uses_arabic_branch_name(self):
+		html = _payment_html("{{ donor_phone }}")
+
+		self.assertIn("custom_branch_name_arabic", html)
+		self.assertIn("doc.custom_branch", html)
 
 	def test_donation_muntada_template_uses_donation_fields(self):
 		doc = frappe._dict(

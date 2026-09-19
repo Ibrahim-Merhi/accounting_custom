@@ -53,8 +53,12 @@ CUSTOM_FIELDS = {
 	],
 	"Branch": [
 		{
+			"fieldname": "custom_branch_name_arabic", "label": "Arabic Branch Name",
+			"fieldtype": "Data", "insert_after": "branch", "in_list_view": 1,
+		},
+		{
 			"fieldname": "custom_company", "label": "Company", "fieldtype": "Link",
-			"options": "Company", "insert_after": "branch",
+			"options": "Company", "insert_after": "custom_branch_name_arabic",
 		},
 	],
 	"Donor": [
@@ -120,6 +124,36 @@ def ensure_custom_fields():
 		frappe.clear_cache(doctype=doctype)
 	migrate_journal_entry_branches()
 	migrate_accounting_payment_rows()
+	backfill_arabic_branch_names()
+
+
+def backfill_arabic_branch_names():
+	if not frappe.db.has_column("Branch", "custom_branch_name_arabic"):
+		return
+	translations = {
+		"beirut": "بيروت",
+		"tripoli": "طرابلس",
+		"saidon": "صيدا",
+		"sidon": "صيدا",
+		"saida": "صيدا",
+		"bekaa": "البقاع",
+		"montada": "المنتدى",
+		"itihad": "الاتحاد",
+	}
+	for branch in frappe.get_all(
+		"Branch", fields=["name", "branch", "custom_branch_name_arabic"]
+	):
+		if branch.custom_branch_name_arabic:
+			continue
+		english_name = branch.branch or branch.name
+		parts = [part.strip() for part in english_name.split(" - ")]
+		translated = [translations.get(part.lower(), part) for part in parts]
+		arabic_name = " - ".join(translated)
+		if arabic_name != english_name:
+			frappe.db.set_value(
+				"Branch", branch.name, "custom_branch_name_arabic", arabic_name,
+				update_modified=False,
+			)
 
 
 def remove_obsolete_payment_entry_fields():

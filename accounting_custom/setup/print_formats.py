@@ -316,7 +316,11 @@ def _payment_html(html):
 	html = html.replace('{{ doc.donor_name or doc.donor or "" }}', '{{ doc.custom_accounting_rows_copy | map(attribute="party_name") | select | unique | join("، ") }}', 1)
 	html = html.replace("DONOR NAME + PHONE", "PAYEE + REFERENCE")
 	html = html.replace("رقم الهاتف:", "الفرع:", 1)
-	html = html.replace("{{ donor_phone }}", '{{ doc.custom_branch or "" }}', 1)
+	html = html.replace(
+		"{{ donor_phone }}",
+		'{{ frappe.db.get_value("Branch", doc.custom_branch, "custom_branch_name_arabic") or doc.custom_branch or "" }}',
+		1,
+	)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
 	html = html.replace('{{ user.full_name or "" }}', "", 1)
 	return html
@@ -351,6 +355,10 @@ def _accounting_receipt_html(html):
 	)
 	html = html.replace("DONOR NAME + PHONE", "RECEIPT PARTY + REFERENCE")
 	html = html.replace("رقم الهاتف:", "الفرع:", 1)
-	html = html.replace("{{ donor_phone }}", '{{ doc.custom_branch or "" }}', 1)
+	html = html.replace(
+		"{{ donor_phone }}",
+		'{{ frappe.db.get_value("Branch", doc.custom_branch, "custom_branch_name_arabic") or doc.custom_branch or "" }}',
+		1,
+	)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
 	return html
