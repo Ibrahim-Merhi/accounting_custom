@@ -35,6 +35,7 @@ def after_migrate():
 def setup_accounting_customizations():
 	ensure_accounting_roles()
 	ensure_party_type_permissions()
+	ensure_employee_link_title()
 	ensure_custom_fields()
 	backfill_arabic_names()
 	ensure_party_types()
@@ -57,6 +58,25 @@ def ensure_party_types():
 			).insert(ignore_permissions=True)
 		elif frappe.db.get_value("Party Type", party_type, "account_type") != account_type:
 			frappe.db.set_value("Party Type", party_type, "account_type", account_type)
+
+
+def ensure_employee_link_title():
+	"""Show Employee Name as the Link title while retaining Employee ID as value."""
+	property_name = "Employee-main-show_title_field_in_link"
+	if frappe.db.exists("Property Setter", property_name):
+		frappe.db.set_value(
+			"Property Setter", property_name,
+			{"value": "1", "property_type": "Check"}, update_modified=False,
+		)
+	else:
+		frappe.make_property_setter({
+			"doctype": "Employee",
+			"doctype_or_field": "DocType",
+			"property": "show_title_field_in_link",
+			"property_type": "Check",
+			"value": "1",
+		})
+	frappe.clear_cache(doctype="Employee")
 
 
 def ensure_party_type_permissions():
