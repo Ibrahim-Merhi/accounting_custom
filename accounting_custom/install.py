@@ -37,6 +37,7 @@ def setup_accounting_customizations():
 	ensure_party_type_permissions()
 	ensure_employee_link_title()
 	ensure_custom_fields()
+	ensure_accounting_entry_layouts()
 	backfill_arabic_names()
 	ensure_party_types()
 	ensure_arabic_voucher_print_formats()
@@ -77,6 +78,16 @@ def ensure_employee_link_title():
 			"value": "1",
 		})
 	frappe.clear_cache(doctype="Employee")
+
+
+def ensure_accounting_entry_layouts():
+	"""Remove legacy Customize Form ordering that overrides app-owned layouts."""
+	for doctype in ("Accounting Payment Entry", "Accounting Receipt Entry"):
+		frappe.db.delete(
+			"Property Setter",
+			{"doc_type": doctype, "property": "field_order"},
+		)
+		frappe.clear_cache(doctype=doctype)
 
 
 def ensure_party_type_permissions():
