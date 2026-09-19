@@ -8,7 +8,7 @@
  "fields":[
   {"fieldname":"naming_series","fieldtype":"Select","label":"Naming Series","options":"CHO-.YYYY.-.#####"},
   {"default":"Today","fieldname":"posting_date","fieldtype":"Date","in_list_view":1,"label":"Posting Date","reqd":1},
-  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","options":"Company","reqd":1},
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","no_default":1,"options":"Company","reqd":1},
   {"fieldname":"collector","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Collector","options":"Collector Profile","reqd":1},
   {"fieldname":"remarks","fieldtype":"Small Text","label":"Remarks"},
   {"fieldname":"handover_lines","fieldtype":"Section Break","label":"Amounts Received"},

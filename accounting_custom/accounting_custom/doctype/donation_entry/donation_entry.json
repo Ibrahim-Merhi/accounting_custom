@@ -116,6 +116,7 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
+   "no_default": 1,
    "options": "Company",
    "reqd": 1
   },

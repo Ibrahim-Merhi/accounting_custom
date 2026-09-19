@@ -7,7 +7,7 @@
  "fields":[
   {"fieldname":"naming_series","fieldtype":"Select","label":"Naming Series","options":"PRV-.YYYY.-.#####"},
   {"fieldname":"payroll_entry","fieldtype":"Link","in_list_view":1,"label":"Payroll Entry","options":"Payroll Entry","reqd":1,"unique":1},
-  {"fetch_from":"payroll_entry.company","fieldname":"company","fieldtype":"Link","in_standard_filter":1,"label":"Company","options":"Company","read_only":1},
+  {"fetch_from":"payroll_entry.company","fieldname":"company","fieldtype":"Link","in_standard_filter":1,"label":"Company","no_default":1,"options":"Company","read_only":1},
   {"fetch_from":"payroll_entry.start_date","fieldname":"period_start","fieldtype":"Date","label":"Period Start","read_only":1},
   {"fetch_from":"payroll_entry.end_date","fieldname":"period_end","fieldtype":"Date","label":"Period End","read_only":1},
   {"description":"Attach the exported Salary Register for signatures when required.","fieldname":"salary_register_file","fieldtype":"Attach","label":"Salary Register File"},

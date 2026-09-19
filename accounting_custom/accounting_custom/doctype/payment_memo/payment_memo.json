@@ -15,7 +15,7 @@
   {"fieldname":"request_section","fieldtype":"Section Break","label":"Payment Request"},
   {"fieldname":"naming_series","fieldtype":"Select","label":"Naming Series","options":"PM-.YYYY.-.#####"},
   {"default":"Today","fieldname":"posting_date","fieldtype":"Date","in_list_view":1,"label":"Posting Date","reqd":1},
-  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","options":"Company","reqd":1},
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"in_standard_filter":1,"label":"Company","no_default":1,"options":"Company","reqd":1},
   {"fieldname":"payment_type","fieldtype":"Select","in_list_view":1,"in_standard_filter":1,"label":"Payment Type","options":"Payment\nCustody\nCustody Closure\nSalary Advance","reqd":1},
   {"fieldname":"applicant_type","fieldtype":"Select","label":"Applicant Type","options":"Employee\nVolunteer\nTreasurer","reqd":1},
   {"depends_on":"eval:doc.applicant_type=='Employee'","fieldname":"employee","fieldtype":"Link","label":"Employee","mandatory_depends_on":"eval:doc.applicant_type=='Employee'","options":"Employee"},

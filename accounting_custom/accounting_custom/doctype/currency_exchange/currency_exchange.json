@@ -12,7 +12,7 @@
   "remarks"
  ],
  "fields": [
-  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"label":"Company","options":"Company","reqd":1},
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"label":"Company","no_default":1,"options":"Company","reqd":1},
   {"default":"Today","fieldname":"posting_date","fieldtype":"Date","in_list_view":1,"label":"Posting Date","reqd":1},
   {"fieldname":"custom_branch","fieldtype":"Link","label":"Branch","options":"Branch","reqd":1},
   {"fieldname":"column_break_header","fieldtype":"Column Break"},

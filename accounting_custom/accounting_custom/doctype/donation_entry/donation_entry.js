@@ -22,7 +22,7 @@ frappe.ui.form.on("Donation Entry", {
 	donor(frm) {
 		frm.set_value("company", null);
 		frm.set_value("donor_account", null);
-		if (frm.doc.donor) load_donor_accounts(frm, true);
+		if (frm.doc.donor) load_donor_accounts(frm);
 	},
 
 	company(frm) {
@@ -163,14 +163,13 @@ function account_query(company) {
 	};
 }
 
-function load_donor_accounts(frm, auto_select = false) {
+function load_donor_accounts(frm) {
 	if (!frm.doc.donor) return;
 	frappe.db.get_doc("Donor", frm.doc.donor).then((donor) => {
 		const rows = donor.custom_accounts || [];
 		const companies = [...new Set(rows.map((row) => row.company).filter(Boolean))];
 		frm.donor_companies = companies;
 		set_queries(frm);
-		if (auto_select && companies.length === 1) frm.set_value("company", companies[0]);
 		const match = rows.find((row) => row.company === frm.doc.company);
 		if (match?.account) frm.set_value("donor_account", match.account);
 	});
