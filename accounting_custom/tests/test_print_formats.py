@@ -15,6 +15,7 @@ class TestMuntadaPrintFormats(TestCase):
 		doc = frappe._dict(
 			company="Al Muntada Al Tullabi",
 			posting_date="2026-09-19",
+			custom_hijri_date="1448/4/8",
 			remarks="Test remarks",
 			custom_amount_in_words_arabic="مائة دولار فقط لا غير",
 			currency_totals=[
@@ -37,6 +38,9 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("Test remarks", receipt)
 		self.assertIn("100.00", payment)
 		self.assertIn("1,000,000", receipt)
+		self.assertEqual(payment.count("فقط لا غير"), 1)
+		self.assertIn("1448/4/8", payment)
+		self.assertIn("2026-09-19", receipt)
 
 	def test_single_format_selects_design_by_company(self):
 		template = _company_conditional_html(

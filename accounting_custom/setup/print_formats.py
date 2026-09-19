@@ -138,14 +138,16 @@ def _muntada_voucher_html(payment, donation=False):
 		'<td>أمين الصندوق:<div class="sign-line"></div></td>'
 		'<td>المستلم:<div class="sign-line"></div></td>'
 		if payment else
-		'<td>التاريخ: <span dir="ltr">{{ doc.posting_date or "" }}</span></td>'
+		'<td></td>'
 		'<td>أمين الصندوق:<div class="sign-line"></div></td>'
 		'<td>المستلم:<div class="sign-line"></div></td>'
 	)
 	date_line = (
-		'<div class="muntada-date">التاريخ: '
-		'<span dir="ltr">{{ doc.posting_date or "" }}</span></div>'
-		if payment else ""
+		'<div class="muntada-date">'
+		'التاريخ الهجري: <span dir="ltr">{{ doc.custom_hijri_date or "" }}</span>'
+		'<span class="date-separator">|</span>'
+		'التاريخ الميلادي: <span dir="ltr">{{ doc.posting_date or "" }}</span>'
+		'</div>'
 	)
 	amount_rows_field = "payments" if donation else "currency_totals"
 	payment_rows_field = "payments" if donation else "custom_accounting_rows_copy"
@@ -161,32 +163,34 @@ def _muntada_voucher_html(payment, donation=False):
 @page {{ size: 230mm 113mm; margin: 0; }}
 .print-format {{ margin:0!important; padding:0!important; }}
 .muntada-voucher {{ direction:rtl; font-family:"Traditional Arabic","Arial",sans-serif; color:#211f20;
-    width:230mm; height:110mm; position:relative; overflow:hidden; box-sizing:border-box; background:#fff; }}
-.muntada-sidebar {{ position:absolute; top:0; right:0; bottom:0; width:25mm; background:#000; color:#fff;
+    width:100%; height:110mm; position:relative; overflow:hidden; box-sizing:border-box; background:#fff; }}
+.muntada-sidebar {{ position:absolute; top:0; right:0; bottom:0; width:12%; background:#000; color:#fff;
     display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; transform:rotate(180deg);
     font-size:19px; font-weight:800; text-align:center; padding:5mm 0; box-sizing:border-box; }}
 .muntada-sidebar small {{ font-size:10px; font-weight:700; margin-top:7mm; }}
-.muntada-logo {{ position:absolute; left:8mm; top:5mm; width:28mm; height:28mm; object-fit:contain; }}
-.muntada-heading {{ position:absolute; left:41mm; top:6mm; width:133mm; direction:rtl; text-align:center; }}
+.muntada-logo {{ position:absolute; left:5%; right:auto!important; top:5mm; width:14%; height:28mm; object-fit:contain; }}
+.muntada-heading {{ position:absolute; left:25%; top:6mm; width:58%; direction:rtl; text-align:center; }}
 .muntada-basmala {{ font-size:10px; font-weight:700; line-height:1; margin-bottom:2mm; }}
 .muntada-verse {{ font-size:19px; font-weight:700; white-space:nowrap; line-height:1.2; }}
-.muntada-title {{ position:absolute; left:42mm; top:34mm; width:137mm; height:10mm; box-sizing:border-box;
+.muntada-title {{ position:absolute; left:25%; top:34mm; width:61%; height:10mm; box-sizing:border-box;
     background:#000; color:#fff; font-size:23px; line-height:10mm; text-align:center; font-weight:700; }}
-.muntada-amounts {{ position:absolute; left:8mm; top:35mm; direction:ltr; height:9mm; white-space:nowrap; }}
+.muntada-amounts {{ position:absolute; left:5%; right:auto!important; top:35mm; direction:ltr; height:9mm; white-space:nowrap; }}
 .amount-box {{ display:inline-block; border:1.5px solid #222; width:27mm; height:9mm; box-sizing:border-box;
     font-family:Arial,sans-serif; font-size:12px; line-height:8mm; font-weight:700; text-align:center; }}
-.muntada-body {{ position:absolute; left:8mm; right:31mm; top:47mm; }}
-.voucher-row {{ font-size:15px; font-weight:700; height:10mm; line-height:9mm; white-space:nowrap; }}
+.muntada-body {{ position:absolute; left:5%; right:16%; top:47mm; }}
+.voucher-row {{ font-size:14px; font-weight:700; height:10mm; line-height:9mm; white-space:nowrap; }}
 .dots {{ display:inline-block; border-bottom:1.4px dotted #333; min-width:57%; height:7mm;
     padding:0 1mm; font-size:13px; font-weight:500; line-height:7mm; vertical-align:bottom; overflow:hidden; }}
 .phone-dots {{ min-width:20%; }} .short-dots {{ min-width:17%; }} .bank-dots {{ min-width:25%; }}
 .check {{ display:inline-block; width:5mm; height:5mm; border:1.5px solid #222; margin:0 2mm;
     text-align:center; line-height:4mm; font-family:Arial; font-size:14px; vertical-align:middle; }}
-.muntada-signatures {{ position:absolute; left:8mm; right:31mm; top:84mm; width:calc(100% - 39mm);
-    border-top:2px solid #222; padding-top:1.5mm; table-layout:fixed; font-size:12px; font-weight:700; text-align:center; }}
-.sign-line {{ border-bottom:1.4px dotted #333; height:7mm; margin:0 7mm; }}
-.muntada-date {{ position:absolute; right:34mm; top:96mm; font-size:10px; font-weight:700; }}
-.muntada-footer {{ position:absolute; left:8mm; right:25mm; bottom:4mm; border:1.5px solid #222;
+.muntada-signatures {{ position:absolute; left:5%; right:16%; top:84mm; width:79%;
+    border-top:2px solid #222; padding-top:1.5mm; table-layout:fixed; font-size:11px; font-weight:700; text-align:center; }}
+.muntada-signatures td {{ vertical-align:top; width:33.33%; }}
+.sign-line {{ border-bottom:1.4px dotted #333; height:5mm; margin:0 9mm; }}
+.muntada-date {{ position:absolute; right:16%; top:96mm; font-size:9px; font-weight:700; white-space:nowrap; }}
+.date-separator {{ margin:0 4mm; color:#777; }}
+.muntada-footer {{ position:absolute; left:5%; right:12%; bottom:2mm; border:1.5px solid #222;
     height:7mm; box-sizing:border-box; line-height:6mm; text-align:center; font-size:9px; font-weight:700; white-space:nowrap; }}
 </style>
 <div class="muntada-voucher">
@@ -197,7 +201,7 @@ def _muntada_voucher_html(payment, donation=False):
   <div class="muntada-title">{title}</div>
   <div class="muntada-body">
     <div class="voucher-row">{party_label} <span class="dots">{{{{ parties }}}}</span> رقم الجوال: <span class="dots phone-dots"></span></div>
-    <div class="voucher-row">مبلغ وقدره: <span class="dots">{{{{ doc.custom_amount_in_words_arabic or "" }}}}</span> فقط لا غير</div>
+    <div class="voucher-row">مبلغ وقدره: <span class="dots">{{{{ doc.custom_amount_in_words_arabic or "" }}}}</span></div>
     <div class="voucher-row">نقدي <span class="check">{{% if "cash" in payment_modes|lower %}}✓{{% endif %}}</span> شيك رقم: <span class="dots short-dots"></span> مسحوب على بنك: <span class="dots bank-dots"></span></div>
     <div class="voucher-row">وذلك لحساب: <span class="dots">{{{{ doc.remarks or "" }}}}</span></div>
   </div>
