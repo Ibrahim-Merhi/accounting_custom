@@ -235,7 +235,8 @@ def get_transactions(filters):
 				gle.voucher_no, '' party,
 				coalesce(
 					max(nullif(line.user_remark, '')),
-					trim(replace(max(nullif(gle.remarks, '')), 'Note:', '')),
+					max(nullif(journal.user_remark, '')),
+					trim(replace(replace(max(nullif(gle.remarks, '')), 'Note:', ''), 'ملاحظة :', '')),
 					''
 				) description,
 				sum(gle.debit_in_account_currency) incoming,
@@ -243,6 +244,7 @@ def get_transactions(filters):
 				min(gle.creation) creation, 'Submitted' status
 			from `tabGL Entry` gle
 			inner join `tabAccount` account on account.name = gle.account
+			left join `tabJournal Entry` journal on journal.name = gle.voucher_no
 			left join (
 				select parent, account, account_currency,
 					max(nullif(user_remark, '')) user_remark
