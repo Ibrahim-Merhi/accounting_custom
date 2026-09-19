@@ -7,7 +7,12 @@ from accounting_custom.accounting.donation_gl import (
 	get_account_details,
 	get_mode_of_payment_account,
 )
-from accounting_custom.accounting.journal_posting import cancel_linked_journal_entry
+from accounting_custom.accounting.journal_posting import (
+	cancel_linked_journal_entry,
+	delete_linked_draft_journal_entry,
+	submit_linked_journal_entry,
+	sync_linked_draft_journal_entry,
+)
 from accounting_custom.accounting.standard_exchange_rate import _get_rate
 
 
@@ -70,56 +75,55 @@ class AccountingCurrencyExchange(Document):
 			)
 		return account
 
-	def on_submit(self):
-		if self.journal_entry:
-			frappe.throw(_("A Journal Entry is already linked to this Accounting Currency Exchange."))
+	def get_gl_entries(self):
 		source_rate, target_rate = self._journal_exchange_rates()
 		source_base = flt(self.from_amount) * source_rate
 		target_base = flt(self.to_amount) * target_rate
 		rounding_difference = source_base - target_base
-		journal = frappe.get_doc({
-			"doctype": "Journal Entry",
-			"voucher_type": "Journal Entry",
-			"company": self.company,
-			"posting_date": self.posting_date,
-			"multi_currency": 1,
-			"user_remark": self.remarks or _("Accounting Currency Exchange {0}").format(self.name),
-		})
-		journal.append("accounts", {
+		entries = [frappe._dict({
 			"account": self.target_account,
 			"account_currency": self.to_currency,
-			"exchange_rate": target_rate,
+			"debit": target_base,
 			"debit_in_account_currency": self.to_amount,
 			"cost_center": self.to_cost_center,
-		})
-		journal.append("accounts", {
+			"remarks": self.remarks,
+		}), frappe._dict({
 			"account": self.source_account,
 			"account_currency": self.from_currency,
-			"exchange_rate": source_rate,
+			"credit": source_base,
 			"credit_in_account_currency": self.from_amount,
 			"cost_center": self.from_cost_center,
-		})
+			"remarks": self.remarks,
+		})]
 		if abs(rounding_difference) > 0.000000001:
-			rounding_row = {
+			rounding_row = frappe._dict({
 				"account": self._get_round_off_account(),
 				"account_currency": self.company_currency,
-				"exchange_rate": 1,
 				"cost_center": self.to_cost_center,
-				"user_remark": _("Currency exchange rounding difference"),
-			}
+				"remarks": _("Currency exchange rounding difference"),
+			})
 			if rounding_difference > 0:
+				rounding_row.debit = rounding_difference
 				rounding_row["debit_in_account_currency"] = rounding_difference
 			else:
+				rounding_row.credit = abs(rounding_difference)
 				rounding_row["credit_in_account_currency"] = abs(rounding_difference)
-			journal.append("accounts", rounding_row)
-		journal.flags.ignore_company_exchange_rate = True
-		journal.flags.ignore_permissions = True
-		journal.insert()
-		journal.submit()
-		self.db_set("journal_entry", journal.name, update_modified=False)
+			entries.append(rounding_row)
+		return entries
+
+	def on_update(self):
+		if self.docstatus == 0:
+			sync_linked_draft_journal_entry(self, self.get_gl_entries())
+
+	def on_submit(self):
+		submit_linked_journal_entry(self, self.get_gl_entries())
 
 	def before_cancel(self):
 		cancel_linked_journal_entry(self)
+
+	def on_trash(self):
+		delete_linked_draft_journal_entry(self)
+		super().on_trash()
 
 
 @frappe.whitelist()
