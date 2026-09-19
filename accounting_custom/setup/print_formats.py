@@ -142,14 +142,16 @@ def _muntada_voucher_html(payment, donation=False):
 		'<td>أمين الصندوق:<div class="sign-line"></div></td>'
 		'<td>المستلم:<div class="sign-line"></div></td>'
 	)
-	rows_field = "payments" if donation else "custom_accounting_rows_copy"
+	amount_rows_field = "payments" if donation else "currency_totals"
+	payment_rows_field = "payments" if donation else "custom_accounting_rows_copy"
 	amount_field = "donation_amount" if donation else "total_debit"
 	return f"""
-{{% set voucher_rows = doc.{rows_field} or [] %}}
-{{% set usd_amount = voucher_rows | selectattr("currency", "equalto", "USD") | sum(attribute="{amount_field}") %}}
-{{% set lbp_amount = voucher_rows | selectattr("currency", "equalto", "LBP") | sum(attribute="{amount_field}") %}}
-{{% set parties = (doc.donor_name or doc.donor or "") if {str(donation).lower()} else (voucher_rows | map(attribute="party_name") | select | unique | join("، ")) %}}
-{{% set payment_modes = voucher_rows | map(attribute="mode_of_payment") | select | join(" ") %}}
+{{% set amount_rows = doc.{amount_rows_field} or [] %}}
+{{% set payment_rows = doc.{payment_rows_field} or [] %}}
+{{% set usd_amount = amount_rows | selectattr("currency", "equalto", "USD") | sum(attribute="{amount_field}") %}}
+{{% set lbp_amount = amount_rows | selectattr("currency", "equalto", "LBP") | sum(attribute="{amount_field}") %}}
+{{% set parties = (doc.donor_name or doc.donor or "") if {str(donation).lower()} else (payment_rows | map(attribute="party_name") | select | unique | join("، ")) %}}
+{{% set payment_modes = payment_rows | map(attribute="mode_of_payment") | select | join(" ") %}}
 {{% set company_logo = frappe.db.get_value("Company", doc.company, "company_logo") or "" %}}
 <style>
 @page {{ size: A5 landscape; margin: 5mm; }}

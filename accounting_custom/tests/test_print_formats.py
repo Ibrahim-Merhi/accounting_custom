@@ -34,6 +34,8 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("وصلنا من:", receipt)
 		self.assertIn("Test Party", payment)
 		self.assertIn("Test remarks", receipt)
+		self.assertIn("100.00", payment)
+		self.assertIn("1,000,000", receipt)
 
 	def test_single_format_selects_design_by_company(self):
 		template = _company_conditional_html(
