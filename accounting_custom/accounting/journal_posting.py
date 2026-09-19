@@ -38,10 +38,17 @@ def create_linked_journal_entry(source_doc, gl_rows, submit=True):
 	if source_doc.journal_entry:
 		frappe.throw(_("A Journal Entry is already linked to {0}.").format(source_doc.name))
 
-	journal = frappe.get_doc({
+	journal_values = {
 		"doctype": "Journal Entry",
 		"voucher_type": "Journal Entry",
-	})
+	}
+	if source_doc.get("amended_from"):
+		cancelled_journal = frappe.db.get_value(
+			source_doc.doctype, source_doc.amended_from, "journal_entry"
+		)
+		if cancelled_journal:
+			journal_values["amended_from"] = cancelled_journal
+	journal = frappe.get_doc(journal_values)
 	_set_journal_values(journal, source_doc, gl_rows)
 	journal.insert()
 	source_doc.db_set("journal_entry", journal.name, update_modified=False)

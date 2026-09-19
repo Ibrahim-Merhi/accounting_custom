@@ -23,6 +23,7 @@ class TestLinkedJournalPosting(TestCase):
 			journal_entry=None, company="Itihad", posting_date="2026-09-05",
 			remarks="Receipt", doctype="Accounting Receipt Entry", name="ARE-0001",
 		)
+		source.get.return_value = None
 		row = frappe._dict(
 			account="Cash USD", account_currency="USD", debit=100, credit=0,
 			debit_in_account_currency=100, credit_in_account_currency=0,
@@ -47,12 +48,33 @@ class TestLinkedJournalPosting(TestCase):
 			posting_date="2026-09-06", remarks="Payment",
 			doctype="Accounting Payment Entry", name="APE-0001",
 		)
+		source.get.return_value = None
 
 		sync_linked_draft_journal_entry(source, [])
 
 		journal.insert.assert_called_once_with()
 		journal.submit.assert_not_called()
 		source.db_set.assert_called_once_with("journal_entry", "JV-0001", update_modified=False)
+
+	@patch("accounting_custom.accounting.journal_posting.frappe.db.get_value", return_value="JV-OLD")
+	@patch("accounting_custom.accounting.journal_posting.frappe.get_doc")
+	def test_amended_source_creates_amended_journal(self, get_doc, get_value):
+		journal = MagicMock()
+		journal.name = "JV-NEW"
+		get_doc.return_value = journal
+		source = MagicMock(
+			journal_entry=None, amended_from="APE-OLD", company="Itihad",
+			posting_date="2026-09-06", remarks="Corrected payment",
+			doctype="Accounting Payment Entry", name="APE-NEW",
+		)
+		source.get.return_value = "APE-OLD"
+
+		create_linked_journal_entry(source, [], submit=False)
+
+		get_value.assert_called_once_with("Accounting Payment Entry", "APE-OLD", "journal_entry")
+		self.assertEqual(get_doc.call_args.args[0]["amended_from"], "JV-OLD")
+		journal.insert.assert_called_once_with()
+		journal.submit.assert_not_called()
 
 	@patch("accounting_custom.accounting.journal_posting.frappe.get_doc")
 	def test_submit_uses_existing_draft_journal(self, get_doc):

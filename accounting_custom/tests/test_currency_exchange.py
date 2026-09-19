@@ -10,6 +10,16 @@ from accounting_custom.accounting_custom.doctype.accounting_currency_exchange.ac
 
 
 class TestAccountingCurrencyExchange(TestCase):
+	def test_amendment_clears_cancelled_journal_link(self):
+		doc = MagicMock(
+			docstatus=0, amended_from="ACX-2026-00001", journal_entry="JV-CANCELLED",
+		)
+		doc.is_new.return_value = True
+
+		AccountingCurrencyExchange._reset_amendment_state(doc)
+
+		self.assertIsNone(doc.journal_entry)
+
 	def test_exchange_rate_field_is_removed(self):
 		meta = frappe.get_meta("Accounting Currency Exchange")
 		self.assertFalse(meta.has_field("exchange_rate"))

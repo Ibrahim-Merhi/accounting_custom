@@ -20,6 +20,20 @@ ROUND_OFF_ACCOUNT_NUMBER = "67500002"
 
 
 class AccountingCurrencyExchange(Document):
+	def _reset_amendment_state(self):
+		if self.docstatus != 0 or not self.amended_from or not self.is_new():
+			return
+		self.journal_entry = None
+
+	def _validate_links(self):
+		# A copied cancelled Journal Entry cannot remain linked to the amended
+		# draft. Its replacement is created as an amendment after insertion.
+		self._reset_amendment_state()
+		super()._validate_links()
+
+	def before_validate(self):
+		self._reset_amendment_state()
+
 	def validate(self):
 		self.company_currency = frappe.get_cached_value("Company", self.company, "default_currency")
 		if not self.company_currency:
