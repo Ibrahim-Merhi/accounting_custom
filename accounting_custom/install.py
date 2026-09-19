@@ -63,6 +63,23 @@ def ensure_party_type_permissions():
 	"""Allow accounting administrators to configure Party Types from Desk."""
 	from frappe.permissions import add_permission, update_permission_property
 
+	# Party Type records are DocType names. Mark the master as translatable so
+	# Link controls display their stored values in the active UI language.
+	translated_property = "Party Type-main-translated_doctype"
+	if frappe.db.exists("Property Setter", translated_property):
+		frappe.db.set_value(
+			"Property Setter", translated_property,
+			{"value": "1", "property_type": "Check"}, update_modified=False,
+		)
+	else:
+		frappe.make_property_setter({
+			"doctype": "Party Type",
+			"doctype_or_field": "DocType",
+			"property": "translated_doctype",
+			"property_type": "Check",
+			"value": "1",
+		})
+
 	# ERPNext marks Party Type as setup-only (`in_create`), which suppresses the
 	# List View Add button even when a role has create permission. This managed
 	# override makes it a normal configurable master for accounting users.
