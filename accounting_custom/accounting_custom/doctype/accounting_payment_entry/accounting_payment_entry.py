@@ -183,9 +183,13 @@ class AccountingPaymentEntry(AccountsController):
 				elif account_currency == self.custom_company_currency:
 					account_amount = base_amount
 				else:
-					frappe.throw(_("Row {0}: Account {1} currency must be {2} or {3}.").format(
-						row.idx, account, row.currency, self.custom_company_currency
-					))
+					account_to_company_rate = flt(get_company_exchange_rate(
+						self.company,
+						account_currency,
+						self.custom_company_currency,
+						self.posting_date,
+					)["exchange_rate"])
+					account_amount = base_amount / account_to_company_rate
 				return frappe._dict(
 					posting_date=self.posting_date, company=self.company, account=account,
 					account_currency=account_currency, transaction_currency=account_currency,

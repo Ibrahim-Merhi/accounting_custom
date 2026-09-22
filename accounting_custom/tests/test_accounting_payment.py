@@ -114,6 +114,36 @@ class TestAccountingPaymentGL(TestCase):
 		self.assertEqual(sum(row.debit for row in rows), 200)
 		self.assertEqual(sum(row.credit for row in rows), 200)
 
+	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_company_exchange_rate")
+	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_account_details")
+	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_mode_of_payment_account")
+	def test_converts_row_to_third_currency_destination_account(self, mode_account, details, exchange_rate):
+		mode_account.return_value = "Cash USD"
+		details.side_effect = lambda account, _company: __import__("frappe")._dict(
+			account_currency="LBP" if account == "Expense LBP" else "USD",
+			account_type="",
+		)
+		exchange_rate.return_value = {"exchange_rate": 1 / 89500}
+		doc = SimpleNamespace(
+			company="Itihad", custom_company_currency="USD", posting_date="2026-09-22",
+			doctype="Accounting Payment Entry", name="APE-2026-00003",
+			custom_branch="Beirut", remarks="USD payment to LBP account",
+			custom_accounting_rows_copy=[
+				SimpleNamespace(idx=1, mode_of_payment="Cash USD", account="Expense LBP",
+					currency="USD", amount=100, base_amount=100, cost_center="Main",
+					party_type=None, party=None),
+			],
+		)
+
+		rows = AccountingPaymentEntry.get_gl_entries(doc)
+
+		self.assertEqual(rows[0].account_currency, "LBP")
+		self.assertAlmostEqual(rows[0].debit_in_account_currency, 8950000)
+		self.assertEqual(rows[0].debit, 100)
+		self.assertEqual(rows[1].account_currency, "USD")
+		self.assertEqual(rows[1].credit_in_account_currency, 100)
+		exchange_rate.assert_called_once_with("Itihad", "LBP", "USD", "2026-09-22")
+
 	def test_builds_debit_and_credit_totals_per_currency(self):
 		totals = []
 		doc = SimpleNamespace(
