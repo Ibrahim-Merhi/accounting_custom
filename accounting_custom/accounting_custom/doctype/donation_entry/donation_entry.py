@@ -69,12 +69,7 @@ class DonationEntry(AccountsController):
 
 	def before_submit(self):
 		if self.approval_status != "Approved":
-			finance_roles = {"Finance Officer", "Accounts Manager", "System Manager"}
-			if not (finance_roles & set(frappe.get_roles())):
-				frappe.throw(_("Finance approval is required before submitting this donation."))
-			self.approval_status = "Approved"
-			self.approved_by = frappe.session.user
-			self.approved_on = now_datetime()
+			frappe.throw(_("Finance approval is required before submitting this donation."))
 		self.validate()
 		self.validate_submit_requirements()
 		self.validate_donor_account()
@@ -197,14 +192,18 @@ def set_approval_status(name, action, notes=None):
 	doc = frappe.get_doc("Donation Entry", name)
 	if doc.docstatus != 0:
 		frappe.throw(_("Only draft donations can be reviewed."))
-	roles = frappe.get_roles()
+	roles = set(frappe.get_roles())
 	if action == "Submit for Finance Approval":
-		if not ({"Collector", "Finance Officer", "Accounts Manager", "System Manager"} & set(roles)):
+		if not ({"Accounts User", "Accounts Manager", "Finance Officer", "Treasurer", "System Manager"} & roles):
 			frappe.throw(_("You are not permitted to submit this donation for approval."))
+		if doc.approval_status not in ("Draft", "Returned"):
+			frappe.throw(_("This donation is already in review."))
 		doc.approval_status = "Pending Finance Approval"
 	elif action in ("Approve", "Return", "Reject"):
-		if not ({"Finance Officer", "Accounts Manager", "System Manager"} & set(roles)):
+		if not ({"Finance Officer", "Accounts Manager", "Treasurer", "System Manager"} & roles):
 			frappe.throw(_("Only Finance can review this donation."))
+		if doc.approval_status != "Pending Finance Approval":
+			frappe.throw(_("This donation is not awaiting Finance approval."))
 		doc.approval_status = {"Approve": "Approved", "Return": "Returned", "Reject": "Rejected"}[action]
 		doc.approved_by = frappe.session.user if action == "Approve" else None
 		doc.approved_on = now_datetime() if action == "Approve" else None

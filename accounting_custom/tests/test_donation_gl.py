@@ -10,7 +10,10 @@ from accounting_custom.accounting.donation_gl import (
 	get_mode_of_payment_currency,
 	post_gl_entries,
 )
-from accounting_custom.accounting_custom.doctype.donation_entry.donation_entry import DonationEntry
+from accounting_custom.accounting_custom.doctype.donation_entry.donation_entry import (
+	DonationEntry,
+	set_approval_status,
+)
 
 
 class TestDonationGL(TestCase):
@@ -132,3 +135,34 @@ class TestDonationGL(TestCase):
 		doc = SimpleNamespace(_action="update_after_submit")
 
 		DonationEntry.validate(doc)
+
+	def test_unapproved_donation_cannot_be_submitted(self):
+		doc = SimpleNamespace(approval_status="Pending Finance Approval")
+
+		with self.assertRaises(frappe.ValidationError):
+			DonationEntry.before_submit(doc)
+
+	@patch("accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.frappe.get_roles", return_value=["Accounts User"])
+	@patch("accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.frappe.get_doc")
+	def test_accounts_user_can_send_donation_for_finance_approval(self, get_doc, get_roles):
+		doc = Mock(docstatus=0, approval_status="Draft", finance_notes=None)
+		get_doc.return_value = doc
+
+		status = set_approval_status("DON-2026-00001", "Submit for Finance Approval")
+
+		self.assertEqual(status, "Pending Finance Approval")
+		self.assertEqual(doc.approval_status, "Pending Finance Approval")
+		doc.save.assert_called_once_with(ignore_permissions=True)
+
+	@patch("accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.frappe.get_roles", return_value=["Finance Officer"])
+	@patch("accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.frappe.get_doc")
+	@patch("accounting_custom.accounting_custom.doctype.donation_entry.donation_entry.now_datetime", return_value="2026-09-22 10:00:00")
+	def test_finance_can_approve_pending_donation(self, now, get_doc, get_roles):
+		doc = Mock(docstatus=0, approval_status="Pending Finance Approval", finance_notes=None)
+		get_doc.return_value = doc
+
+		status = set_approval_status("DON-2026-00001", "Approve", "Reviewed")
+
+		self.assertEqual(status, "Approved")
+		self.assertEqual(doc.approval_status, "Approved")
+		self.assertEqual(doc.finance_notes, "Reviewed")
