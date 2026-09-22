@@ -88,8 +88,10 @@ def delete_linked_draft_journal_entry(source_doc):
 	journal = frappe.get_doc("Journal Entry", source_doc.journal_entry)
 	if journal.docstatus != 0:
 		return
-	journal.flags.ignore_links = True
-	journal.delete(ignore_permissions=True)
+	# The source document itself links to this generated draft Journal Entry.
+	# Frappe's delete backlink validation does not honor ``ignore_links`` for
+	# deletion, so use the narrowly scoped force flag for this generated draft.
+	journal.delete(ignore_permissions=True, force=True)
 
 
 def cancel_linked_journal_entry(source_doc):

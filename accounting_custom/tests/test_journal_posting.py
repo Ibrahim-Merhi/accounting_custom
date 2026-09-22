@@ -100,8 +100,7 @@ class TestLinkedJournalPosting(TestCase):
 
 		delete_linked_draft_journal_entry(source)
 
-		journal.delete.assert_called_once_with(ignore_permissions=True)
-		self.assertTrue(journal.flags.ignore_links)
+		journal.delete.assert_called_once_with(ignore_permissions=True, force=True)
 
 	@patch("accounting_custom.accounting.journal_posting.frappe.get_doc")
 	def test_cancel_cancels_linked_submitted_journal(self, get_doc):
