@@ -76,6 +76,44 @@ class TestAccountingPaymentGL(TestCase):
 		self.assertEqual(rows[3].credit_in_account_currency, 8950000)
 		self.assertTrue(all(row.custom_branch == "Beirut" for row in rows))
 
+	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_account_details")
+	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_mode_of_payment_account")
+	def test_same_company_currency_account_accepts_multiple_row_currencies(self, mode_account, details):
+		mode_account.side_effect = ["Cash USD", "Cash LBP"]
+		details.side_effect = lambda account, _company: __import__("frappe")._dict(
+			account_currency={
+				"Cash USD": "USD",
+				"Cash LBP": "LBP",
+				"Shared Expense": "USD",
+			}[account],
+			account_type="",
+		)
+		doc = SimpleNamespace(
+			company="Itihad", custom_company_currency="USD", posting_date="2026-09-22",
+			doctype="Accounting Payment Entry", name="APE-2026-00002",
+			custom_branch="Beirut", remarks="Mixed-currency payment",
+			custom_accounting_rows_copy=[
+				SimpleNamespace(idx=1, mode_of_payment="Cash USD", account="Shared Expense",
+					currency="USD", amount=100, base_amount=100, cost_center="Main",
+					party_type=None, party=None),
+				SimpleNamespace(idx=2, mode_of_payment="Cash LBP", account="Shared Expense",
+					currency="LBP", amount=8950000, base_amount=100, cost_center="Main",
+					party_type=None, party=None),
+			],
+		)
+
+		rows = AccountingPaymentEntry.get_gl_entries(doc)
+
+		self.assertEqual(len(rows), 4)
+		self.assertEqual([row.account for row in rows], [
+			"Shared Expense", "Cash USD", "Shared Expense", "Cash LBP",
+		])
+		self.assertEqual([rows[0].debit_in_account_currency, rows[2].debit_in_account_currency], [100, 100])
+		self.assertEqual(rows[1].credit_in_account_currency, 100)
+		self.assertEqual(rows[3].credit_in_account_currency, 8950000)
+		self.assertEqual(sum(row.debit for row in rows), 200)
+		self.assertEqual(sum(row.credit for row in rows), 200)
+
 	def test_builds_debit_and_credit_totals_per_currency(self):
 		totals = []
 		doc = SimpleNamespace(
