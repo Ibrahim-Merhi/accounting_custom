@@ -36,6 +36,7 @@ doctype_js = {
 	"Company": "public/js/arabic_name.js",
 	"Cost Center": "public/js/arabic_name.js",
 	"Donor": "public/js/donor.js",
+	"Employee": "public/js/employee.js",
 	"Journal Entry": "public/js/company_exchange_rate.js",
 	"Payment Entry": "public/js/company_exchange_rate.js",
 	"Sales Order": "public/js/company_exchange_rate.js",
@@ -186,6 +187,9 @@ doc_events = {
 	},
 	"GL Entry": {
 		"before_insert": "accounting_custom.accounting.branch.set_gl_entry_branch",
+	},
+	"Employee": {
+		"validate": "accounting_custom.accounting.employee_profile.validate_employee_accounting_profile",
 	},
 }
 

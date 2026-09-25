@@ -7,6 +7,10 @@ OBSOLETE_WORKSPACE_TARGETS = {
 	"Currency Exchange", "Daily Movement", "Daily Movement Other Currency",
 }
 
+CUSTOM_REPORTS_SECTION = "Custom Reports"
+ACCOUNT_COST_CENTER_REPORT = "Account and Cost Center Report"
+ANALYTICAL_TRIAL_BALANCE = "Analytical Trial Balance"
+
 
 SECTIONS = [
 	("Donations and Collectors", [
@@ -64,6 +68,17 @@ def ensure_accounting_workspace_sections():
 		doc.append("roles", {"role": "Treasurer"})
 	content = json.loads(doc.content or "[]")
 	content = [item for item in content if not item.get("id", "").startswith("accounting_custom_")]
+	has_custom_reports_card = any(
+		item.get("type") == "card"
+		and item.get("data", {}).get("card_name") == CUSTOM_REPORTS_SECTION
+		for item in content
+	)
+	if not has_custom_reports_card:
+		content.append({
+			"id": "accounting_custom_custom_reports_card",
+			"type": "card",
+			"data": {"card_name": CUSTOM_REPORTS_SECTION, "col": 4},
+		})
 	content.extend([
 		{
 			"id": "accounting_custom_header",
@@ -83,6 +98,8 @@ def ensure_accounting_workspace_sections():
 	custom_targets = {label for _section, links in SECTIONS for label, _link_type in links}
 	existing_links = []
 	for row in doc.links:
+		if row.type == "Link" and row.link_to == ACCOUNT_COST_CENTER_REPORT:
+			continue
 		if row.type == "Card Break" and row.label in section_labels:
 			continue
 		if row.type == "Link" and (
@@ -90,6 +107,34 @@ def ensure_accounting_workspace_sections():
 		):
 			continue
 		existing_links.append(row.as_dict())
+
+	custom_reports_index = next(
+		(
+			index for index, row in enumerate(existing_links)
+			if row.get("type") == "Card Break" and row.get("label") == CUSTOM_REPORTS_SECTION
+		),
+		None,
+	)
+	if custom_reports_index is None:
+		existing_links.append({"type": "Card Break", "label": CUSTOM_REPORTS_SECTION})
+		custom_reports_index = len(existing_links) - 1
+
+	insert_at = custom_reports_index + 1
+	for index in range(custom_reports_index + 1, len(existing_links)):
+		row = existing_links[index]
+		if row.get("type") == "Card Break":
+			break
+		if row.get("type") == "Link" and row.get("link_to") == ANALYTICAL_TRIAL_BALANCE:
+			insert_at = index
+			break
+		insert_at = index + 1
+	existing_links.insert(insert_at, {
+		"type": "Link",
+		"label": ACCOUNT_COST_CENTER_REPORT,
+		"link_type": "Report",
+		"link_to": ACCOUNT_COST_CENTER_REPORT,
+		"is_query_report": 1,
+	})
 	doc.set("links", existing_links)
 
 	for section, links in SECTIONS:

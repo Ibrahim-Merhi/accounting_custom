@@ -1,0 +1,18 @@
+{
+ "add_total_row": 0,
+ "columns": [],
+ "disabled": 0,
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "module": "Accounting Custom",
+ "name": "Account and Cost Center Report",
+ "prepared_report": 0,
+ "ref_doctype": "GL Entry",
+ "report_name": "Account and Cost Center Report",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Accounts User"},
+  {"role": "Accounts Manager"},
+  {"role": "Auditor"}
+ ]
+}

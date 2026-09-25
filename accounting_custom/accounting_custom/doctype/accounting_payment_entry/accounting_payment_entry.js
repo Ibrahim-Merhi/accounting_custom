@@ -38,10 +38,10 @@ function add_payment_approval_actions(frm) {
 		freeze: true,
 		callback: () => frm.reload_doc(),
 	});
-	if (["Draft", "Returned"].includes(frm.doc.approval_status)) {
+	if (["Draft", "Returned"].includes(frm.doc.approval_status) && roles.some((role) => ["Accounts User", "Finance Officer", "Accounts Manager", "System Manager"].includes(role))) {
 		frm.add_custom_button(__("Submit for Finance Approval"), () => move("Submit for Finance Approval"), __("Approval"));
 	}
-	if (frm.doc.approval_status === "Pending Finance Approval" && roles.some((role) => ["Finance Officer", "Accounts Manager", "Treasurer", "System Manager"].includes(role))) {
+	if (frm.doc.approval_status === "Pending Finance Approval" && roles.some((role) => ["Finance Officer", "Accounts Manager", "System Manager"].includes(role))) {
 		["Approve", "Return", "Reject"].forEach((action) => {
 			frm.add_custom_button(__(action), () => move(action), __("Approval"));
 		});
@@ -124,6 +124,19 @@ frappe.ui.form.on("Accounting Payment Detail", {
 			frappe.db.get_value("Custodies", row.party, ["custody_name", "account"]).then((r) => {
 				frappe.model.set_value(cdt, cdn, "party_name", r.message?.custody_name || row.party);
 				frappe.model.set_value(cdt, cdn, "account", r.message?.account || null);
+			});
+			return;
+		}
+		if (row.party_type === "Supplier") {
+			frappe.call({
+				method: "accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_supplier_account",
+				args: {supplier: row.party, company: frm.doc.company},
+				callback(r) {
+					frappe.model.set_value(cdt, cdn, "account", r.message || null);
+					frappe.db.get_value("Supplier", row.party, "supplier_name").then((supplier) => {
+						frappe.model.set_value(cdt, cdn, "party_name", supplier.message?.supplier_name || row.party);
+					});
+				},
 			});
 			return;
 		}

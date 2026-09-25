@@ -36,6 +36,10 @@ PARTY_COMPANY_FIELDS = {
 }
 
 
+def can_submit_payment(user, roles):
+	return user == "Administrator" or bool({"Finance Officer", "Accounts Manager", "System Manager"} & set(roles))
+
+
 class AccountingPaymentEntry(AccountsController):
 	def _reset_amendment_state(self):
 		if self.docstatus != 0 or not self.amended_from or not self.is_new():
@@ -94,6 +98,9 @@ class AccountingPaymentEntry(AccountsController):
 			sync_linked_draft_journal_entry(self, self.get_gl_entries())
 
 	def before_submit(self):
+		roles = set(frappe.get_roles())
+		if not can_submit_payment(frappe.session.user, roles):
+			frappe.throw(_("Only Finance can submit an Accounting Payment Entry."), frappe.PermissionError)
 		for row in self.custom_accounting_rows_copy:
 			if not row.account:
 				frappe.throw(_("Row {0}: {1} is required.").format(row.idx, _("Account")))
@@ -115,6 +122,8 @@ class AccountingPaymentEntry(AccountsController):
 			frappe.throw(_("Company Currency is required."))
 
 	def validate_row(self, row):
+		if row.party_type == "Supplier" and row.party:
+			row.account = get_supplier_account(row.party, self.company)
 		if row.account:
 			account_details = get_account_details(row.account, self.company)
 		else:
@@ -238,6 +247,21 @@ def supplier_by_company_query(doctype, txt, searchfield, start, page_len, filter
 	)
 
 
+@frappe.whitelist()
+def get_supplier_account(supplier, company):
+	if not supplier or not company:
+		frappe.throw(_("Supplier and Company are required."))
+	account = frappe.db.get_value(
+		"Party Account",
+		{"parenttype": "Supplier", "parent": supplier, "company": company},
+		"account",
+	)
+	if not account:
+		frappe.throw(_("Supplier {0} has no account configured for company {1}.").format(supplier, company))
+	get_account_details(account, company)
+	return account
+
+
 def backfill_arabic_amounts():
 	# During a first app installation, after_install can run before MariaDB has
 	# created this app-owned DocType table. after_migrate will run the backfill
@@ -267,13 +291,13 @@ def _set_approval_status(doctype, name, action, notes=None):
 		frappe.throw(_("Only draft payments can be reviewed."))
 	roles = set(frappe.get_roles())
 	if action == "Submit for Finance Approval":
-		if not ({"Accounts User", "Accounts Manager", "Finance Officer", "Treasurer", "System Manager"} & roles):
+		if not ({"Accounts User", "Accounts Manager", "Finance Officer", "System Manager"} & roles):
 			frappe.throw(_("You cannot submit this payment for approval."))
 		if doc.approval_status not in ("Draft", "Returned"):
 			frappe.throw(_("This payment is already in review."))
 		doc.approval_status = "Pending Finance Approval"
 	elif action in ("Approve", "Return", "Reject"):
-		if not ({"Finance Officer", "Accounts Manager", "Treasurer", "System Manager"} & roles):
+		if not ({"Finance Officer", "Accounts Manager", "System Manager"} & roles):
 			frappe.throw(_("Finance Officer permission is required."))
 		if doc.approval_status != "Pending Finance Approval":
 			frappe.throw(_("This payment is not awaiting Finance approval."))

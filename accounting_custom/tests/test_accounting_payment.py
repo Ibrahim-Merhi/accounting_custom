@@ -7,6 +7,8 @@ import frappe
 from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry import (
 	AccountingPaymentEntry,
 	backfill_arabic_amounts,
+	can_submit_payment,
+	get_supplier_account,
 )
 
 
@@ -162,3 +164,20 @@ class TestAccountingPaymentGL(TestCase):
 			{"currency": "USD", "total_debit": 150, "total_credit": 150},
 			{"currency": "LBP", "total_debit": 8950000, "total_credit": 8950000},
 		])
+
+	def test_treasurer_cannot_submit_payment(self):
+		self.assertFalse(can_submit_payment("treasurer@example.com", ["Treasurer"]))
+		self.assertTrue(can_submit_payment("finance@example.com", ["Finance Officer"]))
+
+	@patch("accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry.get_account_details")
+	@patch.object(frappe.db, "get_value", return_value="21100001 - Supplier - ITHD")
+	def test_fetches_supplier_account_for_company(self, get_value, account_details):
+		account = get_supplier_account("SUP-0001", "Itihad")
+
+		self.assertEqual(account, "21100001 - Supplier - ITHD")
+		get_value.assert_called_once_with(
+			"Party Account",
+			{"parenttype": "Supplier", "parent": "SUP-0001", "company": "Itihad"},
+			"account",
+		)
+		account_details.assert_called_once_with("21100001 - Supplier - ITHD", "Itihad")
