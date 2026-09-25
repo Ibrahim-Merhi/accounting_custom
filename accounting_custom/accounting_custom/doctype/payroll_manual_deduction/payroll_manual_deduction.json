@@ -1,0 +1,18 @@
+{
+ "doctype":"DocType",
+ "editable_grid":1,
+ "engine":"InnoDB",
+ "field_order":["employee","employee_name","salary_component","amount","note","additional_salary"],
+ "fields":[
+  {"columns":2,"fieldname":"employee","fieldtype":"Link","in_list_view":1,"label":"Employee","options":"Employee","reqd":1},
+  {"columns":2,"fetch_from":"employee.employee_name","fieldname":"employee_name","fieldtype":"Data","in_list_view":1,"label":"Employee Name","read_only":1},
+  {"columns":2,"fieldname":"salary_component","fieldtype":"Link","in_list_view":1,"label":"Deduction Component","options":"Salary Component","reqd":1},
+  {"columns":2,"fieldname":"amount","fieldtype":"Currency","in_list_view":1,"label":"Amount","reqd":1},
+  {"columns":4,"fieldname":"note","fieldtype":"Small Text","in_list_view":1,"label":"Reason / Note","reqd":1},
+  {"fieldname":"additional_salary","fieldtype":"Link","label":"Additional Salary","options":"Additional Salary","read_only":1,"hidden":1}
+ ],
+ "istable":1,
+ "module":"Accounting Custom",
+ "name":"Payroll Manual Deduction",
+ "permissions":[]
+}

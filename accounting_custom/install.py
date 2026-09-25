@@ -35,6 +35,7 @@ def after_migrate():
 def setup_accounting_customizations():
 	ensure_accounting_roles()
 	ensure_party_type_permissions()
+	ensure_payroll_account_manager_permissions()
 	ensure_employee_link_title()
 	ensure_custom_fields()
 	ensure_accounting_entry_layouts()
@@ -149,3 +150,20 @@ def ensure_accounting_roles():
 	):
 		if not frappe.db.exists("Role", role):
 			frappe.get_doc({"doctype": "Role", "role_name": role}).insert(ignore_permissions=True)
+
+
+def ensure_payroll_account_manager_permissions():
+	"""Grant Accounts Manager only the payroll rights needed by this workflow."""
+	from frappe.permissions import add_permission, update_permission_property
+
+	permissions_by_doctype = {
+		"Payroll Entry": ("read", "write", "create", "submit", "report", "export", "print", "email"),
+		"Salary Slip": ("read", "report", "export", "print", "email"),
+	}
+	for doctype, permissions in permissions_by_doctype.items():
+		filters = {"parent": doctype, "role": "Accounts Manager", "permlevel": 0, "if_owner": 0}
+		if not frappe.db.exists("Custom DocPerm", filters):
+			add_permission(doctype, "Accounts Manager", 0, "read")
+		for permission in permissions:
+			update_permission_property(doctype, "Accounts Manager", 0, permission, 1, validate=False)
+		frappe.clear_cache(doctype=doctype)

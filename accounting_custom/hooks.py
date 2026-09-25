@@ -37,6 +37,7 @@ doctype_js = {
 	"Cost Center": "public/js/arabic_name.js",
 	"Donor": "public/js/donor.js",
 	"Employee": "public/js/employee.js",
+	"Payroll Entry": "public/js/payroll_entry.js",
 	"Journal Entry": "public/js/company_exchange_rate.js",
 	"Payment Entry": "public/js/company_exchange_rate.js",
 	"Sales Order": "public/js/company_exchange_rate.js",
@@ -48,6 +49,7 @@ doctype_js = {
 extend_bootinfo = "accounting_custom.accounting.cost_center.extend_bootinfo"
 doctype_list_js = {
 	"Party Type": "public/js/party_type_list.js",
+	"Employee": "public/js/employee_list.js",
 }
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -125,21 +127,25 @@ permission_query_conditions = {
 	"Donation Entry": "accounting_custom.permissions.donation_query",
 	"Collector Handover": "accounting_custom.permissions.handover_query",
 	"Payment Memo": "accounting_custom.permissions.payment_memo_query",
+	"Employee Salary Profile": "accounting_custom.permissions.salary_query",
+	"Employee Salary Revision": "accounting_custom.permissions.salary_query",
 }
 #
 has_permission = {
 	"Donation Entry": "accounting_custom.permissions.donation_permission",
 	"Collector Handover": "accounting_custom.permissions.handover_permission",
 	"Payment Memo": "accounting_custom.permissions.payment_memo_permission",
+	"Employee Salary Profile": "accounting_custom.permissions.salary_permission",
+	"Employee Salary Revision": "accounting_custom.permissions.salary_permission",
 }
 
 # DocType Class
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Payroll Entry": "accounting_custom.overrides.payroll_entry.CustomPayrollEntry",
+}
 
 # Document Events
 # ---------------
@@ -190,6 +196,12 @@ doc_events = {
 	},
 	"Employee": {
 		"validate": "accounting_custom.accounting.employee_profile.validate_employee_accounting_profile",
+		"on_update": "accounting_custom.accounting.employee_profile.sync_company_payroll_identities",
+	},
+	"Payroll Entry": {
+		"validate": "accounting_custom.accounting.payroll.validate_payroll_manual_deductions",
+		"before_submit": "accounting_custom.accounting.payroll.create_manual_deductions",
+		"on_cancel": "accounting_custom.accounting.payroll.cancel_manual_deductions",
 	},
 }
 

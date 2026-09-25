@@ -1,0 +1,39 @@
+{
+ "actions": [],
+ "autoname": "field:employee",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["current_salary_tab", "employee", "employee_name", "effective_date", "action_date", "last_action_date", "components_section", "basic_salary", "transportation", "family_allowance", "total_salary", "basic_section", "basic_allocations", "transportation_section", "transportation_allocations", "family_section", "family_allowance_allocations", "salary_history_tab", "revision_history", "latest_revision"],
+ "fields": [
+  {"fieldname": "current_salary_tab", "fieldtype": "Tab Break", "label": "Current Salary Structure"},
+  {"fieldname": "employee", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "Employee", "options": "Employee", "reqd": 1, "unique": 1},
+  {"fetch_from": "employee.employee_name", "fieldname": "employee_name", "fieldtype": "Data", "in_list_view": 1, "label": "Employee Name", "read_only": 1},
+  {"fieldname": "effective_date", "fieldtype": "Date", "in_list_view": 1, "label": "Start Effective Date", "reqd": 1},
+  {"description": "Required for every salary modification and cleared after the revision is recorded.", "fieldname": "action_date", "fieldtype": "Date", "label": "Date of Action"},
+  {"fieldname": "last_action_date", "fieldtype": "Date", "label": "Last Action Date", "read_only": 1},
+  {"fieldname": "components_section", "fieldtype": "Section Break", "label": "Current Salary Components"},
+  {"fieldname": "basic_salary", "fieldtype": "Currency", "label": "Basic Salary", "non_negative": 1, "reqd": 1},
+  {"fieldname": "transportation", "fieldtype": "Currency", "label": "Transportation", "non_negative": 1, "reqd": 1},
+  {"fieldname": "family_allowance", "fieldtype": "Currency", "label": "Family Allowance", "non_negative": 1, "reqd": 1},
+  {"fieldname": "total_salary", "fieldtype": "Currency", "in_list_view": 1, "label": "Total Salary", "read_only": 1},
+  {"fieldname": "basic_section", "fieldtype": "Section Break", "label": "Basic Salary Allocation"},
+  {"fieldname": "basic_allocations", "fieldtype": "Table", "label": "Basic Salary", "options": "Employee Salary Allocation", "reqd": 1},
+  {"fieldname": "transportation_section", "fieldtype": "Section Break", "label": "Transportation Allocation"},
+  {"fieldname": "transportation_allocations", "fieldtype": "Table", "label": "Transportation", "options": "Employee Salary Allocation", "reqd": 1},
+  {"fieldname": "family_section", "fieldtype": "Section Break", "label": "Family Allowance Allocation"},
+  {"fieldname": "family_allowance_allocations", "fieldtype": "Table", "label": "Family Allowance", "options": "Employee Salary Allocation", "reqd": 1},
+  {"fieldname": "salary_history_tab", "fieldtype": "Tab Break", "label": "Past Salary and Changes"},
+  {"fieldname": "revision_history", "fieldtype": "HTML", "label": "Salary Revision History"},
+  {"fieldname": "latest_revision", "fieldtype": "Link", "label": "Latest Revision", "options": "Employee Salary Revision", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 1,
+ "module": "Accounting Custom",
+ "name": "Employee Salary Profile",
+ "naming_rule": "By fieldname",
+ "permissions": [
+  {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Accounts Manager", "share": 1, "write": 1}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

@@ -66,3 +66,16 @@ def payment_memo_permission(doc, user=None, permission_type=None):
 	if "HR Coordinator" in roles and doc.payment_type == "Salary Advance":
 		return True
 	return doc.requested_by == user
+
+
+SALARY_ROLES = {"Accounts Manager"}
+
+
+def salary_query(user=None):
+	"""Hide salary records at query level from every non-accounting role."""
+	return None if _roles(user) & SALARY_ROLES else "1=0"
+
+
+def salary_permission(doc, user=None, permission_type=None):
+	"""Enforce salary access even when a document name is known."""
+	return bool(_roles(user) & SALARY_ROLES)

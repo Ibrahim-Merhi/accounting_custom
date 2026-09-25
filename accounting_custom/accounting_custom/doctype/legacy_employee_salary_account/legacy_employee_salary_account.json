@@ -1,0 +1,19 @@
+{
+ "doctype":"DocType",
+ "autoname":"hash",
+ "engine":"InnoDB",
+ "field_order":["employee","employee_name","company","account","migrated_on"],
+ "fields":[
+  {"fieldname":"employee","fieldtype":"Link","label":"Employee","options":"Employee","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"employee_name","fieldtype":"Data","label":"Employee Name","read_only":1},
+  {"fieldname":"company","fieldtype":"Link","label":"Company","options":"Company","reqd":1,"in_list_view":1},
+  {"fieldname":"account","fieldtype":"Link","label":"Legacy Salary Account","options":"Account","reqd":1,"in_list_view":1},
+  {"fieldname":"migrated_on","fieldtype":"Datetime","label":"Migrated On","read_only":1}
+ ],
+ "module":"Accounting Custom",
+ "name":"Legacy Employee Salary Account",
+ "track_changes":1,
+ "permissions":[
+  {"role":"Accounts Manager","read":1,"report":1,"export":1,"print":1}
+ ]
+}

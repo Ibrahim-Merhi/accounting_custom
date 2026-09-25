@@ -1,0 +1,35 @@
+{
+ "actions": [],
+ "autoname": "ESR-.YYYY.-.#####",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["employee", "employee_name", "salary_profile", "revision_number", "effective_from", "effective_to", "action_date", "changed_by", "amounts_section", "basic_salary", "transportation", "family_allowance", "total_salary", "allocation_section", "allocations", "change_summary"],
+ "fields": [
+  {"fieldname": "employee", "fieldtype": "Link", "in_list_view": 1, "in_standard_filter": 1, "label": "Employee", "options": "Employee", "read_only": 1, "reqd": 1},
+  {"fieldname": "employee_name", "fieldtype": "Data", "label": "Employee Name", "read_only": 1},
+  {"fieldname": "salary_profile", "fieldtype": "Link", "label": "Salary Profile", "options": "Employee Salary Profile", "read_only": 1, "reqd": 1},
+  {"fieldname": "revision_number", "fieldtype": "Int", "in_list_view": 1, "label": "Revision", "read_only": 1, "reqd": 1},
+  {"fieldname": "effective_from", "fieldtype": "Date", "in_list_view": 1, "label": "Effective From", "read_only": 1, "reqd": 1},
+  {"fieldname": "effective_to", "fieldtype": "Date", "in_list_view": 1, "label": "Effective To", "read_only": 1},
+  {"fieldname": "action_date", "fieldtype": "Date", "label": "Action Date", "read_only": 1, "reqd": 1},
+  {"fieldname": "changed_by", "fieldtype": "Link", "label": "Changed By", "options": "User", "read_only": 1},
+  {"fieldname": "amounts_section", "fieldtype": "Section Break", "label": "Salary Components"},
+  {"fieldname": "basic_salary", "fieldtype": "Currency", "label": "Basic Salary", "read_only": 1},
+  {"fieldname": "transportation", "fieldtype": "Currency", "label": "Transportation", "read_only": 1},
+  {"fieldname": "family_allowance", "fieldtype": "Currency", "label": "Family Allowance", "read_only": 1},
+  {"fieldname": "total_salary", "fieldtype": "Currency", "in_list_view": 1, "label": "Total Salary", "read_only": 1},
+  {"fieldname": "allocation_section", "fieldtype": "Section Break", "label": "Component Allocations"},
+  {"fieldname": "allocations", "fieldtype": "Table", "label": "Allocations", "options": "Employee Salary Revision Allocation", "read_only": 1},
+  {"fieldname": "change_summary", "fieldtype": "Small Text", "label": "Change Summary", "read_only": 1}
+ ],
+ "index_web_pages_for_search": 1,
+ "module": "Accounting Custom",
+ "name": "Employee Salary Revision",
+ "naming_rule": "Expression (old style)",
+ "permissions": [
+  {"email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Accounts Manager", "share": 1}
+ ],
+ "sort_field": "effective_from",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

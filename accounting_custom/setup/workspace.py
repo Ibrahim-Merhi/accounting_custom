@@ -27,6 +27,8 @@ SECTIONS = [
 		("Payment Memo", "DocType"),
 	]),
 	("Payroll", [
+		("Employee Salary Profile", "DocType"),
+		("Employee Salary History", "Report"),
 		("Payroll Cost Center Allocation", "DocType"),
 		("Employee Monthly Adjustment", "DocType"),
 		("Payroll Review", "DocType"),
