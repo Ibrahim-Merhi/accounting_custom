@@ -3,7 +3,14 @@ from frappe import _
 
 
 def validate_employee_accounting_profile(doc, method=None):
+	branches = [row for row in (doc.get("custom_branches") or []) if row.branch]
+	if not branches:
+		frappe.throw(_("Please add at least one Working Branch."))
+
 	_validate_unique_rows(doc, "custom_branches", "branch", _("Branch"))
+	# ERPNext and HRMS still use Employee.branch in standard reports and payroll.
+	# Keep it synchronized with the first row while hiding the standard field.
+	doc.branch = branches[0].branch
 	_validate_unique_rows(doc, "custom_salary_accounts", "account", _("Salary Account"))
 
 	for row in doc.get("custom_branches") or []:

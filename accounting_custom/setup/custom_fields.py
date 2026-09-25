@@ -82,7 +82,7 @@ CUSTOM_FIELDS = {
 		},
 		{
 			"fieldname": "custom_branches", "label": "Working Branches", "fieldtype": "Table",
-			"options": "Employee Branch Assignment", "insert_after": "custom_accounting_assignments_section",
+			"options": "Employee Branch Assignment", "insert_after": "custom_accounting_assignments_section", "reqd": 1,
 		},
 		{
 			"fieldname": "custom_salary_accounts", "label": "Salary Accounts", "fieldtype": "Table",
@@ -122,6 +122,7 @@ def ensure_custom_fields():
 	remove_obsolete_supplier_company_field()
 	remove_legacy_donation_requirements()
 	configure_quick_donor_creation()
+	configure_employee_accounting_profile()
 	for doctype, definitions in CUSTOM_FIELDS.items():
 		if not frappe.db.exists("DocType", doctype):
 			continue
@@ -231,6 +232,23 @@ def configure_quick_donor_creation():
 				"value": "0", "property_type": "Check",
 			})
 	frappe.clear_cache(doctype="Donor")
+
+
+def configure_employee_accounting_profile():
+	"""Use the Working Branches table while retaining the standard primary branch internally."""
+	if not frappe.db.exists("DocType", "Employee"):
+		return
+	for fieldname in ("branch", "grade"):
+		property_name = f"Employee-{fieldname}-hidden"
+		values = {"value": "1", "property_type": "Check"}
+		if frappe.db.exists("Property Setter", property_name):
+			frappe.db.set_value("Property Setter", property_name, values, update_modified=False)
+		else:
+			frappe.make_property_setter({
+				"doctype": "Employee", "fieldname": fieldname, "property": "hidden",
+				**values,
+			})
+	frappe.clear_cache(doctype="Employee")
 
 
 def remove_obsolete_supplier_company_field():
