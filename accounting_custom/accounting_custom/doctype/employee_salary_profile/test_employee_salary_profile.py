@@ -7,6 +7,18 @@ from accounting_custom.permissions import salary_permission, salary_query
 
 
 class TestEmployeeSalarySecurity(FrappeTestCase):
+	def test_component_totals_are_derived_and_only_one_component_is_required(self):
+		profile = frappe.new_doc("Employee Salary Profile")
+		profile.append("basic_allocations", {"amount": 300})
+		profile.append("basic_allocations", {"amount": 700})
+		profile._calculate_component_totals()
+		self.assertEqual(profile.basic_salary, 1000)
+		self.assertEqual(profile.transportation, 0)
+		self.assertEqual(profile.family_allowance, 0)
+		empty_profile = frappe.new_doc("Employee Salary Profile")
+		with self.assertRaises(frappe.ValidationError):
+			empty_profile._calculate_component_totals()
+
 	def test_multiple_companies_create_internal_payroll_identity(self):
 		frappe.set_user("Administrator")
 		branch = frappe.get_doc({"doctype": "Branch", "branch": "Payroll Identity Test", "custom_company": "_Test Company"}).insert(ignore_permissions=True)
@@ -44,10 +56,9 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		profile = frappe.get_doc({
 			"doctype": "Employee Salary Profile", "employee": employee.name,
 			"effective_date": "2026-09-01", "action_date": "2026-08-25",
-			"basic_salary": 1000, "transportation": 200, "family_allowance": 100,
 		})
-		for fieldname in ("basic_allocations", "transportation_allocations", "family_allowance_allocations"):
-			profile.append(fieldname, {"company": "Itihad", "account": account, "cost_center": cost_center, "percentage": 100})
+		for fieldname, amount in (("basic_allocations", 1000), ("transportation_allocations", 200), ("family_allowance_allocations", 100)):
+			profile.append(fieldname, {"company": "Itihad", "account": account, "cost_center": cost_center, "amount": amount})
 		profile.insert(ignore_permissions=True)
 		payroll_employee = frappe.db.get_value("Employee", {"custom_master_employee": employee.name, "company": "Itihad"}, "name")
 		revision = frappe.get_doc("Employee Salary Revision", profile.latest_revision)

@@ -15,6 +15,7 @@ class EmployeeSalaryProfile(Document):
 	def validate(self):
 		self._validate_access()
 		self._validate_dates()
+		self._calculate_component_totals()
 		self.total_salary = flt(self.basic_salary) + flt(self.transportation) + flt(self.family_allowance)
 		allowed_companies = self._get_employee_companies()
 		self._validate_company_currencies(allowed_companies)
@@ -75,11 +76,19 @@ class EmployeeSalaryProfile(Document):
 		if len(currencies) > 1:
 			frappe.throw(_("All companies in one salary profile must use the same default currency."))
 
+	def _calculate_component_totals(self):
+		row_count = 0
+		for _component, (amount_field, table_field) in COMPONENT_TABLES.items():
+			rows = self.get(table_field) or []
+			row_count += len(rows)
+			self.set(amount_field, flt(sum(flt(row.amount) for row in rows), 2))
+		if not row_count:
+			frappe.throw(_("Add at least one salary allocation row in Basic Salary, Transportation, or Family Allowance."))
+
 	def _validate_allocations(self, component, component_amount, table_field, allowed_companies):
 		rows = self.get(table_field) or []
 		if not rows:
-			frappe.throw(_("Add at least one allocation row for {0}.").format(component))
-		total_percentage = 0
+			return
 		seen = set()
 		for row in rows:
 			if row.company not in allowed_companies:
@@ -94,10 +103,11 @@ class EmployeeSalaryProfile(Document):
 			if key in seen:
 				frappe.throw(_("Row {0}: This company, account, and cost center allocation is duplicated.").format(row.idx))
 			seen.add(key)
-			total_percentage += flt(row.percentage)
-			row.amount = flt(component_amount * flt(row.percentage) / 100, 2)
-		if abs(total_percentage - 100) > 0.001:
-			frappe.throw(_("{0} allocation percentages must total exactly 100% (currently {1}%).").format(component, total_percentage))
+			if flt(row.amount) <= 0:
+				frappe.throw(_("Row {0}: Amount must be greater than zero.").format(row.idx))
+			row.percentage = flt(flt(row.amount) / component_amount * 100, 6)
+		if component_amount <= 0:
+			frappe.throw(_("{0} total must be greater than zero.").format(component))
 
 	def _salary_configuration_changed(self):
 		before = self.get_doc_before_save()

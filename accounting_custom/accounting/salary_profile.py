@@ -24,7 +24,11 @@ def get_salary_profile_summary(employee):
 	if not profile:
 		return {"exists": False}
 	profile.exists = True
+	profile_doc = frappe.get_doc("Employee Salary Profile", profile.name)
+	for table_field in ("basic_allocations", "transportation_allocations", "family_allowance_allocations"):
+		profile[table_field] = [row.as_dict() for row in profile_doc.get(table_field)]
 	profile.revision_count = frappe.db.count("Employee Salary Revision", {"salary_profile": profile.name})
+	profile.revisions = get_revision_history(profile.name)
 	payroll_employees = frappe.get_all("Employee", filters={"custom_master_employee": employee}, pluck="name")
 	payroll_employees.append(employee)
 	profile.salary_slips = frappe.get_all(
@@ -33,6 +37,50 @@ def get_salary_profile_summary(employee):
 		order_by="end_date desc", limit=5,
 	)
 	return profile
+
+
+@frappe.whitelist()
+def get_salary_profile_editor(employee):
+	check_salary_access()
+	profile_name = frappe.db.get_value("Employee Salary Profile", {"employee": employee}, "name")
+	if not profile_name:
+		return {"exists": False, "employee": employee}
+	profile = frappe.get_doc("Employee Salary Profile", profile_name)
+	return {
+		"exists": True,
+		"name": profile.name,
+		"employee": employee,
+		"effective_date": profile.effective_date,
+		"last_action_date": profile.last_action_date,
+		"basic_allocations": [row.as_dict() for row in profile.basic_allocations],
+		"transportation_allocations": [row.as_dict() for row in profile.transportation_allocations],
+		"family_allowance_allocations": [row.as_dict() for row in profile.family_allowance_allocations],
+	}
+
+
+@frappe.whitelist()
+def save_salary_profile_from_employee(payload):
+	check_salary_access()
+	data = frappe.parse_json(payload)
+	employee = data.get("employee")
+	if not employee or not frappe.db.exists("Employee", employee):
+		frappe.throw(_("Select a valid employee."))
+	profile_name = frappe.db.get_value("Employee Salary Profile", {"employee": employee}, "name")
+	profile = frappe.get_doc("Employee Salary Profile", profile_name) if profile_name else frappe.new_doc("Employee Salary Profile")
+	profile.employee = employee
+	profile.effective_date = data.get("effective_date")
+	profile.action_date = data.get("action_date")
+	for table_field in ("basic_allocations", "transportation_allocations", "family_allowance_allocations"):
+		profile.set(table_field, [])
+		for row in data.get(table_field) or []:
+			profile.append(table_field, {
+				"company": row.get("company"),
+				"account": row.get("account"),
+				"cost_center": row.get("cost_center"),
+				"amount": row.get("amount"),
+			})
+	profile.save()
+	return get_salary_profile_summary(employee)
 
 
 @frappe.whitelist()

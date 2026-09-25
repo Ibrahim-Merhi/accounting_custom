@@ -44,8 +44,11 @@ def create_structure_assignment(revision, employee, company, amounts):
 			"is_active": "Yes", "payroll_frequency": "Monthly", "currency": currency,
 		})
 		for component in COMPONENTS:
+			amount = flt(amounts.get(component))
+			if amount <= 0:
+				continue
 			structure.append("earnings", {
-				"salary_component": component, "amount": flt(amounts.get(component)), "amount_based_on_formula": 0,
+				"salary_component": component, "amount": amount, "amount_based_on_formula": 0,
 			})
 		structure.flags.ignore_permissions = True
 		structure.insert()

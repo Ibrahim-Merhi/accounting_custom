@@ -20,23 +20,14 @@ frappe.ui.form.on("Employee Salary Profile", {
 			});
 		}
 	},
-	basic_salary(frm) {
-		recalculate_allocation_table(frm, "basic_allocations", "basic_salary");
-	},
-	transportation(frm) {
-		recalculate_allocation_table(frm, "transportation_allocations", "transportation");
-	},
-	family_allowance(frm) {
-		recalculate_allocation_table(frm, "family_allowance_allocations", "family_allowance");
-	},
+	basic_allocations_remove(frm) { recalculate_all_allocations(frm); },
+	transportation_allocations_remove(frm) { recalculate_all_allocations(frm); },
+	family_allowance_allocations_remove(frm) { recalculate_all_allocations(frm); },
 });
 
 frappe.ui.form.on("Employee Salary Allocation", {
-	percentage(frm, cdt, cdn) {
-		const row = locals[cdt][cdn];
-		const configuration = allocation_configuration(row.parentfield);
-		if (!configuration) return;
-		set_allocation_amount(row, frm.doc[configuration.amount_field]);
+	amount(frm) {
+		recalculate_all_allocations(frm);
 	},
 });
 
@@ -48,15 +39,18 @@ function allocation_configuration(table_field) {
 	}[table_field];
 }
 
-function set_allocation_amount(row, component_amount) {
-	const amount = flt(flt(component_amount) * flt(row.percentage) / 100, 2);
-	if (flt(row.amount, 2) !== amount) {
-		frappe.model.set_value(row.doctype, row.name, "amount", amount);
-	}
-}
-
 function recalculate_allocation_table(frm, table_field, amount_field) {
-	(frm.doc[table_field] || []).forEach((row) => set_allocation_amount(row, frm.doc[amount_field]));
+	const rows = frm.doc[table_field] || [];
+	const total = flt(rows.reduce((sum, row) => sum + flt(row.amount), 0), 2);
+	rows.forEach((row) => {
+		const percentage = total > 0 ? flt(flt(row.amount) / total * 100, 6) : 0;
+		if (flt(row.percentage, 6) !== percentage) {
+			frappe.model.set_value(row.doctype, row.name, "percentage", percentage);
+		}
+	});
+	if (flt(frm.doc[amount_field], 2) !== total) {
+		frappe.model.set_value(frm.doctype, frm.docname, amount_field, total);
+	}
 	frm.refresh_field(table_field);
 }
 
@@ -64,6 +58,10 @@ function recalculate_all_allocations(frm) {
 	for (const table_field of ["basic_allocations", "transportation_allocations", "family_allowance_allocations"]) {
 		const configuration = allocation_configuration(table_field);
 		recalculate_allocation_table(frm, table_field, configuration.amount_field);
+	}
+	const total_salary = flt(frm.doc.basic_salary) + flt(frm.doc.transportation) + flt(frm.doc.family_allowance);
+	if (flt(frm.doc.total_salary, 2) !== flt(total_salary, 2)) {
+		frappe.model.set_value(frm.doctype, frm.docname, "total_salary", total_salary);
 	}
 }
 
