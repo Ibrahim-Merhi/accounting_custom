@@ -12,6 +12,7 @@ frappe.ui.form.on("Employee Salary Profile", {
 		}
 	},
 	refresh(frm) {
+		recalculate_all_allocations(frm);
 		render_salary_revision_history(frm);
 		if (frm.doc.employee) {
 			frm.add_custom_button(__("Salary Revisions"), () => {
@@ -19,7 +20,52 @@ frappe.ui.form.on("Employee Salary Profile", {
 			});
 		}
 	},
+	basic_salary(frm) {
+		recalculate_allocation_table(frm, "basic_allocations", "basic_salary");
+	},
+	transportation(frm) {
+		recalculate_allocation_table(frm, "transportation_allocations", "transportation");
+	},
+	family_allowance(frm) {
+		recalculate_allocation_table(frm, "family_allowance_allocations", "family_allowance");
+	},
 });
+
+frappe.ui.form.on("Employee Salary Allocation", {
+	percentage(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		const configuration = allocation_configuration(row.parentfield);
+		if (!configuration) return;
+		set_allocation_amount(row, frm.doc[configuration.amount_field]);
+	},
+});
+
+function allocation_configuration(table_field) {
+	return {
+		basic_allocations: {amount_field: "basic_salary"},
+		transportation_allocations: {amount_field: "transportation"},
+		family_allowance_allocations: {amount_field: "family_allowance"},
+	}[table_field];
+}
+
+function set_allocation_amount(row, component_amount) {
+	const amount = flt(flt(component_amount) * flt(row.percentage) / 100, 2);
+	if (flt(row.amount, 2) !== amount) {
+		frappe.model.set_value(row.doctype, row.name, "amount", amount);
+	}
+}
+
+function recalculate_allocation_table(frm, table_field, amount_field) {
+	(frm.doc[table_field] || []).forEach((row) => set_allocation_amount(row, frm.doc[amount_field]));
+	frm.refresh_field(table_field);
+}
+
+function recalculate_all_allocations(frm) {
+	for (const table_field of ["basic_allocations", "transportation_allocations", "family_allowance_allocations"]) {
+		const configuration = allocation_configuration(table_field);
+		recalculate_allocation_table(frm, table_field, configuration.amount_field);
+	}
+}
 
 function render_salary_revision_history(frm) {
 	const field = frm.get_field("revision_history");
