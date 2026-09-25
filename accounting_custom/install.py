@@ -11,6 +11,7 @@ from accounting_custom.setup.metadata import ensure_visible_metadata
 from accounting_custom.setup.print_formats import ensure_arabic_voucher_print_formats
 from accounting_custom.setup.workspace import (
 	ensure_accounting_workspace_sections,
+	ensure_hr_manager_workspace,
 	remove_standalone_accounting_program_workspace,
 )
 
@@ -46,6 +47,7 @@ def setup_accounting_customizations():
 	backfill_arabic_amounts()
 	backfill_journal_entry_transaction_currency()
 	ensure_accounting_workspace_sections()
+	ensure_hr_manager_workspace()
 	remove_standalone_accounting_program_workspace()
 
 
