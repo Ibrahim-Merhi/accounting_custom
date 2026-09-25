@@ -42,13 +42,26 @@ function company_filter(cdt, cdn) {
 }
 
 function render_secure_salary_profile(frm) {
-	const can_access = frappe.user_roles.includes("Accounts Manager") || frappe.session.user === "Administrator";
-	frm.toggle_display("salary_information", can_access);
-	if (!can_access || frm.is_new()) return;
+	const roles = frappe.user_roles || [];
+	const can_access = roles.includes("Accounts Manager") || frappe.session?.user === "Administrator";
+	if (!can_access) {
+		frm.layout.select_tab("basic_details_tab");
+		frm.toggle_display("salary_information", false);
+		frm.toggle_display("custom_secure_salary_profile", false);
+		return;
+	}
+	frm.toggle_display("salary_information", true);
+	frm.toggle_display("custom_secure_salary_profile", true);
+	if (frm.is_new()) return;
+	const field = frm.get_field("custom_secure_salary_profile");
+	if (field) field.$wrapper.html(`<div class="text-muted p-3">${__("Loading salary information...")}</div>`);
 	frappe.call({
 		method: "accounting_custom.accounting.salary_profile.get_salary_profile_summary",
 		args: {employee: frm.doc.name},
 		callback: ({message}) => render_salary_workspace(frm, message || {exists: false}),
+		error: () => {
+			if (field) field.$wrapper.html(`<div class="text-danger p-3">${__("Unable to load salary information. Please refresh or contact the administrator.")}</div>`);
+		},
 	});
 }
 
