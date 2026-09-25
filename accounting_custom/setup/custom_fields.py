@@ -77,16 +77,12 @@ CUSTOM_FIELDS = {
 	],
 	"Employee": [
 		{
-			"fieldname": "custom_accounting_assignments_section", "label": "Accounting Assignments",
+			"fieldname": "custom_accounting_assignments_section", "label": "Company and Accounting Details",
 			"fieldtype": "Section Break", "insert_after": "branch",
 		},
 		{
-			"fieldname": "custom_branches", "label": "Working Branches", "fieldtype": "Table",
+			"fieldname": "custom_branches", "label": "Company and Accounting Details", "fieldtype": "Table",
 			"options": "Employee Branch Assignment", "insert_after": "custom_accounting_assignments_section", "reqd": 1,
-		},
-		{
-			"fieldname": "custom_salary_accounts", "label": "Salary Accounts", "fieldtype": "Table",
-			"options": "Employee Salary Account", "insert_after": "custom_branches",
 		},
 	],
 	"Accounting Payment Entry": [
@@ -139,24 +135,81 @@ def ensure_custom_fields():
 		frappe.clear_cache(doctype=doctype)
 	migrate_journal_entry_branches()
 	migrate_accounting_payment_rows()
-	backfill_employee_primary_branches()
+	migrate_employee_company_accounting_details()
+	remove_obsolete_employee_assignment_fields()
 	backfill_arabic_branch_names()
 
 
-def backfill_employee_primary_branches():
+def migrate_employee_company_accounting_details():
+	"""Merge legacy branch and salary-account rows into unified assignments."""
 	if not (
 		frappe.db.has_column("Employee", "custom_branches")
 		and frappe.db.table_exists("Employee Branch Assignment")
 	):
 		return
-	for employee in frappe.get_all("Employee", filters={"branch": ["!=", ""]}, fields=["name", "branch"]):
-		if not frappe.db.exists(
-			"Employee Branch Assignment", {"parent": employee.name, "parenttype": "Employee", "branch": employee.branch}
-		):
-			frappe.get_doc({
+	for employee in frappe.get_all(
+		"Employee",
+		fields=["name", "company", "branch", "department", "designation", "employment_type"],
+	):
+		rows = frappe.get_all(
+			"Employee Branch Assignment",
+			filters={"parent": employee.name, "parenttype": "Employee"},
+			fields=["name", "idx", "company", "branch", "department", "designation", "employment_type", "account"],
+			order_by="idx asc",
+		)
+		if not rows and employee.branch:
+			branch_company = frappe.db.get_value("Branch", employee.branch, "custom_company")
+			row = frappe.get_doc({
 				"doctype": "Employee Branch Assignment", "parent": employee.name,
-				"parenttype": "Employee", "parentfield": "custom_branches", "branch": employee.branch,
-			}).db_insert()
+				"parenttype": "Employee", "parentfield": "custom_branches",
+				"company": branch_company or employee.company, "branch": employee.branch,
+				"department": employee.department, "designation": employee.designation,
+				"employment_type": employee.employment_type,
+			})
+			row.db_insert()
+			rows = [row]
+
+		for row in rows:
+			company = row.company or frappe.db.get_value("Branch", row.branch, "custom_company") or employee.company
+			frappe.db.set_value("Employee Branch Assignment", row.name, {
+				"company": company, "department": row.department or employee.department,
+				"designation": row.designation or employee.designation,
+				"employment_type": row.employment_type or employee.employment_type,
+			}, update_modified=False)
+			row.company = company
+
+		if not frappe.db.table_exists("Employee Salary Account"):
+			continue
+		for salary in frappe.get_all(
+			"Employee Salary Account", filters={"parent": employee.name, "parenttype": "Employee"},
+			fields=["account", "company"], order_by="idx asc",
+		):
+			company = salary.company or frappe.db.get_value("Account", salary.account, "company")
+			company_rows = [row for row in rows if row.company == company]
+			if any(row.account == salary.account for row in company_rows):
+				continue
+			empty_row = next((row for row in company_rows if not row.account), None)
+			if empty_row:
+				frappe.db.set_value("Employee Branch Assignment", empty_row.name, "account", salary.account, update_modified=False)
+				empty_row.account = salary.account
+			elif company_rows:
+				base = company_rows[0]
+				new_row = frappe.get_doc({
+					"doctype": "Employee Branch Assignment", "parent": employee.name,
+					"parenttype": "Employee", "parentfield": "custom_branches",
+					"company": company, "branch": base.branch, "department": base.department,
+					"designation": base.designation, "employment_type": base.employment_type,
+					"account": salary.account,
+				})
+				new_row.db_insert()
+				rows.append(new_row)
+
+
+def remove_obsolete_employee_assignment_fields():
+	fieldname = "Employee-custom_salary_accounts"
+	if frappe.db.exists("Custom Field", fieldname):
+		frappe.delete_doc("Custom Field", fieldname, ignore_permissions=True)
+		frappe.clear_cache(doctype="Employee")
 
 
 def backfill_arabic_branch_names():
@@ -238,7 +291,7 @@ def configure_employee_accounting_profile():
 	"""Use the Working Branches table while retaining the standard primary branch internally."""
 	if not frappe.db.exists("DocType", "Employee"):
 		return
-	for fieldname in ("branch", "grade"):
+	for fieldname in ("company_details_section", "branch", "grade"):
 		property_name = f"Employee-{fieldname}-hidden"
 		values = {"value": "1", "property_type": "Check"}
 		if frappe.db.exists("Property Setter", property_name):
