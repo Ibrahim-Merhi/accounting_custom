@@ -2,7 +2,11 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 	setup(frm) {
 		frm.set_query("payroll_payable_account", "companies", (_doc, cdt, cdn) => ({filters:{company:locals[cdt][cdn].company,is_group:0,disabled:0,account_type:"Payable"}}));
 		frm.set_query("employee", "manual_deductions", () => ({filters:{name:["in",(frm.doc.employees||[]).map(r=>r.employee)]}}));
-		frm.set_query("company", "manual_deductions", () => ({filters:{name:["in",(frm.doc.companies||[]).map(r=>r.company)]}}));
+		frm.set_query("company", "manual_deductions", (_doc, cdt, cdn) => {
+			const employee = locals[cdt][cdn].employee;
+			const companies = get_employee_companies(frm, employee);
+			return {filters:{name:["in",companies]}};
+		});
 		frm.set_query("salary_component", "manual_deductions", () => ({filters:{type:"Deduction",disabled:0}}));
 	},
 	refresh(frm) {
@@ -20,9 +24,27 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 });
 
 frappe.ui.form.on("Multi Company Payroll Deduction", {
-	employee(frm, cdt, cdn) { map_deduction_employee(frm, cdt, cdn); },
+	employee(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		const companies = get_employee_companies(frm, row.employee);
+		const company = companies.length === 1 ? companies[0] : "";
+
+		frappe.model.set_value(cdt, cdn, "company", company).then(() => {
+			map_deduction_employee(frm, cdt, cdn);
+		});
+	},
 	company(frm, cdt, cdn) { map_deduction_employee(frm, cdt, cdn); },
 });
+
+function get_employee_companies(frm, employee) {
+	if (!employee) return [];
+
+	return [...new Set(
+		(frm.doc.employees || [])
+			.filter((row) => row.employee === employee && row.company)
+			.map((row) => row.company)
+	)];
+}
 
 function map_deduction_employee(frm, cdt, cdn) {
 	const row=locals[cdt][cdn];
