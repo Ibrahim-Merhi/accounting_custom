@@ -89,6 +89,7 @@ class EmployeeSalaryProfile(Document):
 		rows = self.get(table_field) or []
 		if not rows:
 			return
+		total_percentage = 0
 		seen = set()
 		for row in rows:
 			if row.company not in allowed_companies:
@@ -105,7 +106,11 @@ class EmployeeSalaryProfile(Document):
 			seen.add(key)
 			if flt(row.amount) <= 0:
 				frappe.throw(_("Row {0}: Amount must be greater than zero.").format(row.idx))
-			row.percentage = flt(flt(row.amount) / component_amount * 100, 6)
+			if flt(row.percentage) <= 0 or flt(row.percentage) > 100:
+				frappe.throw(_("Row {0}: Percentage must be greater than 0% and no more than 100%.").format(row.idx))
+			total_percentage += flt(row.percentage)
+		if abs(total_percentage - 100) > 0.001:
+			frappe.throw(_("{0} allocation percentages must total exactly 100% (currently {1}%).").format(component, total_percentage))
 		if component_amount <= 0:
 			frappe.throw(_("{0} total must be greater than zero.").format(component))
 

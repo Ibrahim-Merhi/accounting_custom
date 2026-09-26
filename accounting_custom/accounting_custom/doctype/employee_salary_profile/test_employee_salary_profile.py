@@ -58,8 +58,12 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 			"effective_date": "2026-09-01", "action_date": "2026-08-25",
 		})
 		for fieldname, amount in (("basic_allocations", 1000), ("transportation_allocations", 200), ("family_allowance_allocations", 100)):
-			profile.append(fieldname, {"company": "Itihad", "account": account, "cost_center": cost_center, "amount": amount})
+			profile.append(fieldname, {"company": "Itihad", "account": account, "cost_center": cost_center, "amount": amount, "percentage": 100})
 		profile.insert(ignore_permissions=True)
+		profile.basic_allocations[0].percentage = 90
+		with self.assertRaises(frappe.ValidationError):
+			profile._validate_allocations("Basic Salary", profile.basic_salary, "basic_allocations", {"Itihad"})
+		profile.basic_allocations[0].percentage = 100
 		payroll_employee = frappe.db.get_value("Employee", {"custom_master_employee": employee.name, "company": "Itihad"}, "name")
 		revision = frappe.get_doc("Employee Salary Revision", profile.latest_revision)
 		self.assertEqual(revision.total_salary, 1300)

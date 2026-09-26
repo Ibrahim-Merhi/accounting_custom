@@ -42,12 +42,6 @@ function allocation_configuration(table_field) {
 function recalculate_allocation_table(frm, table_field, amount_field) {
 	const rows = frm.doc[table_field] || [];
 	const total = flt(rows.reduce((sum, row) => sum + flt(row.amount), 0), 2);
-	rows.forEach((row) => {
-		const percentage = total > 0 ? flt(flt(row.amount) / total * 100, 6) : 0;
-		if (flt(row.percentage, 6) !== percentage) {
-			frappe.model.set_value(row.doctype, row.name, "percentage", percentage);
-		}
-	});
 	if (flt(frm.doc[amount_field], 2) !== total) {
 		frappe.model.set_value(frm.doctype, frm.docname, amount_field, total);
 	}

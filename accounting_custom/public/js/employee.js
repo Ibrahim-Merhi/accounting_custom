@@ -150,7 +150,7 @@ function build_salary_profile_dialog(frm, data) {
 		{fieldname: "account", label: __("Account"), fieldtype: "Link", options: "Account", in_list_view: 1, columns: 2, reqd: 1},
 		{fieldname: "cost_center", label: __("Cost Center"), fieldtype: "Link", options: "Cost Center", in_list_view: 1, columns: 2, reqd: 1},
 		{fieldname: "amount", label: __("Amount"), fieldtype: "Currency", in_list_view: 1, columns: 2, reqd: 1, non_negative: 1, onchange: () => update_salary_dialog_totals(dialog)},
-		{fieldname: "percentage", label: __("Percentage"), fieldtype: "Percent", precision: "0", in_list_view: 1, columns: 2, read_only: 1},
+		{fieldname: "percentage", label: __("Percentage"), fieldtype: "Percent", precision: "0", in_list_view: 1, columns: 2, reqd: 1, onchange: () => update_salary_dialog_totals(dialog)},
 	];
 	const table = (fieldname, label) => ({fieldname, label, fieldtype: "Table", cannot_add_rows: false, in_place_edit: true, data: data[fieldname] || [], fields: allocation_fields()});
 	dialog = new frappe.ui.Dialog({
@@ -166,10 +166,13 @@ function build_salary_profile_dialog(frm, data) {
 			{fieldname: "total_salary", label: __("Total Salary"), fieldtype: "Currency", read_only: 1},
 			{fieldname: "basic_section", fieldtype: "Section Break", label: __("Basic Salary Allocation")},
 			table("basic_allocations", __("Basic Salary")),
+			{fieldname: "basic_percentage_status", fieldtype: "HTML"},
 			{fieldname: "transportation_section", fieldtype: "Section Break", label: __("Transportation Allocation")},
 			table("transportation_allocations", __("Transportation")),
+			{fieldname: "transportation_percentage_status", fieldtype: "HTML"},
 			{fieldname: "family_section", fieldtype: "Section Break", label: __("Family Allowance Allocation")},
 			table("family_allowance_allocations", __("Family Allowance")),
+			{fieldname: "family_allowance_percentage_status", fieldtype: "HTML"},
 		],
 		primary_action_label: __("Save Salary Profile"),
 		primary_action(values) {
@@ -205,9 +208,16 @@ function update_salary_dialog_totals(dialog) {
 	for (const fieldname of salary_table_fields()) {
 		const rows = dialog.get_value(fieldname) || [];
 		const total = flt(rows.reduce((sum, row) => sum + flt(row.amount), 0), 2);
-		rows.forEach((row) => { row.percentage = total > 0 ? flt(flt(row.amount) / total * 100, 6) : 0; });
+		const percentage_total = flt(rows.reduce((sum, row) => sum + flt(row.percentage), 0), 6);
 		totals[fieldname] = total;
 		dialog.fields_dict[fieldname].grid.refresh();
+		const status_field = `${fieldname.replace("_allocations", "")}_percentage_status`;
+		const is_valid = Math.abs(percentage_total - 100) <= 0.001;
+		const status_class = is_valid ? "text-success" : "text-danger";
+		const status_text = rows.length ? `${__("Percentage Total")}: ${format_percent(percentage_total)}` : __("No allocation rows");
+		if (dialog.fields_dict[status_field]) {
+			dialog.fields_dict[status_field].$wrapper.html(`<div class="${status_class} font-weight-bold text-right mb-2">${status_text}</div>`);
+		}
 	}
 	dialog.set_value("basic_total", totals.basic_allocations || 0);
 	dialog.set_value("transportation_total", totals.transportation_allocations || 0);
