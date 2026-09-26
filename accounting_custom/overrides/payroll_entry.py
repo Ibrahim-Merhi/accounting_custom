@@ -7,23 +7,56 @@ PROFILE_COMPONENTS = {"Basic Salary", "Transportation", "Family Allowance"}
 
 class CustomPayrollEntry(PayrollEntry):
 
+	def _is_managed_payroll(self):
+		if self.get("custom_multi_company_payroll_run"):
+			return True
+		employees = [row.employee for row in self.get("employees") if row.employee]
+		if not employees:
+			employees = frappe.get_all("Salary Slip", filters={"payroll_entry": self.name}, pluck="employee")
+		if not employees:
+			return False
+		return bool(frappe.db.sql("""
+			select 1 from `tabSalary Structure Assignment`
+			where employee in %(employees)s and salary_structure like 'Managed-%%'
+			and docstatus = 1 and from_date <= %(end_date)s limit 1
+		""", {"employees": tuple(set(employees)), "end_date": self.end_date}))
+
 	def validate_payroll_payable_account(self):
-		if not self.get("custom_multi_company_payroll_run"):
+		if not self._is_managed_payroll():
 			return super().validate_payroll_payable_account()
 		account_type = frappe.db.get_value("Account", self.payroll_payable_account, "account_type")
 		if account_type != "Payable":
 			frappe.throw(f"Payroll payable account {self.payroll_payable_account} must have Account Type Payable.")
 
 	def set_payable_amount_against_payroll_payable_account(self, accounts, currencies, company_currency, accounting_dimensions, precision, payable_amount, payroll_payable_account, employee_wise_accounting_enabled):
-		if self.get("custom_multi_company_payroll_run"):
-			self.employee_based_payroll_payable_entries = {}
-			for slip in frappe.get_all("Salary Slip", filters={"payroll_entry": self.name, "docstatus": 1}, fields=["employee", "net_pay", "salary_structure"]):
-				self.employee_based_payroll_payable_entries[slip.employee] = {"earnings": flt(slip.net_pay), "deductions": 0, "salary_structure": slip.salary_structure}
-			employee_wise_accounting_enabled = True
-		return super().set_payable_amount_against_payroll_payable_account(accounts, currencies, company_currency, accounting_dimensions, precision, payable_amount, payroll_payable_account, employee_wise_accounting_enabled)
+		if not self._is_managed_payroll():
+			return super().set_payable_amount_against_payroll_payable_account(accounts, currencies, company_currency, accounting_dimensions, precision, payable_amount, payroll_payable_account, employee_wise_accounting_enabled)
+
+		self.employee_based_payroll_payable_entries = {}
+		party_amounts = getattr(self, "_profile_party_amounts", {})
+		slips = frappe.get_all("Salary Slip", filters={"payroll_entry": self.name, "docstatus": 1}, fields=["employee", "net_pay", "salary_structure"])
+		for slip in slips:
+			net_pay = flt(slip.net_pay)
+			self.employee_based_payroll_payable_entries[slip.employee] = {"earnings": net_pay, "deductions": 0, "salary_structure": slip.salary_structure}
+			cost_centers = {}
+			for (_account, cost_center, employee), amount in party_amounts.items():
+				if employee == slip.employee:
+					cost_centers[cost_center] = cost_centers.get(cost_center, 0) + flt(amount)
+			if not cost_centers:
+				cost_centers = {self.cost_center: net_pay}
+			total_weight = sum(cost_centers.values())
+			remaining = net_pay
+			for index, (cost_center, weight) in enumerate(sorted(cost_centers.items())):
+				amount = remaining if index == len(cost_centers) - 1 else flt(net_pay * weight / total_weight, precision)
+				remaining -= amount
+				self.get_accounting_entries_and_payable_amount(
+					payroll_payable_account, cost_center, amount, currencies, company_currency, 0,
+					accounting_dimensions, precision, entry_type="payable", party=slip.employee, accounts=accounts,
+				)
+		return None
 
 	def make_journal_entry(self, accounts, *args, **kwargs):
-		if not self.get("custom_multi_company_payroll_run"):
+		if not self._is_managed_payroll():
 			return super().make_journal_entry(accounts, *args, **kwargs)
 		party_amounts = getattr(self, "_profile_party_amounts", {})
 		expanded = []
@@ -47,8 +80,8 @@ class CustomPayrollEntry(PayrollEntry):
 		return super().make_journal_entry(expanded, *args, **kwargs)
 
 	def email_salary_slip(self, submitted_ss):
-		"""Do not email slips submitted by the custom multi-company payroll run."""
-		if self.flags.get("suppress_salary_slip_email"):
+		"""Custom multi-company payroll keeps slips in-app and never emails them."""
+		if self._is_managed_payroll() or self.flags.get("suppress_salary_slip_email"):
 			return
 		return super().email_salary_slip(submitted_ss)
 
@@ -67,7 +100,7 @@ class CustomPayrollEntry(PayrollEntry):
 					amount = flt(item.amount) * flt(allocation.amount) / allocation_total
 					key = (allocation.account, allocation.cost_center)
 					account_dict[key] = account_dict.get(key, 0) + amount
-					if self.get("custom_multi_company_payroll_run"):
+					if self._is_managed_payroll():
 						if not hasattr(self, "_profile_party_amounts"):
 							self._profile_party_amounts = {}
 						party_key = (allocation.account, allocation.cost_center, item.employee)
