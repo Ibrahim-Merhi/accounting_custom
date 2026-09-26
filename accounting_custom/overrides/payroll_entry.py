@@ -42,6 +42,19 @@ class CustomPayrollEntry(PayrollEntry):
 				accounting_dimensions, precision, entry_type="payable", party=row.employee, accounts=accounts,
 			)
 		return None
+	@frappe.whitelist()
+	def get_bank_payment_allocation_defaults(self):
+		self.check_permission("read")
+		if not self._is_managed_payroll() or not self.salary_slips_submitted:
+			return []
+		grouped = {}
+		for row in self._get_managed_payable_rows(2):
+			grouped[row.cost_center] = grouped.get(row.cost_center, 0) + flt(row.amount)
+		return [
+			{"cost_center": cost_center, "amount": amount}
+			for cost_center, amount in sorted(grouped.items()) if amount > 0
+		]
+
 	def set_accounting_entries_for_bank_entry(self, je_payment_amount, user_remark):
 		rows = self.get("custom_bank_payment_allocations") or []
 		if not self._is_managed_payroll() or not rows:
