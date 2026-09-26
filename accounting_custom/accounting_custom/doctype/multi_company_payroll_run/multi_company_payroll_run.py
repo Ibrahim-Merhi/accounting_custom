@@ -29,6 +29,11 @@ class MultiCompanyPayrollRun(Document):
 			self._process_company(company_row)
 		self._refresh_generated_documents()
 		self.status = "Completed"
+		frappe.msgprint(
+			_("Salary Slips submitted for period from {0} to {1}").format(
+				self.start_date, self.end_date
+			)
+		)
 
 	def on_cancel(self):
 		for row in reversed(self.companies):
@@ -131,7 +136,15 @@ class MultiCompanyPayrollRun(Document):
 		if entry.docstatus==0: entry.submit()
 		if not entry.salary_slips_submitted:
 			entry.flags.suppress_salary_slip_email = True
+			message_count = len(frappe.local.message_log)
 			entry.submit_salary_slips()
+			success_message = _("Salary Slips submitted for period from {0} to {1}").format(
+				entry.start_date, entry.end_date
+			)
+			frappe.local.message_log = frappe.local.message_log[:message_count] + [
+				message for message in frappe.local.message_log[message_count:]
+				if message.get("message") != success_message
+			]
 			entry.reload()
 			if not entry.salary_slips_submitted:
 				frappe.throw(_("Salary Slip submission failed for company {0}. Open Payroll Entry {1} for details.").format(row.company, entry.name))
