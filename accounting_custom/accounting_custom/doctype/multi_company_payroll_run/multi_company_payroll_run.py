@@ -82,6 +82,14 @@ class MultiCompanyPayrollRun(Document):
 				frappe.throw(_("Deduction row {0}: select a Deduction salary component.").format(row.idx))
 			if flt(row.amount) <= 0:
 				frappe.throw(_("Deduction row {0}: amount must be greater than zero.").format(row.idx))
+			valid_source = any(
+				allocation.employee == row.employee and allocation.company == row.company
+				and allocation.component == row.source_component and allocation.account == row.source_account
+				and allocation.cost_center == row.source_cost_center
+				for allocation in self.allocation_summary
+			)
+			if not valid_source:
+				frappe.throw(_("Deduction row {0}: source component, account, and cost center must match the employee salary allocation.").format(row.idx))
 
 	def _refresh_employee_totals(self):
 		deductions = {}
@@ -127,7 +135,7 @@ class MultiCompanyPayrollRun(Document):
 			allocations=[r for r in self.allocation_summary if r.company==company_row.company]; employees=sorted({r.payroll_employee for r in allocations})
 			entry=frappe.get_doc({"doctype":"Payroll Entry","custom_multi_company_payroll_run":self.name,"posting_date":self.posting_date,"company":company_row.company,"currency":company_row.currency,"exchange_rate":1,"payroll_payable_account":company_row.payroll_payable_account,"payroll_frequency":self.payroll_frequency,"start_date":self.start_date,"end_date":self.end_date,"cost_center":allocations[0].cost_center,"employees":[{"employee":e} for e in employees]})
 			for deduction in self.manual_deductions:
-				if deduction.company==company_row.company: entry.append("custom_manual_deductions", {"employee":deduction.payroll_employee,"salary_component":deduction.salary_component,"amount":deduction.amount,"note":deduction.note})
+				if deduction.company==company_row.company: entry.append("custom_manual_deductions", {"employee":deduction.payroll_employee,"source_component":deduction.source_component,"source_account":deduction.source_account,"source_cost_center":deduction.source_cost_center,"salary_component":deduction.salary_component,"amount":deduction.amount,"note":deduction.note})
 			entry.insert(); company_row.payroll_entry=entry.name; company_row.status="Created"
 
 	def _process_company(self, row):

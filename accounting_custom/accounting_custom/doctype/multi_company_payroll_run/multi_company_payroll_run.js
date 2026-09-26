@@ -8,6 +8,8 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 			return {filters:{name:["in",companies]}};
 		});
 		frm.set_query("salary_component", "manual_deductions", () => ({filters:{type:"Deduction",disabled:0}}));
+		frm.set_query("source_account", "manual_deductions", (_doc, cdt, cdn) => ({filters:{name:["in",get_source_allocations(frm, locals[cdt][cdn]).map(r=>r.account)]}}));
+		frm.set_query("source_cost_center", "manual_deductions", (_doc, cdt, cdn) => ({filters:{name:["in",get_source_allocations(frm, locals[cdt][cdn]).filter(r=>!locals[cdt][cdn].source_account || r.account===locals[cdt][cdn].source_account).map(r=>r.cost_center)]}}));
 	},
 	refresh(frm) {
 		if (!frm.is_new() && frm.doc.docstatus===0 && !frm.doc.companies?.some(r=>r.payroll_entry)) {
@@ -33,8 +35,30 @@ frappe.ui.form.on("Multi Company Payroll Deduction", {
 			map_deduction_employee(frm, cdt, cdn);
 		});
 	},
-	company(frm, cdt, cdn) { map_deduction_employee(frm, cdt, cdn); },
+	company(frm, cdt, cdn) { map_deduction_employee(frm, cdt, cdn); clear_source(frm, cdt, cdn); },
+	source_component(frm, cdt, cdn) { clear_source(frm, cdt, cdn); autofill_source(frm, cdt, cdn); },
+	source_account(frm, cdt, cdn) { frappe.model.set_value(cdt, cdn, "source_cost_center", ""); autofill_source(frm, cdt, cdn); },
 });
+
+function get_source_allocations(frm, row) {
+	return (frm.doc.allocation_summary || []).filter((allocation) =>
+		allocation.employee === row.employee && allocation.company === row.company && allocation.component === row.source_component
+	);
+}
+
+function clear_source(_frm, cdt, cdn) {
+	frappe.model.set_value(cdt, cdn, "source_account", "");
+	frappe.model.set_value(cdt, cdn, "source_cost_center", "");
+}
+
+function autofill_source(frm, cdt, cdn) {
+	const row = locals[cdt][cdn];
+	const allocations = get_source_allocations(frm, row);
+	const accounts = [...new Set(allocations.map(r=>r.account))];
+	if (!row.source_account && accounts.length === 1) frappe.model.set_value(cdt, cdn, "source_account", accounts[0]);
+	const cost_centers = [...new Set(allocations.filter(r=>!row.source_account || r.account===row.source_account).map(r=>r.cost_center))];
+	if (cost_centers.length === 1) frappe.model.set_value(cdt, cdn, "source_cost_center", cost_centers[0]);
+}
 
 function get_employee_companies(frm, employee) {
 	if (!employee) return [];
