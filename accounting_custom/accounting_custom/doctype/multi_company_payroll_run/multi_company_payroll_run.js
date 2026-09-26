@@ -7,7 +7,7 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 	},
 	refresh(frm) {
 		if (!frm.is_new() && frm.doc.docstatus===0 && !frm.doc.companies?.some(r=>r.payroll_entry)) {
-			frm.add_custom_button(__("Get Employees"), () => frm.call({method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
+			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}
 		if (frm.doc.docstatus===1) frm.dashboard.set_headline_alert(__("Payroll completed. Open company Payroll Entries, Salary Slips, and Journal Entries from the tables below."), "green");
 	},
