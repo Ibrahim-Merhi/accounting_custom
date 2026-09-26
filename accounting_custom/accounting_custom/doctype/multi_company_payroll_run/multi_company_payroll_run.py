@@ -127,7 +127,9 @@ class MultiCompanyPayrollRun(Document):
 		entry=frappe.get_doc("Payroll Entry", row.payroll_entry)
 		if len(entry.employees)>30: frappe.throw(_("Company {0} has more than 30 employees. Split the run to ensure synchronous audited processing.").format(row.company))
 		if entry.docstatus==0: entry.submit()
-		if not entry.salary_slips_submitted: entry.submit_salary_slips()
+		if not entry.salary_slips_submitted:
+			entry.flags.suppress_salary_slip_email = True
+			entry.submit_salary_slips()
 		row.status="Completed"
 
 	def _refresh_generated_documents(self):

@@ -7,6 +7,12 @@ PROFILE_COMPONENTS = {"Basic Salary", "Transportation", "Family Allowance"}
 
 
 class CustomPayrollEntry(PayrollEntry):
+	def email_salary_slip(self, submitted_ss):
+		"""Do not email slips submitted by the custom multi-company payroll run."""
+		if self.flags.get("suppress_salary_slip_email"):
+			return
+		return super().email_salary_slip(submitted_ss)
+
 	def get_salary_component_total(self, component_type=None, employee_wise_accounting_enabled=False):
 		if component_type != "earnings":
 			return super().get_salary_component_total(component_type, employee_wise_accounting_enabled)

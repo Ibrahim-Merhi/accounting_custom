@@ -147,6 +147,7 @@ has_permission = {
 
 override_doctype_class = {
 	"Payroll Entry": "accounting_custom.overrides.payroll_entry.CustomPayrollEntry",
+	"Salary Slip": "accounting_custom.overrides.salary_slip.CustomSalarySlip",
 }
 
 # Document Events
