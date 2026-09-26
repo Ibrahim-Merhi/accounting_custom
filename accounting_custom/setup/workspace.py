@@ -28,6 +28,7 @@ SECTIONS = [
 	]),
 	("Payroll", [
 		("Employee Salary Profile", "DocType"),
+		("Multi Company Payroll Run", "DocType"),
 		("Employee Salary History", "Report"),
 		("Payroll Cost Center Allocation", "DocType"),
 		("Employee Monthly Adjustment", "DocType"),

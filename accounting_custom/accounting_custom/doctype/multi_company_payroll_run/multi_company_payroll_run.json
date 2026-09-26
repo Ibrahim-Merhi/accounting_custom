@@ -1,0 +1,29 @@
+{
+ "actions": [],
+ "autoname": "MCPR-.YYYY.-.#####",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["posting_date", "payroll_frequency", "column_break_1", "start_date", "end_date", "status", "companies_section", "companies", "allocations_section", "allocation_summary"],
+ "fields": [
+  {"default":"Today","fieldname":"posting_date","fieldtype":"Date","in_list_view":1,"label":"Posting Date","reqd":1},
+  {"default":"Monthly","fieldname":"payroll_frequency","fieldtype":"Select","label":"Payroll Frequency","options":"Monthly\nFortnightly\nBimonthly\nWeekly\nDaily","reqd":1},
+  {"fieldname":"column_break_1","fieldtype":"Column Break"},
+  {"fieldname":"start_date","fieldtype":"Date","in_list_view":1,"label":"Start Date","reqd":1},
+  {"fieldname":"end_date","fieldtype":"Date","in_list_view":1,"label":"End Date","reqd":1},
+  {"default":"Draft","fieldname":"status","fieldtype":"Select","in_list_view":1,"in_standard_filter":1,"label":"Status","options":"Draft\nEmployees Loaded\nPayroll Entries Created\nSalary Slips Created\nCompleted","read_only":1},
+  {"fieldname":"companies_section","fieldtype":"Section Break","label":"Company Payroll Entries"},
+  {"fieldname":"companies","fieldtype":"Table","label":"Companies and Payable Accounts","options":"Multi Company Payroll Company"},
+  {"fieldname":"allocations_section","fieldtype":"Section Break","label":"Employee Salary Allocations"},
+  {"fieldname":"allocation_summary","fieldtype":"Table","label":"Employee / Company / Account / Cost Center / Amount","options":"Multi Company Payroll Allocation","read_only":1}
+ ],
+ "links": [{"link_doctype":"Payroll Entry","link_fieldname":"custom_multi_company_payroll_run"}],
+ "module": "Accounting Custom",
+ "name": "Multi Company Payroll Run",
+ "permissions": [
+  {"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"Accounts Manager","share":1,"write":1},
+  {"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"System Manager","share":1,"write":1}
+ ],
+ "sort_field":"modified",
+ "sort_order":"DESC",
+ "track_changes":1
+}

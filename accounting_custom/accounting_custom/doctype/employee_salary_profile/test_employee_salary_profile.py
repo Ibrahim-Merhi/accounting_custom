@@ -4,6 +4,7 @@ from frappe.tests.utils import FrappeTestCase
 from accounting_custom.accounting.salary_profile import get_revision_history, get_salary_profile_summary
 from accounting_custom.accounting.payroll import create_manual_deductions, cancel_manual_deductions
 from accounting_custom.permissions import salary_permission, salary_query
+from accounting_custom.overrides.payroll_entry import CustomPayrollEntry
 
 
 class TestEmployeeSalarySecurity(FrappeTestCase):
@@ -18,6 +19,17 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		empty_profile = frappe.new_doc("Employee Salary Profile")
 		with self.assertRaises(frappe.ValidationError):
 			empty_profile._calculate_component_totals()
+
+	def test_payroll_uses_allocation_amounts_not_manual_percentages(self):
+		entry = CustomPayrollEntry({"doctype": "Payroll Entry", "company": "Itihad"})
+		entry.get_salary_components = lambda _component_type: [frappe._dict(employee="EMP-1", salary_component="Basic Salary", amount=400)]
+		entry._profile_allocations = lambda _employee, _component: [
+			frappe._dict(account="Account A", cost_center="Cost Center A", amount=100, percentage=45),
+			frappe._dict(account="Account B", cost_center="Cost Center B", amount=300, percentage=55),
+		]
+		allocated = entry.get_salary_component_total("earnings")
+		self.assertEqual(allocated[("Account A", "Cost Center A")], 100)
+		self.assertEqual(allocated[("Account B", "Cost Center B")], 300)
 
 	def test_multiple_companies_create_internal_payroll_identity(self):
 		frappe.set_user("Administrator")

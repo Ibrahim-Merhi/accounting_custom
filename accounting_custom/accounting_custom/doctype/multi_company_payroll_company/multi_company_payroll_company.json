@@ -1,0 +1,20 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["company", "payroll_payable_account", "currency", "employee_count", "gross_salary", "payroll_entry", "salary_slip_count", "status"],
+ "fields": [
+  {"fieldname":"company","fieldtype":"Link","in_list_view":1,"label":"Company","options":"Company","read_only":1,"reqd":1,"columns":2},
+  {"fieldname":"payroll_payable_account","fieldtype":"Link","in_list_view":1,"label":"Payroll Payable Account","options":"Account","columns":2},
+  {"fieldname":"currency","fieldtype":"Link","in_list_view":1,"label":"Currency","options":"Currency","read_only":1,"columns":1},
+  {"fieldname":"employee_count","fieldtype":"Int","in_list_view":1,"label":"Employees","read_only":1,"columns":1},
+  {"fieldname":"gross_salary","fieldtype":"Currency","in_list_view":1,"label":"Gross Salary","precision":"0","read_only":1,"columns":1},
+  {"fieldname":"payroll_entry","fieldtype":"Link","in_list_view":1,"label":"Payroll Entry","options":"Payroll Entry","read_only":1,"columns":2},
+  {"fieldname":"salary_slip_count","fieldtype":"Int","label":"Salary Slips","read_only":1},
+  {"fieldname":"status","fieldtype":"Data","in_list_view":1,"label":"Status","read_only":1,"columns":1}
+ ],
+ "istable": 1,
+ "module": "Accounting Custom",
+ "name": "Multi Company Payroll Company"
+}

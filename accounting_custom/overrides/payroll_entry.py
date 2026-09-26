@@ -17,8 +17,9 @@ class CustomPayrollEntry(PayrollEntry):
 		for item in items:
 			allocations = self._profile_allocations(item.employee, item.salary_component)
 			if allocations:
+				allocation_total = sum(flt(row.amount) for row in allocations)
 				for allocation in allocations:
-					amount = flt(item.amount) * flt(allocation.percentage) / 100
+					amount = flt(item.amount) * flt(allocation.amount) / allocation_total
 					key = (allocation.account, allocation.cost_center)
 					account_dict[key] = account_dict.get(key, 0) + amount
 					if employee_wise_accounting_enabled:
@@ -48,4 +49,4 @@ class CustomPayrollEntry(PayrollEntry):
 			return []
 		return frappe.get_all("Employee Salary Revision Allocation", filters={
 			"parent": revision[0][0], "component": component, "company": self.company,
-		}, fields=["account", "cost_center", "percentage"], order_by="idx")
+		}, fields=["account", "cost_center", "amount"], order_by="idx")
