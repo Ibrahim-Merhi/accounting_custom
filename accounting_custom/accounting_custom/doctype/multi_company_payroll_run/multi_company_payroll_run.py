@@ -13,8 +13,11 @@ class MultiCompanyPayrollRun(Document):
 		self._map_and_validate_deductions()
 		self._refresh_employee_totals()
 		self._validate_company_rows(require_accounts=self.docstatus == 1)
+		if self.docstatus == 1:
+			self._validate_payroll_prerequisites()
 
 	def before_submit(self):
+		self._validate_payroll_prerequisites()
 		if not self.employees or not self.allocation_summary:
 			frappe.throw(_("Get Employees before submitting payroll."))
 		self.status = "Processing"
@@ -52,6 +55,15 @@ class MultiCompanyPayrollRun(Document):
 				frappe.throw(_("Select an enabled ledger payroll payable account belonging to {0}.").format(row.company))
 			if account.account_type:
 				frappe.throw(_("Payroll payable account {0} must not have an Account Type.").format(row.payroll_payable_account))
+
+	def _validate_payroll_prerequisites(self):
+		missing_holiday_lists = []
+		for row in self.employees:
+			holiday_list = frappe.db.get_value("Employee", row.payroll_employee, "holiday_list") or frappe.db.get_value("Company", row.company, "default_holiday_list")
+			if not holiday_list:
+				missing_holiday_lists.append(f"{row.employee_name} — {row.company}")
+		if missing_holiday_lists:
+			frappe.throw(_("Set a Holiday List on the master Employee or Default Holiday List on these companies before submitting payroll: {0}").format(", ".join(missing_holiday_lists)))
 
 	def _map_and_validate_deductions(self):
 		valid = {(row.employee, row.company): row.payroll_employee for row in self.employees}

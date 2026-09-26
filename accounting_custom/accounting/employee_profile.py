@@ -89,7 +89,7 @@ def sync_company_payroll_identities(doc, method=None):
 				"status": doc.status, "relieving_date": None, "employee_name": doc.employee_name,
 				"department": position.department,
 				"designation": position.designation, "employment_type": position.employment_type,
-				"branch": position.branch,
+				"branch": position.branch, "holiday_list": doc.holiday_list,
 			}, update_modified=False)
 			continue
 		identity_doc = frappe.get_doc({
@@ -99,7 +99,7 @@ def sync_company_payroll_identities(doc, method=None):
 			"status": doc.status, "relieving_date": doc.relieving_date if doc.status == "Left" else None,
 			"company": company, "branch": position.branch,
 			"department": position.department, "designation": position.designation,
-			"employment_type": position.employment_type, "custom_master_employee": doc.name,
+			"employment_type": position.employment_type, "holiday_list": doc.holiday_list, "custom_master_employee": doc.name,
 			"custom_is_payroll_identity": 1,
 		})
 		identity_doc.flags.ignore_permissions = True
