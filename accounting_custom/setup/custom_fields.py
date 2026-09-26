@@ -101,8 +101,12 @@ CUSTOM_FIELDS = {
 			"options": "Employee Past Position", "insert_after": "custom_past_positions_section", "read_only": 1,
 		},
 		{
+			"fieldname": "custom_secure_salary_section", "label": "Salary Profile",
+			"fieldtype": "Section Break", "insert_after": "salary_information",
+		},
+		{
 			"fieldname": "custom_secure_salary_profile", "label": "Salary Profile",
-			"fieldtype": "HTML", "insert_after": "salary_information",
+			"fieldtype": "HTML", "insert_after": "custom_secure_salary_section",
 		},
 	],
 	"Payroll Entry": [
@@ -318,7 +322,7 @@ def configure_employee_accounting_profile():
 		return
 	for fieldname in (
 		"company_details_section", "branch", "grade", "ctc", "salary_currency",
-		"salary_mode", "payroll_cost_center",
+		"salary_mode", "payroll_cost_center", "pan_number", "provident_fund_account",
 	):
 		property_name = f"Employee-{fieldname}-hidden"
 		values = {"value": "1", "property_type": "Check"}

@@ -41,16 +41,26 @@ function company_filter(cdt, cdn) {
 	return company ? {company} : {name: ["=", ""]};
 }
 
+function set_employee_position_queries(frm) {
+	frm.set_query("branch", "custom_branches", (_doc, cdt, cdn) => {
+		const company = position_company(cdt, cdn);
+		return {filters: company ? {custom_company: company} : {name: ["=", ""]}};
+	});
+	frm.set_query("department", "custom_branches", (_doc, cdt, cdn) => ({filters: company_filter(cdt, cdn)}));
+}
+
 function render_secure_salary_profile(frm) {
 	const roles = frappe.user_roles || [];
 	const can_access = roles.includes("Accounts Manager") || frappe.session?.user === "Administrator";
 	if (!can_access) {
 		frm.layout.select_tab("basic_details_tab");
 		frm.toggle_display("salary_information", false);
+		frm.toggle_display("custom_secure_salary_section", false);
 		frm.toggle_display("custom_secure_salary_profile", false);
 		return;
 	}
 	frm.toggle_display("salary_information", true);
+	frm.toggle_display("custom_secure_salary_section", true);
 	frm.toggle_display("custom_secure_salary_profile", true);
 	if (frm.is_new()) return;
 	const field = frm.get_field("custom_secure_salary_profile");
@@ -113,8 +123,10 @@ function salary_total_card(label, value, emphasized = false) {
 
 function render_allocation_table(label, allocations) {
 	if (!allocations || !allocations.length) return "";
-	const rows = allocations.map((row) => `<tr><td>${escape_html(row.company)}</td><td>${escape_html(row.account)}</td><td>${escape_html(row.cost_center)}</td><td>${format_currency(row.amount)}</td><td>${format_percent(row.percentage)}</td></tr>`).join("");
-	return `<div class="mb-4"><h6>${label}</h6><div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th>${__("Amount")}</th><th>${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+	const rows = allocations.map((row) => `<tr><td>${escape_html(row.company)}</td><td>${escape_html(row.account)}</td><td>${escape_html(row.cost_center)}</td><td class="text-right">${format_currency(row.amount)}</td><td class="text-right">${format_percent(row.percentage)}</td></tr>`).join("");
+	const total_amount = allocations.reduce((sum, row) => sum + flt(row.amount), 0);
+	const total_percentage = allocations.reduce((sum, row) => sum + flt(row.percentage), 0);
+	return `<div class="mb-4"><div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">${label}</h6><span class="text-muted small">${allocations.length} ${__("allocation(s)")}</span></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th class="text-right">${__("Amount")}</th><th class="text-right">${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="font-weight-bold"><td colspan="3">${__("Total")}</td><td class="text-right">${format_currency(total_amount)}</td><td class="text-right">${format_percent(total_percentage)}</td></tr></tfoot></table></div></div>`;
 }
 
 function render_salary_history(revisions) {
@@ -135,8 +147,8 @@ function build_salary_profile_dialog(frm, data) {
 	let dialog;
 	const allocation_fields = () => [
 		{fieldname: "company", label: __("Company"), fieldtype: "Link", options: "Company", in_list_view: 1, columns: 2, reqd: 1},
-		{fieldname: "account", label: __("Account"), fieldtype: "Link", options: "Account", in_list_view: 1, columns: 3, reqd: 1},
-		{fieldname: "cost_center", label: __("Cost Center"), fieldtype: "Link", options: "Cost Center", in_list_view: 1, columns: 3, reqd: 1},
+		{fieldname: "account", label: __("Account"), fieldtype: "Link", options: "Account", in_list_view: 1, columns: 2, reqd: 1},
+		{fieldname: "cost_center", label: __("Cost Center"), fieldtype: "Link", options: "Cost Center", in_list_view: 1, columns: 2, reqd: 1},
 		{fieldname: "amount", label: __("Amount"), fieldtype: "Currency", in_list_view: 1, columns: 2, reqd: 1, non_negative: 1, onchange: () => update_salary_dialog_totals(dialog)},
 		{fieldname: "percentage", label: __("Percentage"), fieldtype: "Percent", precision: "0", in_list_view: 1, columns: 2, read_only: 1},
 	];
