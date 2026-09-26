@@ -101,6 +101,13 @@ function render_salary_workspace(frm, profile) {
 		field.$wrapper.find(`[data-salary-panel="${tab}"]`).removeClass("hide");
 	});
 	field.$wrapper.find(".edit-salary-profile").on("click", () => open_salary_profile_dialog(frm));
+	field.$wrapper.find(".toggle-revision-details").on("click", function () {
+		const target = $(this).attr("data-target");
+		const details = field.$wrapper.find(`[data-revision-details="${target}"]`);
+		const opening = details.hasClass("hide");
+		details.toggleClass("hide", !opening);
+		$(this).text(opening ? __("Hide allocation details") : __("Show allocation details"));
+	});
 }
 
 function render_present_salary(profile) {
@@ -118,23 +125,58 @@ function render_present_salary(profile) {
 }
 
 function salary_total_card(label, value, emphasized = false) {
-	return `<div class="col-sm-3 mb-3"><div class="border rounded p-3 h-100"><small class="text-muted">${label}</small><div class="${emphasized ? "font-weight-bold text-primary" : "font-weight-bold"}">${format_currency(value || 0)}</div></div></div>`;
+	return `<div class="col-sm-3 mb-3"><div class="border rounded p-3 h-100"><small class="text-muted">${label}</small><div class="${emphasized ? "font-weight-bold text-primary" : "font-weight-bold"}">${format_salary_amount(value)}</div></div></div>`;
 }
 
 function render_allocation_table(label, allocations) {
 	if (!allocations || !allocations.length) return "";
-	const rows = allocations.map((row) => `<tr><td>${escape_html(row.company)}</td><td>${escape_html(row.account)}</td><td>${escape_html(row.cost_center)}</td><td class="text-right">${format_currency(row.amount)}</td><td class="text-right">${format_percent(row.percentage)}</td></tr>`).join("");
+	const rows = allocations.map((row) => `<tr><td>${escape_html(row.company)}</td><td>${escape_html(row.account)}</td><td>${escape_html(row.cost_center)}</td><td class="text-right">${format_salary_amount(row.amount)}</td><td class="text-right">${format_percent(row.percentage)}</td></tr>`).join("");
 	const total_amount = allocations.reduce((sum, row) => sum + flt(row.amount), 0);
 	const total_percentage = allocations.reduce((sum, row) => sum + flt(row.percentage), 0);
-	return `<div class="mb-4"><div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">${label}</h6><span class="text-muted small">${allocations.length} ${__("allocation(s)")}</span></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th class="text-right">${__("Amount")}</th><th class="text-right">${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="font-weight-bold"><td colspan="3">${__("Total")}</td><td class="text-right">${format_currency(total_amount)}</td><td class="text-right">${format_percent(total_percentage)}</td></tr></tfoot></table></div></div>`;
+	return `<div class="mb-4"><div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">${label}</h6><span class="text-muted small">${allocations.length} ${__("allocation(s)")}</span></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th class="text-right">${__("Amount")}</th><th class="text-right">${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="font-weight-bold"><td colspan="3">${__("Total")}</td><td class="text-right">${format_salary_amount(total_amount)}</td><td class="text-right">${format_percent(total_percentage)}</td></tr></tfoot></table></div></div>`;
 }
 
 function render_salary_history(revisions) {
 	if (!revisions || !revisions.length) return `<p class="text-muted">${__("No salary revisions yet.")}</p>`;
-	const rows = revisions.map((row) => `<tr><td>${row.revision_number}</td><td>${frappe.datetime.str_to_user(row.effective_from)}</td><td>${row.effective_to ? frappe.datetime.str_to_user(row.effective_to) : __("Current")}</td><td>${frappe.datetime.str_to_user(row.action_date)}</td><td>${format_currency(row.total_salary)}</td><td>${escape_html(row.change_summary || "")}</td></tr>`).join("");
-	return `<h5>${__("Salary Revision History")}</h5><div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>${__("Revision")}</th><th>${__("Effective From")}</th><th>${__("Effective To")}</th><th>${__("Action Date")}</th><th>${__("Total")}</th><th>${__("Changes")}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+	const cards = revisions.map((row) => {
+		const current = !row.effective_to;
+		const target = `salary-revision-${row.revision_number}`;
+		const period = `${frappe.datetime.str_to_user(row.effective_from)} – ${current ? __("Current") : frappe.datetime.str_to_user(row.effective_to)}`;
+		return `<div class="border rounded mb-3 overflow-hidden">
+			<div class="p-3 bg-light">
+				<div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+					<div><span class="badge ${current ? "badge-success" : "badge-secondary"} mr-2">${current ? __("Current") : __("Archived")}</span><strong>${__("Revision")} #${row.revision_number}</strong></div>
+					<div class="font-weight-bold text-primary">${format_salary_amount(row.total_salary)}</div>
+				</div>
+				<div class="row text-muted small mb-3">
+					<div class="col-md-4"><strong>${__("Effective Period")}:</strong> ${period}</div>
+					<div class="col-md-4"><strong>${__("Action Date")}:</strong> ${frappe.datetime.str_to_user(row.action_date)}</div>
+					<div class="col-md-4"><strong>${__("Changed By")}:</strong> ${escape_html(row.changed_by || "")}</div>
+				</div>
+				<div class="row mb-3">
+					${revision_component(__("Basic Salary"), row.basic_salary)}
+					${revision_component(__("Transportation"), row.transportation)}
+					${revision_component(__("Family Allowance"), row.family_allowance)}
+				</div>
+				<div class="small"><strong>${__("Changes")}:</strong> ${format_change_summary(row.change_summary)}</div>
+				<div class="mt-3"><button type="button" class="btn btn-xs btn-default toggle-revision-details" data-target="${target}">${__("Show allocation details")}</button>
+				<a class="btn btn-xs btn-link" href="/app/employee-salary-revision/${encodeURIComponent(row.name)}">${__("View Revision")}</a></div>
+			</div>
+			<div class="p-3 hide" data-revision-details="${target}">${render_revision_allocations(row.allocations)}</div>
+		</div>`;
+	}).join("");
+	return `<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">${__("Salary Revision History")}</h5><div class="text-muted small">${__("Complete salary audit trail, effective periods, and allocation snapshots")}</div></div><span class="badge badge-light">${revisions.length} ${__("revision(s)")}</span></div>${cards}`;
 }
 
+function revision_component(label, value) {
+	return `<div class="col-md-4 mb-2"><div class="border rounded bg-white p-2"><small class="text-muted">${label}</small><div class="font-weight-bold">${format_salary_amount(value)}</div></div></div>`;
+}
+
+function render_revision_allocations(allocations) {
+	if (!allocations || !allocations.length) return `<div class="text-muted">${__("No allocation snapshot available.")}</div>`;
+	const rows = allocations.map((row) => `<tr><td>${escape_html(row.component)}</td><td>${escape_html(row.company)}</td><td>${escape_html(row.account)}</td><td>${escape_html(row.cost_center)}</td><td class="text-right">${format_salary_amount(row.amount)}</td><td class="text-right">${format_percent(row.percentage)}</td></tr>`).join("");
+	return `<h6>${__("Allocation Snapshot")}</h6><div class="table-responsive"><table class="table table-bordered table-sm mb-0"><thead><tr><th>${__("Component")}</th><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th class="text-right">${__("Amount")}</th><th class="text-right">${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
 function open_salary_profile_dialog(frm) {
 	frappe.call({
 		method: "accounting_custom.accounting.salary_profile.get_salary_profile_editor",
@@ -149,7 +191,7 @@ function build_salary_profile_dialog(frm, data) {
 		{fieldname: "company", label: __("Company"), fieldtype: "Link", options: "Company", in_list_view: 1, columns: 2, reqd: 1},
 		{fieldname: "account", label: __("Account"), fieldtype: "Link", options: "Account", in_list_view: 1, columns: 2, reqd: 1},
 		{fieldname: "cost_center", label: __("Cost Center"), fieldtype: "Link", options: "Cost Center", in_list_view: 1, columns: 2, reqd: 1},
-		{fieldname: "amount", label: __("Amount"), fieldtype: "Currency", in_list_view: 1, columns: 2, reqd: 1, non_negative: 1, onchange: () => update_salary_dialog_totals(dialog)},
+		{fieldname: "amount", label: __("Amount"), fieldtype: "Currency", precision: "0", in_list_view: 1, columns: 2, reqd: 1, non_negative: 1, onchange: () => update_salary_dialog_totals(dialog)},
 		{fieldname: "percentage", label: __("Percentage"), fieldtype: "Percent", precision: "0", in_list_view: 1, columns: 2, reqd: 1, onchange: () => update_salary_dialog_totals(dialog)},
 	];
 	const table = (fieldname, label) => ({fieldname, label, fieldtype: "Table", cannot_add_rows: false, in_place_edit: true, data: data[fieldname] || [], fields: allocation_fields()});
@@ -160,10 +202,10 @@ function build_salary_profile_dialog(frm, data) {
 			{fieldname: "effective_date", label: __("Start Effective Date"), fieldtype: "Date", reqd: 1, default: data.effective_date || frappe.datetime.get_today()},
 			{fieldname: "action_date", label: __("Date of Action"), fieldtype: "Date", reqd: 1, default: frappe.datetime.get_today()},
 			{fieldname: "totals_section", fieldtype: "Section Break", label: __("Salary Totals")},
-			{fieldname: "basic_total", label: __("Basic Salary"), fieldtype: "Currency", read_only: 1},
-			{fieldname: "transportation_total", label: __("Transportation"), fieldtype: "Currency", read_only: 1},
-			{fieldname: "family_allowance_total", label: __("Family Allowance"), fieldtype: "Currency", read_only: 1},
-			{fieldname: "total_salary", label: __("Total Salary"), fieldtype: "Currency", read_only: 1},
+			{fieldname: "basic_total", label: __("Basic Salary"), fieldtype: "Currency", precision: "0", read_only: 1},
+			{fieldname: "transportation_total", label: __("Transportation"), fieldtype: "Currency", precision: "0", read_only: 1},
+			{fieldname: "family_allowance_total", label: __("Family Allowance"), fieldtype: "Currency", precision: "0", read_only: 1},
+			{fieldname: "total_salary", label: __("Total Salary"), fieldtype: "Currency", precision: "0", read_only: 1},
 			{fieldname: "basic_section", fieldtype: "Section Break", label: __("Basic Salary Allocation")},
 			table("basic_allocations", __("Basic Salary")),
 			{fieldname: "basic_percentage_status", fieldtype: "HTML"},
@@ -227,8 +269,16 @@ function update_salary_dialog_totals(dialog) {
 
 function render_salary_slips(slips) {
 	if (!slips || !slips.length) return "";
-	const rows = slips.map((slip) => `<tr><td><a href="/app/salary-slip/${encodeURIComponent(slip.name)}">${escape_html(slip.name)}</a></td><td>${escape_html(slip.company)}</td><td>${frappe.datetime.str_to_user(slip.start_date)} – ${frappe.datetime.str_to_user(slip.end_date)}</td><td>${format_currency(slip.net_pay, slip.currency)}</td><td><a class="btn btn-xs btn-default" target="_blank" href="/printview?doctype=Salary%20Slip&name=${encodeURIComponent(slip.name)}&trigger_print=1">${__("Print")}</a></td></tr>`).join("");
+	const rows = slips.map((slip) => `<tr><td><a href="/app/salary-slip/${encodeURIComponent(slip.name)}">${escape_html(slip.name)}</a></td><td>${escape_html(slip.company)}</td><td>${frappe.datetime.str_to_user(slip.start_date)} – ${frappe.datetime.str_to_user(slip.end_date)}</td><td>${format_salary_amount(slip.net_pay, slip.currency)}</td><td><a class="btn btn-xs btn-default" target="_blank" href="/printview?doctype=Salary%20Slip&name=${encodeURIComponent(slip.name)}&trigger_print=1">${__("Print")}</a></td></tr>`).join("");
 	return `<div class="mt-4"><h5>${__("Salary Slips")}</h5><div class="table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>${__("Salary Slip")}</th><th>${__("Company")}</th><th>${__("Period")}</th><th>${__("Net Pay")}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+
+function format_salary_amount(value, currency) {
+	return format_currency(value || 0, currency, 0);
+}
+
+function format_change_summary(value) {
+	return escape_html(value || "").replace(/(\d+)\.0+\b/g, "$1");
 }
 
 function format_percent(value) {

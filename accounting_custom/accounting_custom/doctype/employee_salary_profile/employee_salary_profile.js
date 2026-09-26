@@ -72,11 +72,11 @@ function render_salary_revision_history(frm) {
 				<td>${frappe.datetime.str_to_user(row.effective_from)}</td>
 				<td>${row.effective_to ? frappe.datetime.str_to_user(row.effective_to) : __("Current")}</td>
 				<td>${frappe.datetime.str_to_user(row.action_date)}</td>
-				<td>${format_currency(row.basic_salary)}</td>
-				<td>${format_currency(row.transportation)}</td>
-				<td>${format_currency(row.family_allowance)}</td>
-				<td class="font-weight-bold">${format_currency(row.total_salary)}</td>
-				<td>${frappe.utils.escape_html(row.change_summary || "")}</td>
+				<td>${format_currency(row.basic_salary, null, 0)}</td>
+				<td>${format_currency(row.transportation, null, 0)}</td>
+				<td>${format_currency(row.family_allowance, null, 0)}</td>
+				<td class="font-weight-bold">${format_currency(row.total_salary, null, 0)}</td>
+				<td>${frappe.utils.escape_html(row.change_summary || "").replace(/(\d+)\.0+\b/g, "$1")}</td>
 			</tr>`).join("");
 			field.$wrapper.html(`<div class="table-responsive"><table class="table table-bordered table-hover">
 				<thead><tr><th>${__("Revision")}</th><th>${__("Effective From")}</th><th>${__("Effective To")}</th><th>${__("Action Date")}</th><th>${__("Basic Salary")}</th><th>${__("Transportation")}</th><th>${__("Family Allowance")}</th><th>${__("Total")}</th><th>${__("Changes")}</th></tr></thead>

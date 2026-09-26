@@ -78,6 +78,7 @@ def save_salary_profile_from_employee(payload):
 				"account": row.get("account"),
 				"cost_center": row.get("cost_center"),
 				"amount": row.get("amount"),
+				"percentage": row.get("percentage"),
 			})
 	profile.save()
 	return get_salary_profile_summary(employee)
@@ -86,8 +87,16 @@ def save_salary_profile_from_employee(payload):
 @frappe.whitelist()
 def get_revision_history(profile):
 	check_salary_access()
-	return frappe.get_all(
+	revisions = frappe.get_all(
 		"Employee Salary Revision", filters={"salary_profile": profile},
 		fields=["name", "revision_number", "effective_from", "effective_to", "action_date", "basic_salary", "transportation", "family_allowance", "total_salary", "changed_by", "change_summary"],
 		order_by="revision_number desc",
 	)
+	for revision in revisions:
+		revision.allocations = frappe.get_all(
+			"Employee Salary Revision Allocation",
+			filters={"parent": revision.name, "parenttype": "Employee Salary Revision"},
+			fields=["component", "company", "account", "cost_center", "amount", "percentage"],
+			order_by="idx asc",
+		)
+	return revisions

@@ -1,7 +1,7 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from accounting_custom.accounting.salary_profile import get_salary_profile_summary
+from accounting_custom.accounting.salary_profile import get_revision_history, get_salary_profile_summary
 from accounting_custom.accounting.payroll import create_manual_deductions, cancel_manual_deductions
 from accounting_custom.permissions import salary_permission, salary_query
 
@@ -67,6 +67,10 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		payroll_employee = frappe.db.get_value("Employee", {"custom_master_employee": employee.name, "company": "Itihad"}, "name")
 		revision = frappe.get_doc("Employee Salary Revision", profile.latest_revision)
 		self.assertEqual(revision.total_salary, 1300)
+		history = get_revision_history(profile.name)
+		self.assertEqual(history[0].name, revision.name)
+		self.assertEqual(len(history[0].allocations), 3)
+		self.assertTrue(all(row.percentage == 100 for row in history[0].allocations))
 		self.assertTrue(frappe.db.exists("Salary Structure Assignment", {"employee": payroll_employee, "from_date": "2026-09-01", "docstatus": 1}))
 		payable = frappe.db.get_value("Account", {"company": "Itihad", "is_group": 0, "disabled": 0, "root_type": "Liability", "account_type": ["!=", "Payable"]}, "name")
 		payroll = frappe.get_doc({
