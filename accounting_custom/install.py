@@ -5,6 +5,7 @@ from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accoun
 )
 from accounting_custom.accounting.cost_center import backfill_arabic_names
 from accounting_custom.accounting.branch import backfill_journal_entry_transaction_currency
+from accounting_custom.accounting.employee_profile import normalize_payroll_identity_titles
 from accounting_custom.setup.custom_fields import ensure_custom_fields
 from accounting_custom.setup.journal_voucher import ensure_journal_voucher_print_format
 from accounting_custom.setup.metadata import ensure_visible_metadata
@@ -38,6 +39,7 @@ def setup_accounting_customizations():
 	ensure_payroll_account_manager_permissions()
 	ensure_employee_link_title()
 	ensure_custom_fields()
+	normalize_payroll_identity_titles()
 	ensure_accounting_entry_layouts()
 	backfill_arabic_names()
 	ensure_party_types()

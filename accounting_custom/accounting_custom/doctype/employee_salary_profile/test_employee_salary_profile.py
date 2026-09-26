@@ -3,7 +3,7 @@ from frappe.tests.utils import FrappeTestCase
 
 from accounting_custom.accounting.salary_profile import get_revision_history, get_salary_profile_summary
 from accounting_custom.accounting.payroll import create_manual_deductions, cancel_manual_deductions
-from accounting_custom.permissions import salary_permission, salary_query
+from accounting_custom.permissions import employee_permission, employee_query, salary_permission, salary_query
 from accounting_custom.overrides.payroll_entry import CustomPayrollEntry
 
 
@@ -120,6 +120,14 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		self.assertFalse(frappe.has_permission("Employee Salary Profile", "read"))
 		with self.assertRaises(frappe.PermissionError):
 			get_salary_profile_summary("__missing_employee__")
+
+	def test_internal_payroll_employees_are_hidden_from_non_system_users(self):
+		frappe.set_user("l.harara.onmicrosoft.com")
+		self.assertIn("custom_is_payroll_identity", employee_query())
+		self.assertFalse(employee_permission(frappe._dict(custom_is_payroll_identity=1)))
+		self.assertIsNone(employee_permission(frappe._dict(custom_is_payroll_identity=0)))
+		frappe.set_user("Administrator")
+		self.assertIsNone(employee_query())
 
 	def test_accounts_manager_can_access_salary_records(self):
 		frappe.set_user("l.harara@itihadorg.onmicrosoft.com")

@@ -79,3 +79,21 @@ def salary_query(user=None):
 def salary_permission(doc, user=None, permission_type=None):
 	"""Enforce salary access even when a document name is known."""
 	return bool(_roles(user) & SALARY_ROLES)
+
+
+def employee_query(user=None):
+	"""Hide internal company payroll identities from every non-system user."""
+	user = user or frappe.session.user
+	if user == "Administrator" or "System Manager" in _roles(user):
+		return None
+	return "coalesce(`tabEmployee`.`custom_is_payroll_identity`, 0) = 0"
+
+
+def employee_permission(doc, user=None, permission_type=None):
+	"""Prevent direct access when an internal Employee name is known."""
+	user = user or frappe.session.user
+	if user == "Administrator" or "System Manager" in _roles(user):
+		return None
+	if doc and doc.get("custom_is_payroll_identity"):
+		return False
+	return None

@@ -129,6 +129,7 @@ permission_query_conditions = {
 	"Payment Memo": "accounting_custom.permissions.payment_memo_query",
 	"Employee Salary Profile": "accounting_custom.permissions.salary_query",
 	"Employee Salary Revision": "accounting_custom.permissions.salary_query",
+	"Employee": "accounting_custom.permissions.employee_query",
 }
 #
 has_permission = {
@@ -137,6 +138,7 @@ has_permission = {
 	"Payment Memo": "accounting_custom.permissions.payment_memo_permission",
 	"Employee Salary Profile": "accounting_custom.permissions.salary_permission",
 	"Employee Salary Revision": "accounting_custom.permissions.salary_permission",
+	"Employee": "accounting_custom.permissions.employee_permission",
 }
 
 # DocType Class

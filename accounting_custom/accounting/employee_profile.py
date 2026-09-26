@@ -86,7 +86,7 @@ def sync_company_payroll_identities(doc, method=None):
 		identity = frappe.db.get_value("Employee", {"custom_master_employee": doc.name, "company": company}, "name")
 		if identity:
 			frappe.db.set_value("Employee", identity, {
-				"status": doc.status, "relieving_date": None, "employee_name": f"{doc.employee_name} — {company} (Payroll)",
+				"status": doc.status, "relieving_date": None, "employee_name": doc.employee_name,
 				"department": position.department,
 				"designation": position.designation, "employment_type": position.employment_type,
 				"branch": position.branch,
@@ -94,7 +94,7 @@ def sync_company_payroll_identities(doc, method=None):
 			continue
 		identity_doc = frappe.get_doc({
 			"doctype": "Employee", "first_name": doc.employee_name, "middle_name": None,
-			"last_name": f"— {company} (Payroll)", "gender": doc.gender,
+			"last_name": None, "gender": doc.gender,
 			"date_of_birth": doc.date_of_birth, "date_of_joining": position.from_date or doc.date_of_joining,
 			"status": doc.status, "relieving_date": doc.relieving_date if doc.status == "Left" else None,
 			"company": company, "branch": position.branch,
@@ -115,3 +115,15 @@ def get_payroll_employee(master_employee, company):
 def _latest_company_departure(doc, company):
 	dates = [row.to_date for row in doc.get("custom_past_positions") or [] if row.company == company and row.to_date]
 	return max(dates) if dates else None
+
+
+def normalize_payroll_identity_titles():
+	"""Use the master employee title for hidden payroll identities."""
+	for identity in frappe.get_all(
+		"Employee",
+		filters={"custom_is_payroll_identity": 1},
+		fields=["name", "custom_master_employee"],
+	):
+		master_name = frappe.db.get_value("Employee", identity.custom_master_employee, "employee_name")
+		if master_name:
+			frappe.db.set_value("Employee", identity.name, "employee_name", master_name, update_modified=False)
