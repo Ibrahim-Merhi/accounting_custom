@@ -119,6 +119,15 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Table", "options": "Payroll Manual Deduction",
 			"insert_after": "custom_manual_deductions_section",
 		},
+		{
+			"fieldname": "custom_bank_allocations_section", "label": "Bank / Cash Payment Allocations",
+			"fieldtype": "Section Break", "insert_after": "payment_account",
+		},
+		{
+			"fieldname": "custom_bank_payment_allocations", "label": "Payment Account / Cost Center / Amount",
+			"fieldtype": "Table", "options": "Payroll Bank Payment Allocation",
+			"insert_after": "custom_bank_allocations_section", "allow_on_submit": 1,
+		},
 	],
 	"Accounting Payment Entry": [
 		{

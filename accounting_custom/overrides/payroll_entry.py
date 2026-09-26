@@ -1,5 +1,9 @@
 import frappe
+from frappe import _
 from frappe.utils import flt
+
+import erpnext
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import get_accounting_dimensions
 from hrms.payroll.doctype.payroll_entry.payroll_entry import PayrollEntry
 
 
@@ -54,6 +58,99 @@ class CustomPayrollEntry(PayrollEntry):
 					accounting_dimensions, precision, entry_type="payable", party=slip.employee, accounts=accounts,
 				)
 		return None
+
+	def set_accounting_entries_for_bank_entry(self, je_payment_amount, user_remark):
+		rows = self.get("custom_bank_payment_allocations") or []
+		if not self._is_managed_payroll() or not rows:
+			return super().set_accounting_entries_for_bank_entry(je_payment_amount, user_remark)
+
+		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency")
+		company_currency = erpnext.get_company_currency(self.company)
+		accounting_dimensions = get_accounting_dimensions() or []
+		currencies = []
+		payment_groups = {}
+		for row in rows:
+			account = frappe.db.get_value(
+				"Account", row.payment_account,
+				["company", "account_type", "is_group", "disabled"], as_dict=True,
+			)
+			if not account or account.company != self.company or account.is_group or account.disabled:
+				frappe.throw(_("Row {0}: select an enabled ledger account belonging to {1}.").format(row.idx, self.company))
+			if account.account_type not in ("Bank", "Cash"):
+				frappe.throw(_("Row {0}: payment account must have Account Type Bank or Cash.").format(row.idx))
+			if frappe.db.get_value("Cost Center", row.cost_center, "company") != self.company:
+				frappe.throw(_("Row {0}: cost center must belong to {1}.").format(row.idx, self.company))
+			if flt(row.amount) <= 0:
+				frappe.throw(_("Row {0}: amount must be greater than zero.").format(row.idx))
+			key = (row.payment_account, row.cost_center)
+			payment_groups[key] = payment_groups.get(key, 0) + flt(row.amount)
+
+		payment_total = sum(payment_groups.values())
+		if abs(payment_total - flt(je_payment_amount)) > 0.01:
+			frappe.throw(_("Bank / Cash allocation total {0} must equal net payroll {1}.").format(payment_total, je_payment_amount))
+
+		payable_rows = self._get_managed_payable_rows(precision)
+		payable_by_cost_center = {}
+		for row in payable_rows:
+			payable_by_cost_center[row.cost_center] = payable_by_cost_center.get(row.cost_center, 0) + row.amount
+		payment_by_cost_center = {}
+		for (_account, cost_center), amount in payment_groups.items():
+			payment_by_cost_center[cost_center] = payment_by_cost_center.get(cost_center, 0) + amount
+		if any(abs(payable_by_cost_center.get(cost_center, 0) - payment_by_cost_center.get(cost_center, 0)) > 0.01 for cost_center in set(payable_by_cost_center) | set(payment_by_cost_center)):
+			frappe.throw(_("Bank / Cash amounts must match the net payroll amount for each cost center."))
+
+		accounts = []
+		for (payment_account, cost_center), payment_amount in sorted(payment_groups.items()):
+			exchange_rate, amount = self.get_amount_and_exchange_rate_for_journal_entry(
+				payment_account, payment_amount, company_currency, currencies
+			)
+			accounts.append(self.update_accounting_dimensions({
+				"account": payment_account,
+				"credit_in_account_currency": flt(amount, precision),
+				"exchange_rate": flt(exchange_rate),
+				"cost_center": cost_center,
+			}, accounting_dimensions))
+
+		for payable in payable_rows:
+			exchange_rate, amount = self.get_amount_and_exchange_rate_for_journal_entry(
+				self.payroll_payable_account, payable.amount, company_currency, currencies
+			)
+			accounts.append(self.update_accounting_dimensions({
+				"account": self.payroll_payable_account,
+				"debit_in_account_currency": flt(amount, precision),
+				"exchange_rate": flt(exchange_rate),
+				"reference_type": self.doctype,
+				"reference_name": self.name,
+				"party_type": "Employee",
+				"party": payable.employee,
+				"cost_center": payable.cost_center,
+			}, accounting_dimensions))
+
+		self.make_journal_entry(
+			accounts, currencies, voucher_type="Bank Entry",
+			user_remark=_("Payment of {0} from {1} to {2}").format(user_remark, self.start_date, self.end_date),
+		)
+
+	def _get_managed_payable_rows(self, precision):
+		rows = []
+		slips = frappe.get_all(
+			"Salary Slip", filters={"payroll_entry": self.name, "docstatus": 1},
+			fields=["employee", "net_pay"], order_by="employee",
+		)
+		for slip in slips:
+			weights = {}
+			for component in PROFILE_COMPONENTS:
+				for allocation in self._profile_allocations(slip.employee, component):
+					weights[allocation.cost_center] = weights.get(allocation.cost_center, 0) + flt(allocation.amount)
+			if not weights:
+				weights = {self.cost_center: flt(slip.net_pay)}
+			total_weight = sum(weights.values())
+			remaining = flt(slip.net_pay)
+			for index, (cost_center, weight) in enumerate(sorted(weights.items())):
+				amount = remaining if index == len(weights) - 1 else flt(flt(slip.net_pay) * weight / total_weight, precision)
+				remaining -= amount
+				rows.append(frappe._dict(employee=slip.employee, cost_center=cost_center, amount=amount))
+		return rows
 
 	def make_journal_entry(self, accounts, *args, **kwargs):
 		if not self._is_managed_payroll():
