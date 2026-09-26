@@ -366,3 +366,23 @@ def _accounting_receipt_html(html):
 	)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
 	return html
+
+
+def ensure_consolidated_payslip_print_format():
+	name = "Employee Consolidated Payslip"
+	html = r'''
+<style>
+.payslip{font-family:Arial,sans-serif;color:#1f2937;padding:18px}.payslip-head{display:flex;justify-content:space-between;border-bottom:3px solid #111827;padding-bottom:14px;margin-bottom:18px}.payslip-title{font-size:25px;font-weight:700}.payslip-meta{text-align:right}.summary{display:flex;gap:12px;margin:18px 0}.summary>div{flex:1;border:1px solid #d1d5db;border-radius:7px;padding:12px}.summary .value{font-size:20px;font-weight:700;margin-top:5px}.net{background:#f0fdf4;border-color:#86efac!important}.breakdown{width:100%;border-collapse:collapse;margin-top:18px}.breakdown th,.breakdown td{border:1px solid #d1d5db;padding:9px;text-align:left}.breakdown th{background:#f3f4f6}.amount{text-align:right!important}.footer{margin-top:24px;color:#6b7280;font-size:11px}@media print{.payslip{padding:0}}
+</style>
+<div class="payslip">
+ <div class="payslip-head"><div><div class="payslip-title">Consolidated Payslip</div><div>{{ doc.employee_name }}</div><div class="text-muted">{{ doc.employee }}</div></div><div class="payslip-meta"><strong>{{ doc.name }}</strong><br>{{ frappe.utils.formatdate(doc.start_date) }} – {{ frappe.utils.formatdate(doc.end_date) }}<br>Status: {{ doc.status }}</div></div>
+ <div class="summary"><div><span>Gross Pay</span><div class="value">{{ frappe.utils.fmt_money(doc.gross_pay, currency=doc.currency) }}</div></div><div><span>Deductions</span><div class="value">{{ frappe.utils.fmt_money(doc.total_deduction, currency=doc.currency) }}</div></div><div class="net"><span>Net Pay</span><div class="value">{{ frappe.utils.fmt_money(doc.net_pay, currency=doc.currency) }}</div></div></div>
+ <h4>Company Breakdown</h4>
+ <table class="breakdown"><thead><tr><th>Company</th><th>Internal Salary Slip</th><th>Status</th><th class="amount">Gross</th><th class="amount">Deductions</th><th class="amount">Net Pay</th></tr></thead><tbody>{% for row in doc.companies %}<tr><td>{{ row.company }}</td><td>{{ row.salary_slip }}</td><td>{{ row.slip_status }}</td><td class="amount">{{ frappe.utils.fmt_money(row.gross_pay, currency=doc.currency) }}</td><td class="amount">{{ frappe.utils.fmt_money(row.total_deduction, currency=doc.currency) }}</td><td class="amount"><strong>{{ frappe.utils.fmt_money(row.net_pay, currency=doc.currency) }}</strong></td></tr>{% endfor %}</tbody></table>
+ <div class="footer">This consolidated employee copy combines company-specific payroll documents for the same period. Accounting remains posted separately by company.</div>
+</div>'''
+	values = {"doc_type": "Employee Consolidated Payslip", "module": "Accounting Custom", "standard": "No", "custom_format": 1, "disabled": 0, "print_format_type": "Jinja", "html": html, "margin_top": 8, "margin_bottom": 8, "margin_left": 8, "margin_right": 8}
+	if frappe.db.exists("Print Format", name):
+		frappe.db.set_value("Print Format", name, values, update_modified=False)
+	else:
+		frappe.get_doc({"doctype": "Print Format", "name": name, **values}).insert(ignore_permissions=True)

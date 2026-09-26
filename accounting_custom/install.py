@@ -9,7 +9,7 @@ from accounting_custom.accounting.employee_profile import normalize_payroll_iden
 from accounting_custom.setup.custom_fields import ensure_custom_fields
 from accounting_custom.setup.journal_voucher import ensure_journal_voucher_print_format
 from accounting_custom.setup.metadata import ensure_visible_metadata
-from accounting_custom.setup.print_formats import ensure_arabic_voucher_print_formats
+from accounting_custom.setup.print_formats import ensure_arabic_voucher_print_formats, ensure_consolidated_payslip_print_format
 from accounting_custom.setup.workspace import (
 	ensure_accounting_workspace_sections,
 	remove_standalone_accounting_program_workspace,
@@ -44,6 +44,7 @@ def setup_accounting_customizations():
 	backfill_arabic_names()
 	ensure_party_types()
 	ensure_arabic_voucher_print_formats()
+	ensure_consolidated_payslip_print_format()
 	ensure_journal_voucher_print_format()
 	ensure_visible_metadata()
 	backfill_arabic_amounts()

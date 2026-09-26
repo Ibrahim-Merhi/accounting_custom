@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from accounting_custom.accounting.consolidated_payslip import sync_employee_payslips
+
 
 SALARY_ROLES = {"Accounts Manager"}
 
@@ -29,13 +31,7 @@ def get_salary_profile_summary(employee):
 		profile[table_field] = [row.as_dict() for row in profile_doc.get(table_field)]
 	profile.revision_count = frappe.db.count("Employee Salary Revision", {"salary_profile": profile.name})
 	profile.revisions = get_revision_history(profile.name)
-	payroll_employees = frappe.get_all("Employee", filters={"custom_master_employee": employee}, pluck="name")
-	payroll_employees.append(employee)
-	profile.salary_slips = frappe.get_all(
-		"Salary Slip", filters={"employee": ["in", payroll_employees], "docstatus": ["<", 2]},
-		fields=["name", "company", "start_date", "end_date", "currency", "net_pay", "docstatus"],
-		order_by="end_date desc", limit=5,
-	)
+	profile.salary_slips = sync_employee_payslips(employee)
 	return profile
 
 

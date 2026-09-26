@@ -1,4 +1,6 @@
 import frappe
+
+from accounting_custom.accounting.consolidated_payslip import sync_consolidated_payslip
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, getdate
@@ -143,3 +145,5 @@ class MultiCompanyPayrollRun(Document):
 				if employee_row.company!=company_row.company: continue
 				slip=by_employee.get(employee_row.payroll_employee)
 				employee_row.salary_slip=slip.name if slip else None; employee_row.net_salary=slip.net_pay if slip else employee_row.net_salary; employee_row.status="Completed" if slip else "Failed"
+		for employee in {row.employee for row in self.employees}:
+			sync_consolidated_payslip(employee, self.start_date, self.end_date)

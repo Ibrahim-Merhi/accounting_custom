@@ -1,0 +1,27 @@
+{
+ "doctype":"DocType", "name":"Employee Consolidated Payslip", "module":"Accounting Custom",
+ "autoname":"field:payslip_id", "title_field":"employee_name", "search_fields":"employee,employee_name,start_date,end_date",
+ "track_changes":1, "is_submittable":0, "allow_rename":0, "sort_field":"end_date", "sort_order":"DESC",
+ "field_order":["payslip_id","employee","employee_name","status","period_section","start_date","end_date","currency","totals_section","gross_pay","total_deduction","net_pay","company_count","companies_section","companies"],
+ "fields":[
+  {"fieldname":"payslip_id","label":"Payslip ID","fieldtype":"Data","hidden":1,"unique":1,"read_only":1},
+  {"fieldname":"employee","label":"Employee","fieldtype":"Link","options":"Employee","reqd":1,"read_only":1,"in_standard_filter":1},
+  {"fieldname":"employee_name","label":"Employee Name","fieldtype":"Data","reqd":1,"read_only":1},
+  {"fieldname":"status","label":"Status","fieldtype":"Select","options":"Draft\nPartial\nSubmitted","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"period_section","label":"Pay Period","fieldtype":"Section Break"},
+  {"fieldname":"start_date","label":"Start Date","fieldtype":"Date","reqd":1,"read_only":1,"in_list_view":1},
+  {"fieldname":"end_date","label":"End Date","fieldtype":"Date","reqd":1,"read_only":1,"in_list_view":1},
+  {"fieldname":"currency","label":"Currency","fieldtype":"Link","options":"Currency","reqd":1,"read_only":1},
+  {"fieldname":"totals_section","label":"Totals","fieldtype":"Section Break"},
+  {"fieldname":"gross_pay","label":"Gross Pay","fieldtype":"Currency","options":"currency","read_only":1},
+  {"fieldname":"total_deduction","label":"Total Deduction","fieldtype":"Currency","options":"currency","read_only":1},
+  {"fieldname":"net_pay","label":"Net Pay","fieldtype":"Currency","options":"currency","read_only":1,"in_list_view":1},
+  {"fieldname":"company_count","label":"Companies","fieldtype":"Int","read_only":1},
+  {"fieldname":"companies_section","label":"Company Breakdown","fieldtype":"Section Break"},
+  {"fieldname":"companies","label":"Company Salary Slips","fieldtype":"Table","options":"Employee Consolidated Payslip Company","read_only":1}
+ ],
+ "permissions":[
+  {"role":"Accounts Manager","read":1,"print":1,"report":1,"export":1},
+  {"role":"System Manager","read":1,"print":1,"report":1,"export":1}
+ ]
+}
