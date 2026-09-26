@@ -1,6 +1,6 @@
 frappe.ui.form.on("Multi Company Payroll Run", {
 	setup(frm) {
-		frm.set_query("payroll_payable_account", "companies", (_doc, cdt, cdn) => ({filters:{company:locals[cdt][cdn].company,is_group:0,disabled:0,account_type:""}}));
+		frm.set_query("payroll_payable_account", "companies", (_doc, cdt, cdn) => ({filters:{company:locals[cdt][cdn].company,is_group:0,disabled:0,account_type:"Payable"}}));
 		frm.set_query("employee", "manual_deductions", () => ({filters:{name:["in",(frm.doc.employees||[]).map(r=>r.employee)]}}));
 		frm.set_query("company", "manual_deductions", () => ({filters:{name:["in",(frm.doc.companies||[]).map(r=>r.company)]}}));
 		frm.set_query("salary_component", "manual_deductions", () => ({filters:{type:"Deduction",disabled:0}}));

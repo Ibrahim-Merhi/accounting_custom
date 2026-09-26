@@ -55,8 +55,8 @@ class MultiCompanyPayrollRun(Document):
 			account = frappe.db.get_value("Account", row.payroll_payable_account, ["company", "is_group", "disabled", "account_type"], as_dict=True)
 			if not account or account.company != row.company or account.is_group or account.disabled:
 				frappe.throw(_("Select an enabled ledger payroll payable account belonging to {0}.").format(row.company))
-			if account.account_type:
-				frappe.throw(_("Payroll payable account {0} must not have an Account Type.").format(row.payroll_payable_account))
+			if account.account_type != "Payable":
+				frappe.throw(_("Payroll payable account {0} must have Account Type Payable.").format(row.payroll_payable_account))
 
 	def _validate_payroll_prerequisites(self):
 		missing_holiday_lists = []
@@ -120,7 +120,7 @@ class MultiCompanyPayrollRun(Document):
 		for company_row in self.companies:
 			if company_row.payroll_entry and frappe.db.exists("Payroll Entry", company_row.payroll_entry): continue
 			allocations=[r for r in self.allocation_summary if r.company==company_row.company]; employees=sorted({r.payroll_employee for r in allocations})
-			entry=frappe.get_doc({"doctype":"Payroll Entry","posting_date":self.posting_date,"company":company_row.company,"currency":company_row.currency,"exchange_rate":1,"payroll_payable_account":company_row.payroll_payable_account,"payroll_frequency":self.payroll_frequency,"start_date":self.start_date,"end_date":self.end_date,"cost_center":allocations[0].cost_center,"employees":[{"employee":e} for e in employees]})
+			entry=frappe.get_doc({"doctype":"Payroll Entry","custom_multi_company_payroll_run":self.name,"posting_date":self.posting_date,"company":company_row.company,"currency":company_row.currency,"exchange_rate":1,"payroll_payable_account":company_row.payroll_payable_account,"payroll_frequency":self.payroll_frequency,"start_date":self.start_date,"end_date":self.end_date,"cost_center":allocations[0].cost_center,"employees":[{"employee":e} for e in employees]})
 			for deduction in self.manual_deductions:
 				if deduction.company==company_row.company: entry.append("custom_manual_deductions", {"employee":deduction.payroll_employee,"salary_component":deduction.salary_component,"amount":deduction.amount,"note":deduction.note})
 			entry.insert(); company_row.payroll_entry=entry.name; company_row.status="Created"
@@ -132,6 +132,9 @@ class MultiCompanyPayrollRun(Document):
 		if not entry.salary_slips_submitted:
 			entry.flags.suppress_salary_slip_email = True
 			entry.submit_salary_slips()
+			entry.reload()
+			if not entry.salary_slips_submitted:
+				frappe.throw(_("Salary Slip submission failed for company {0}. Open Payroll Entry {1} for details.").format(row.company, entry.name))
 		row.status="Completed"
 
 	def _refresh_generated_documents(self):
