@@ -11,6 +11,11 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 		}
 		if (frm.doc.docstatus===1) frm.dashboard.set_headline_alert(__("Payroll completed. Open company Payroll Entries, Salary Slips, and Journal Entries from the tables below."), "green");
 	},
+	start_date(frm) {
+		if (!frm.doc.start_date) return;
+
+		frm.set_value("end_date", moment(frm.doc.start_date).endOf("month").format("YYYY-MM-DD"));
+	},
 	manual_deductions_add(frm) { setTimeout(()=>frm.refresh_field("manual_deductions"),0); },
 });
 
