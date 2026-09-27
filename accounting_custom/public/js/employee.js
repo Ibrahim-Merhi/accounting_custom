@@ -80,9 +80,12 @@ function render_salary_workspace(frm, profile) {
 	if (!field) return;
 	const action_label = profile.exists ? __("Edit Present Salary") : __("Create Salary Profile");
 	field.$wrapper.html(`<div class="frappe-card salary-workspace">
-		<div class="salary-tabs border-bottom px-3 pt-2">
-			<button class="btn btn-link active" data-salary-tab="present">${__("Present Salary")}</button>
-			<button class="btn btn-link" data-salary-tab="past">${__("Past Salary and Changes")} <span class="badge badge-light">${profile.revision_count || 0}</span></button>
+		<div class="salary-tabs" role="tablist" aria-label="${__("Salary Profile Sections")}">
+			<button type="button" class="salary-tab active" role="tab" aria-selected="true" data-salary-tab="present">${__("Present Salary")}</button>
+			<button type="button" class="salary-tab" role="tab" aria-selected="false" data-salary-tab="past">
+				<span>${__("Past Salary and Changes")}</span>
+				<span class="badge badge-light">${profile.revision_count || 0}</span>
+			</button>
 		</div>
 		<div class="salary-tab-content p-4" data-salary-panel="present">
 			${render_present_salary(profile)}
@@ -95,8 +98,8 @@ function render_salary_workspace(frm, profile) {
 	</div>`);
 	field.$wrapper.find("[data-salary-tab]").on("click", function () {
 		const tab = $(this).attr("data-salary-tab");
-		field.$wrapper.find("[data-salary-tab]").removeClass("active");
-		$(this).addClass("active");
+		field.$wrapper.find("[data-salary-tab]").removeClass("active").attr("aria-selected", "false");
+		$(this).addClass("active").attr("aria-selected", "true");
 		field.$wrapper.find("[data-salary-panel]").addClass("hide");
 		field.$wrapper.find(`[data-salary-panel="${tab}"]`).removeClass("hide");
 	});
