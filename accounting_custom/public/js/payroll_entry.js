@@ -58,7 +58,7 @@ function add_payroll_flow_actions(frm) {
 		const label = has_submitted_entry ? __("View Bank Entry") : __("Create Bank Entry");
 		frm.add_custom_button(label, () => {
 			if (has_submitted_entry) {
-				open_payroll_bank_entries(frm);
+				open_payroll_bank_entry(frm);
 				return;
 			}
 			create_payroll_bank_entry(frm);
@@ -98,7 +98,7 @@ function create_payroll_bank_entry(frm) {
 		},
 		freeze: true,
 		freeze_message: __("Creating Bank Entry..."),
-	}).then(() => open_payroll_bank_entries(frm));
+	}).then(() => open_payroll_bank_entry(frm));
 
 	if (frm.is_dirty()) {
 		frm.save().then(create_entry);
@@ -107,10 +107,13 @@ function create_payroll_bank_entry(frm) {
 	}
 }
 
-function open_payroll_bank_entries(frm) {
-	frappe.set_route("List", "Journal Entry", {
-		"Journal Entry Account.reference_type": "Payroll Entry",
-		"Journal Entry Account.reference_name": frm.doc.name,
+function open_payroll_bank_entry(frm) {
+	return frm.call("get_bank_entry_name").then((response) => {
+		if (!response.message) {
+			frappe.msgprint(__("No Bank Entry was found for this Payroll Entry."));
+			return;
+		}
+		frappe.set_route("Form", "Journal Entry", response.message);
 	});
 }
 

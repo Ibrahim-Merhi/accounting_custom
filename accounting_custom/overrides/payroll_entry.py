@@ -83,6 +83,25 @@ class CustomPayrollEntry(PayrollEntry):
 		self.save()
 		return True
 
+	@frappe.whitelist()
+	def get_bank_entry_name(self):
+		self.check_permission("read")
+		result = frappe.db.sql(
+			"""
+			select je.name
+			from `tabJournal Entry` je
+			inner join `tabJournal Entry Account` jea on jea.parent = je.name
+			where je.voucher_type = 'Bank Entry'
+				and je.docstatus < 2
+				and jea.reference_type = 'Payroll Entry'
+				and jea.reference_name = %s
+			order by je.creation desc
+			limit 1
+			""",
+			self.name,
+		)
+		return result[0][0] if result else None
+
 	def set_accounting_entries_for_bank_entry(self, je_payment_amount, user_remark):
 		rows = self.get("custom_bank_payment_allocations") or []
 		if not self._is_managed_payroll() or not rows:
