@@ -190,6 +190,13 @@ function open_salary_profile_dialog(frm) {
 
 function build_salary_profile_dialog(frm, data) {
 	let dialog;
+	const employee_companies = [...new Set(
+		(frm.doc.custom_branches || []).filter((row) => row.company && !row.left_position).map((row) => row.company)
+	)];
+	if (!employee_companies.length) {
+		frappe.msgprint(__("Add at least one company in the Employee Company Details table before creating a salary profile."));
+		return;
+	}
 	const allocation_fields = () => [
 		{fieldname: "company", label: __("Company"), fieldtype: "Link", options: "Company", in_list_view: 1, columns: 2, reqd: 1},
 		{fieldname: "account", label: __("Account"), fieldtype: "Link", options: "Account", in_list_view: 1, columns: 2, reqd: 1},
@@ -235,6 +242,7 @@ function build_salary_profile_dialog(frm, data) {
 	});
 	for (const fieldname of salary_table_fields()) {
 		const grid = dialog.fields_dict[fieldname].grid;
+		grid.get_field("company").get_query = () => ({filters: {name: ["in", employee_companies]}});
 		grid.get_field("account").get_query = (doc) => ({filters: doc.company ? {company: doc.company, is_group: 0, disabled: 0} : {name: ["=", ""]}});
 		grid.get_field("cost_center").get_query = (doc) => ({filters: doc.company ? {company: doc.company, is_group: 0, disabled: 0} : {name: ["=", ""]}});
 	}

@@ -65,9 +65,7 @@ class EmployeeSalaryProfile(Document):
 			) if row.company
 		}
 		if not companies:
-			company = frappe.db.get_value("Employee", self.employee, "company")
-			if company:
-				companies.add(company)
+			frappe.throw(_("Employee {0} must have at least one company in the Company Details table.").format(self.employee))
 		return companies
 
 	def _validate_company_currencies(self, companies):

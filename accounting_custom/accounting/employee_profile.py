@@ -13,7 +13,7 @@ def validate_employee_accounting_profile(doc, method=None):
 	positions = [row for row in (doc.get("custom_branches") or []) if row.company and row.branch]
 	if not positions:
 		if doc.status == "Active":
-			frappe.throw(_("Please add at least one current position."))
+			frappe.throw(_("Add at least one current company in the Company Details table."))
 		return
 
 	_validate_unique_positions(positions)

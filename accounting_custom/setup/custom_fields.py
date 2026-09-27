@@ -91,12 +91,13 @@ CUSTOM_FIELDS = {
 			"insert_after": "custom_master_employee", "hidden": 1, "read_only": 1, "no_copy": 1,
 		},
 		{
-			"fieldname": "custom_accounting_assignments_section", "label": "Company and Accounting Details",
+			"fieldname": "custom_accounting_assignments_section", "label": "Company Details",
 			"fieldtype": "Section Break", "insert_after": "branch",
 		},
 		{
-			"fieldname": "custom_branches", "label": "Company and Accounting Details", "fieldtype": "Table",
-			"options": "Employee Branch Assignment", "insert_after": "custom_accounting_assignments_section", "reqd": 0,
+			"fieldname": "custom_branches", "label": "Company Details", "fieldtype": "Table",
+			"options": "Employee Branch Assignment", "insert_after": "custom_accounting_assignments_section",
+			"reqd": 0, "mandatory_depends_on": "eval:doc.status == \"Active\"",
 		},
 		{
 			"fieldname": "custom_past_positions_section", "label": "Past Positions",
