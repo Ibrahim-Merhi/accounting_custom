@@ -29,6 +29,12 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Data", "insert_after": "custom_company_name_arabic", "hidden": 1,
 			"read_only": 1,
 		},
+		{
+			"fieldname": "custom_default_payroll_payment_account",
+			"label": "Default Payroll Payment Account", "fieldtype": "Link",
+			"options": "Account", "insert_after": "default_payroll_payable_account",
+			"description": "Default Bank or Cash account used when paying payroll.",
+		},
 	],
 	"Cost Center": [
 		{

@@ -47,14 +47,28 @@ class CustomPayrollEntry(PayrollEntry):
 		self.check_permission("read")
 		if not self._is_managed_payroll() or not self.salary_slips_submitted:
 			return []
-		grouped = {}
-		for row in self._get_managed_payable_rows(2):
-			grouped[row.cost_center] = grouped.get(row.cost_center, 0) + flt(row.amount)
+		payment_account = frappe.db.get_value("Company", self.company, "custom_default_payroll_payment_account")
+		if not payment_account:
+			frappe.throw(_("Set Default Payroll Payment Account in Company {0}.").format(self.company))
+		rows = frappe.db.sql("""
+			select jea.cost_center,
+				sum(jea.credit_in_account_currency - jea.debit_in_account_currency) as amount
+			from `tabJournal Entry Account` jea
+			where jea.reference_type = 'Payroll Entry'
+				and jea.reference_name = %s and jea.account = %s and jea.docstatus = 1
+			group by jea.cost_center
+			having amount > 0
+			order by jea.cost_center
+		""", (self.name, self.payroll_payable_account), as_dict=True)
+		if not rows:
+			grouped = {}
+			for row in self._get_managed_payable_rows(2):
+				grouped[row.cost_center] = grouped.get(row.cost_center, 0) + flt(row.amount)
+			rows = [frappe._dict(cost_center=cost_center, amount=amount) for cost_center, amount in sorted(grouped.items()) if amount > 0]
 		return [
-			{"cost_center": cost_center, "amount": amount}
-			for cost_center, amount in sorted(grouped.items()) if amount > 0
+			{"payment_account": payment_account, "cost_center": row.cost_center, "amount": flt(row.amount, 2)}
+			for row in rows
 		]
-
 	def set_accounting_entries_for_bank_entry(self, je_payment_amount, user_remark):
 		rows = self.get("custom_bank_payment_allocations") or []
 		if not self._is_managed_payroll() or not rows:

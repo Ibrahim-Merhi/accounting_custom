@@ -24,10 +24,12 @@ frappe.ui.form.on("Payroll Entry", {
 			frm.call("get_bank_payment_allocation_defaults").then((response) => {
 				for (const allocation of response.message || []) {
 					const row = frm.add_child("custom_bank_payment_allocations");
+					row.payment_account = allocation.payment_account;
 					row.cost_center = allocation.cost_center;
 					row.amount = allocation.amount;
 				}
 				frm.refresh_field("custom_bank_payment_allocations");
+				sync_primary_payment_account(frm);
 			}).finally(() => { frm.__loading_bank_allocations = false; });
 		}
 	},

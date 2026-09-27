@@ -4,6 +4,15 @@ const arabicNameFields = {
 	"Cost Center": ["cost_center_name", "custom_cost_center_name_arabic"],
 };
 
+frappe.ui.form.on("Company", {
+	setup(frm) {
+		frm.set_query("custom_default_payroll_payment_account", () => ({ filters: {
+			company: frm.doc.name, is_group: 0, disabled: 0,
+			account_type: ["in", ["Bank", "Cash"]],
+		} }));
+	},
+});
+
 for (const [doctype, [sourceField, arabicField]] of Object.entries(arabicNameFields)) {
 	frappe.ui.form.on(doctype, {
 		[sourceField](frm) {
