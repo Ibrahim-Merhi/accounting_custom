@@ -145,34 +145,34 @@ function render_salary_history(revisions) {
 		const current = !row.effective_to;
 		const target = `salary-revision-${row.revision_number}`;
 		const period = `${frappe.datetime.str_to_user(row.effective_from)} – ${current ? __("Current") : frappe.datetime.str_to_user(row.effective_to)}`;
-		return `<div class="border rounded mb-3 overflow-hidden">
-			<div class="p-3 bg-light">
-				<div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+		return `<article class="salary-revision-card ${current ? "is-current" : "is-archived"}">
+			<div class="salary-revision-card-body">
+				<div class="salary-revision-heading">
 					<div><span class="badge ${current ? "badge-success" : "badge-secondary"} mr-2">${current ? __("Current") : __("Archived")}</span><strong>${__("Revision")} #${row.revision_number}</strong></div>
 					<div class="font-weight-bold text-primary">${format_salary_amount(row.total_salary)}</div>
 				</div>
-				<div class="row text-muted small mb-3">
+				<div class="row salary-revision-meta">
 					<div class="col-md-4"><strong>${__("Effective Period")}:</strong> ${period}</div>
 					<div class="col-md-4"><strong>${__("Action Date")}:</strong> ${frappe.datetime.str_to_user(row.action_date)}</div>
 					<div class="col-md-4"><strong>${__("Changed By")}:</strong> ${escape_html(row.changed_by || "")}</div>
 				</div>
-				<div class="row mb-3">
+				<div class="row salary-revision-components">
 					${revision_component(__("Basic Salary"), row.basic_salary)}
 					${revision_component(__("Transportation"), row.transportation)}
 					${revision_component(__("Family Allowance"), row.family_allowance)}
 				</div>
-				<div class="small"><strong>${__("Changes")}:</strong> ${format_change_summary(row.change_summary)}</div>
-				<div class="mt-3"><button type="button" class="btn btn-xs btn-default toggle-revision-details" data-target="${target}">${__("Show allocation details")}</button>
-				<a class="btn btn-xs btn-link" href="/app/employee-salary-revision/${encodeURIComponent(row.name)}">${__("View Revision")}</a></div>
+				<div class="salary-revision-changes"><strong>${__("Changes")}:</strong> ${format_change_summary(row.change_summary)}</div>
+				<div class="salary-revision-actions"><button type="button" class="btn btn-sm btn-default toggle-revision-details" data-target="${target}">${__("Show allocation details")}</button>
+				<a class="btn btn-sm btn-link" href="/app/employee-salary-revision/${encodeURIComponent(row.name)}">${__("View Revision")}</a></div>
 			</div>
-			<div class="p-3 hide" data-revision-details="${target}">${render_revision_allocations(row.allocations)}</div>
-		</div>`;
+			<div class="salary-revision-details hide" data-revision-details="${target}">${render_revision_allocations(row.allocations)}</div>
+		</article>`;
 	}).join("");
-	return `<div class="d-flex justify-content-between align-items-center mb-3"><div><h5 class="mb-1">${__("Salary Revision History")}</h5><div class="text-muted small">${__("Complete salary audit trail, effective periods, and allocation snapshots")}</div></div><span class="badge badge-light">${revisions.length} ${__("revision(s)")}</span></div>${cards}`;
+	return `<div class="salary-history-heading"><div><h5 class="mb-1">${__("Salary Revision History")}</h5><div class="text-muted small">${__("Complete salary audit trail, effective periods, and allocation snapshots")}</div></div><span class="salary-history-count">${revisions.length} ${__("revision(s)")}</span></div><div class="salary-revision-list">${cards}</div>`;
 }
 
 function revision_component(label, value) {
-	return `<div class="col-md-4 mb-2"><div class="border rounded bg-white p-2"><small class="text-muted">${label}</small><div class="font-weight-bold">${format_salary_amount(value)}</div></div></div>`;
+	return `<div class="col-md-4 mb-2"><div class="salary-revision-component"><small class="text-muted">${label}</small><div class="font-weight-bold">${format_salary_amount(value)}</div></div></div>`;
 }
 
 function render_revision_allocations(allocations) {
