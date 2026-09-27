@@ -22,6 +22,7 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 
 	def test_payroll_uses_allocation_amounts_not_manual_percentages(self):
 		entry = CustomPayrollEntry({"doctype": "Payroll Entry", "company": "Itihad"})
+		entry._is_managed_payroll = lambda: True
 		entry.get_salary_components = lambda _component_type: [frappe._dict(employee="EMP-1", salary_component="Basic Salary", amount=400)]
 		entry._profile_allocations = lambda _employee, _component: [
 			frappe._dict(account="Account A", cost_center="Cost Center A", amount=100, percentage=45),
@@ -102,7 +103,15 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		payroll.make_accrual_jv_entry([slip])
 		journal = frappe.get_doc("Journal Entry", slip.reload().journal_entry)
 		self.assertTrue(any(row.account == account and row.cost_center == cost_center for row in journal.accounts))
-		payroll.append("custom_manual_deductions", {"employee": payroll_employee, "salary_component": "Professional Tax", "amount": 25, "note": "Test deduction"})
+		payroll.append("custom_manual_deductions", {
+			"employee": payroll_employee,
+			"source_component": "Basic Salary",
+			"source_account": account,
+			"source_cost_center": cost_center,
+			"salary_component": "Professional Tax",
+			"amount": 25,
+			"note": "Test deduction",
+		})
 		payroll.save(ignore_permissions=True)
 		create_manual_deductions(payroll)
 		additional = frappe.get_doc("Additional Salary", payroll.custom_manual_deductions[0].additional_salary)
