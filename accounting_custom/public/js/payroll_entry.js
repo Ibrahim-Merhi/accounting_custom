@@ -1,5 +1,6 @@
 frappe.ui.form.on("Payroll Entry", {
 	setup(frm) {
+		suppress_standard_bank_button_for_managed_payroll(frm);
 		frm.set_query("employee", "custom_manual_deductions", () => ({filters: {company: frm.doc.company, status: "Active"}}));
 		frm.set_query("salary_component", "custom_manual_deductions", () => ({filters: {type: "Deduction", disabled: 0}}));
 		frm.set_query("payment_account", "custom_bank_payment_allocations", () => ({filters: {
@@ -20,7 +21,6 @@ frappe.ui.form.on("Payroll Entry", {
 
 		make_bank_allocation_full_width(frm);
 		add_payroll_flow_actions(frm);
-		hide_standard_bank_button(frm);
 		if (frm.doc.docstatus === 1 && !(frm.doc.custom_bank_payment_allocations || []).length && !frm.__loading_bank_allocations) {
 			frm.__loading_bank_allocations = true;
 			frm.call("ensure_bank_payment_allocation_defaults").then((response) => {
@@ -54,7 +54,6 @@ function add_payroll_flow_actions(frm) {
 			payroll_payable_account: frm.doc.payroll_payable_account,
 		},
 	}).then((response) => {
-		hide_standard_bank_button(frm);
 		const has_submitted_entry = Boolean(response.message?.submitted);
 		const label = has_submitted_entry ? __("View Bank Entry") : __("Create Bank Entry");
 		frm.add_custom_button(label, () => {
@@ -68,11 +67,16 @@ function add_payroll_flow_actions(frm) {
 }
 
 
-function hide_standard_bank_button(frm) {
-	const remove = () => frm.remove_custom_button(__("Make Bank Entry"));
-	remove();
-	setTimeout(remove, 250);
-	setTimeout(remove, 1000);
+function suppress_standard_bank_button_for_managed_payroll(frm) {
+	const standard_handler = frm.events.add_bank_entry_button;
+	if (!standard_handler || standard_handler._accounting_custom_wrapped) return;
+
+	const wrapped_handler = (form) => {
+		if (form.doc.custom_multi_company_payroll_run) return;
+		return standard_handler(form);
+	};
+	wrapped_handler._accounting_custom_wrapped = true;
+	frm.events.add_bank_entry_button = wrapped_handler;
 }
 
 function create_payroll_bank_entry(frm) {
