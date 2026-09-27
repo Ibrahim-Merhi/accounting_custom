@@ -17,7 +17,7 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 		}
 		if (frm.doc.docstatus===1) {
 			frm.dashboard.set_headline_alert(__("Payroll completed. Continue with each company Payroll Entry to review payment allocations and create the Bank Entry."), "green");
-			frm.add_custom_button(__("Next: Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
+			frm.add_custom_button(__("Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
 		}
 	},
 	start_date(frm) {

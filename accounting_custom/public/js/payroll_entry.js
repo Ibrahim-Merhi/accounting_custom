@@ -20,17 +20,11 @@ frappe.ui.form.on("Payroll Entry", {
 
 		make_bank_allocation_full_width(frm);
 		add_payroll_flow_actions(frm);
+		hide_standard_bank_button(frm);
 		if (frm.doc.docstatus === 1 && !(frm.doc.custom_bank_payment_allocations || []).length && !frm.__loading_bank_allocations) {
 			frm.__loading_bank_allocations = true;
-			frm.call("get_bank_payment_allocation_defaults").then((response) => {
-				for (const allocation of response.message || []) {
-					const row = frm.add_child("custom_bank_payment_allocations");
-					row.payment_account = allocation.payment_account;
-					row.cost_center = allocation.cost_center;
-					row.amount = allocation.amount;
-				}
-				frm.refresh_field("custom_bank_payment_allocations");
-				sync_primary_payment_account(frm);
+			frm.call("ensure_bank_payment_allocation_defaults").then((response) => {
+				if (response.message) return frm.reload_doc();
 			}).finally(() => { frm.__loading_bank_allocations = false; });
 		}
 	},
@@ -49,7 +43,7 @@ function add_payroll_flow_actions(frm) {
 
 	if (frm.doc.docstatus !== 1 || !frm.doc.salary_slips_submitted) return;
 	frm.dashboard.set_headline_alert(
-		__("Next step: review the Bank / Cash Payment Allocations, then create the Bank Entry."),
+		__("Review the Bank / Cash Payment Allocations, then create the Bank Entry."),
 		"blue"
 	);
 
@@ -60,8 +54,9 @@ function add_payroll_flow_actions(frm) {
 			payroll_payable_account: frm.doc.payroll_payable_account,
 		},
 	}).then((response) => {
+		hide_standard_bank_button(frm);
 		const has_submitted_entry = Boolean(response.message?.submitted);
-		const label = has_submitted_entry ? __("Next: View Bank Entry") : __("Next: Create Bank Entry");
+		const label = has_submitted_entry ? __("View Bank Entry") : __("Create Bank Entry");
 		frm.add_custom_button(label, () => {
 			if (has_submitted_entry) {
 				open_payroll_bank_entries(frm);
@@ -70,6 +65,14 @@ function add_payroll_flow_actions(frm) {
 			create_payroll_bank_entry(frm);
 		}).addClass("btn-primary");
 	});
+}
+
+
+function hide_standard_bank_button(frm) {
+	const remove = () => frm.remove_custom_button(__("Make Bank Entry"));
+	remove();
+	setTimeout(remove, 250);
+	setTimeout(remove, 1000);
 }
 
 function create_payroll_bank_entry(frm) {

@@ -69,6 +69,20 @@ class CustomPayrollEntry(PayrollEntry):
 			{"payment_account": payment_account, "cost_center": row.cost_center, "amount": flt(row.amount, 2)}
 			for row in rows
 		]
+	@frappe.whitelist()
+	def ensure_bank_payment_allocation_defaults(self):
+		self.check_permission("write")
+		if self.get("custom_bank_payment_allocations"):
+			return False
+		defaults = self.get_bank_payment_allocation_defaults()
+		if not defaults:
+			return False
+		for allocation in defaults:
+			self.append("custom_bank_payment_allocations", allocation)
+		self.payment_account = defaults[0]["payment_account"]
+		self.save()
+		return True
+
 	def set_accounting_entries_for_bank_entry(self, je_payment_amount, user_remark):
 		rows = self.get("custom_bank_payment_allocations") or []
 		if not self._is_managed_payroll() or not rows:

@@ -156,6 +156,7 @@ class MultiCompanyPayrollRun(Document):
 			entry.reload()
 			if not entry.salary_slips_submitted:
 				frappe.throw(_("Salary Slip submission failed for company {0}. Open Payroll Entry {1} for details.").format(row.company, entry.name))
+		entry.ensure_bank_payment_allocation_defaults()
 		row.status="Completed"
 
 	def _refresh_generated_documents(self):
