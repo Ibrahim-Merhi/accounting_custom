@@ -58,6 +58,16 @@ class MultiCompanyPayrollRun(Document):
 			if not row.payroll_entry or not frappe.db.exists("Payroll Entry", row.payroll_entry):
 				continue
 			entry = frappe.get_doc("Payroll Entry", row.payroll_entry)
+			if entry.get("custom_multi_company_payroll_run") != self.name:
+				linked_payment = frappe.db.exists("Journal Entry", {"custom_multi_company_payroll_run": self.name, "docstatus": ["<", 2]})
+				if linked_payment:
+					frappe.throw(_("Cancel or delete Bank Entry {0} before cancelling this payroll release.").format(linked_payment))
+				if entry.get("custom_payment_payroll_run") == self.name:
+					entry.set("custom_bank_payment_allocations", [])
+					entry.custom_payment_payroll_run = None
+					entry.flags.ignore_validate_update_after_submit = True
+					entry.save(ignore_permissions=True)
+				continue
 			if entry.docstatus == 1:
 				entry.cancel()
 			elif entry.docstatus == 0:
@@ -206,6 +216,9 @@ class MultiCompanyPayrollRun(Document):
 					employee_row.source_payroll_entry = entry.name
 
 	def _process_company(self, row):
+		if not row.payroll_entry:
+			row.status = "Deferred"
+			return
 		entry=frappe.get_doc("Payroll Entry", row.payroll_entry)
 		if len(entry.employees)>30: frappe.throw(_("Company {0} has more than 30 employees. Split the run to ensure synchronous audited processing.").format(row.company))
 		if entry.docstatus==0: entry.submit()
@@ -251,11 +264,14 @@ class MultiCompanyPayrollRun(Document):
 					if amount > 0.01:
 						entry.append("custom_bank_payment_allocations", {"employee": employee, "payment_account": payment_account, "cost_center": payable.cost_center, "amount": amount})
 			entry.payment_account = payment_account
+			entry.custom_payment_payroll_run = self.name
 			entry.flags.ignore_validate_update_after_submit = True
 			entry.save(ignore_permissions=True)
 
 	def _refresh_generated_documents(self):
 		for company_row in self.companies:
+			if not company_row.payroll_entry:
+				continue
 			slips=frappe.get_all("Salary Slip", filters={"payroll_entry":company_row.payroll_entry,"docstatus":1}, fields=["name","employee","net_pay"])
 			company_row.salary_slip_count=len(slips)
 			journals=frappe.get_all("Journal Entry Account", filters={"reference_type":"Payroll Entry","reference_name":company_row.payroll_entry,"docstatus":1}, pluck="parent", distinct=True)

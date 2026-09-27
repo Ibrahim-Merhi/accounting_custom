@@ -128,6 +128,12 @@ CUSTOM_FIELDS = {
 	],
 	"Payroll Entry": [
 		{
+			"fieldname": "custom_payment_payroll_run", "label": "Current Payment Payroll Run",
+			"fieldtype": "Link", "options": "Multi Company Payroll Run",
+			"insert_after": "custom_multi_company_payroll_run", "allow_on_submit": 1,
+			"read_only": 1, "hidden": 1, "no_copy": 1,
+		},
+		{
 			"fieldname": "custom_manual_deductions_section", "label": "Manual Deductions",
 			"fieldtype": "Section Break", "insert_after": "employees", "collapsible": 1,
 		},
@@ -154,6 +160,11 @@ CUSTOM_FIELDS = {
 		},
 	],
 	"Journal Entry": [
+		{
+			"fieldname": "custom_multi_company_payroll_run", "label": "Multi Company Payroll Run",
+			"fieldtype": "Link", "options": "Multi Company Payroll Run",
+			"insert_after": "company", "read_only": 1, "hidden": 1, "no_copy": 1,
+		},
 		{
 			"fieldname": "custom_branch", "label": "Branch (Legacy)", "fieldtype": "Link",
 			"options": "Branch", "insert_after": "company", "hidden": 1,

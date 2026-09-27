@@ -12,7 +12,7 @@ frappe.ui.form.on("Payroll Entry", {
 		}}));
 	},
 	refresh(frm) {
-		const managed = Boolean(frm.doc.custom_multi_company_payroll_run);
+		const managed = Boolean(frm.doc.custom_payment_payroll_run || frm.doc.custom_multi_company_payroll_run);
 		frm.toggle_display("cost_center", !managed);
 		frm.toggle_display("payment_account", !managed);
 		frm.toggle_display("custom_bank_allocations_section", managed);
@@ -21,12 +21,6 @@ frappe.ui.form.on("Payroll Entry", {
 
 		make_bank_allocation_full_width(frm);
 		add_payroll_flow_actions(frm);
-		if (frm.doc.docstatus === 1 && !(frm.doc.custom_bank_payment_allocations || []).length && !frm.__loading_bank_allocations) {
-			frm.__loading_bank_allocations = true;
-			frm.call("ensure_bank_payment_allocation_defaults").then((response) => {
-				if (response.message) return frm.reload_doc();
-			}).finally(() => { frm.__loading_bank_allocations = false; });
-		}
 	},
 });
 
@@ -38,7 +32,7 @@ frappe.ui.form.on("Payroll Bank Payment Allocation", {
 
 function add_payroll_flow_actions(frm) {
 	frm.add_custom_button(__("Back to Payroll Run"), () => {
-		frappe.set_route("Form", "Multi Company Payroll Run", frm.doc.custom_multi_company_payroll_run);
+		frappe.set_route("Form", "Multi Company Payroll Run", frm.doc.custom_payment_payroll_run || frm.doc.custom_multi_company_payroll_run);
 	}, __("Payroll Flow"));
 
 	if (frm.doc.docstatus !== 1 || !frm.doc.salary_slips_submitted) return;

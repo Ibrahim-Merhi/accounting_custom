@@ -101,6 +101,9 @@ class CustomPayrollEntry(PayrollEntry):
 		rows = self.get("custom_bank_payment_allocations") or []
 		if not self._is_managed_payroll() or not rows:
 			return super().set_accounting_entries_for_bank_entry(je_payment_amount, user_remark)
+		draft_entry = frappe.db.sql("""select j.name from `tabJournal Entry` j join `tabJournal Entry Account` a on a.parent=j.name where j.docstatus=0 and j.voucher_type='Bank Entry' and a.reference_type='Payroll Entry' and a.reference_name=%s limit 1""", self.name)
+		if draft_entry:
+			frappe.throw(_("Submit or cancel the existing draft Bank Entry {0} before creating another payment.").format(draft_entry[0][0]))
 		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency")
 		company_currency = erpnext.get_company_currency(self.company)
 		dimensions = get_accounting_dimensions() or []
@@ -187,7 +190,13 @@ class CustomPayrollEntry(PayrollEntry):
 				child = dict(row)
 				child.update({amount_field: part, "party_type": "Employee", "party": employee})
 				expanded.append(child)
-		return super().make_journal_entry(expanded, *args, **kwargs)
+		result = super().make_journal_entry(expanded, *args, **kwargs)
+		run = self.get("custom_payment_payroll_run") or self.get("custom_multi_company_payroll_run")
+		if run:
+			journal = frappe.db.sql("""select j.name from `tabJournal Entry` j join `tabJournal Entry Account` a on a.parent=j.name where j.docstatus<2 and a.reference_type='Payroll Entry' and a.reference_name=%s order by j.creation desc limit 1""", self.name)
+			if journal:
+				frappe.db.set_value("Journal Entry", journal[0][0], "custom_multi_company_payroll_run", run, update_modified=False)
+		return result
 
 	def email_salary_slip(self, submitted_ss):
 		"""Custom multi-company payroll keeps slips in-app and never emails them."""

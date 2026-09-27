@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -42,6 +42,34 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         self.assertEqual(row.deductions, 40)
         self.assertEqual(row.net_salary, 460)
         self.assertEqual(row.deferred_amount, 210)
+
+    def test_company_with_all_rows_removed_is_deferred(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "companies": [{"company": "Company", "status": "Ready"}],
+        })
+        run._process_company(run.companies[0])
+        self.assertEqual(run.companies[0].status, "Deferred")
+
+    def test_cancelling_release_run_does_not_cancel_original_payroll(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "name": "MCPR-RELEASE",
+            "companies": [{"company": "Company", "payroll_entry": "PE-ORIGINAL"}],
+        })
+        entry = MagicMock()
+        entry.docstatus = 1
+        entry.get.side_effect = lambda key: {
+            "custom_multi_company_payroll_run": "MCPR-ORIGINAL",
+            "custom_payment_payroll_run": "MCPR-RELEASE",
+        }.get(key)
+        with patch("accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.db.exists", side_effect=lambda doctype, *args, **kwargs: doctype == "Payroll Entry"), patch(
+            "accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.get_doc", return_value=entry
+        ), patch.object(run, "db_set"):
+            run.on_cancel()
+        entry.cancel.assert_not_called()
+        entry.save.assert_called_once()
+        self.assertIsNone(entry.custom_payment_payroll_run)
 
     def test_outstanding_payable_subtracts_prior_bank_payments(self):
         entry = CustomPayrollEntry({"doctype": "Payroll Entry", "name": "PE-1", "payroll_payable_account": "Payable"})
