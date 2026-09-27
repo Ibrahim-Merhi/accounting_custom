@@ -40,6 +40,7 @@ def setup_accounting_customizations():
 	ensure_payroll_account_manager_permissions()
 	ensure_employee_link_title()
 	ensure_custom_fields()
+	backfill_payroll_months()
 	ensure_multi_company_payroll_link()
 	normalize_payroll_identity_titles()
 	ensure_accounting_entry_layouts()
@@ -53,6 +54,17 @@ def setup_accounting_customizations():
 	backfill_journal_entry_transaction_currency()
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
+
+
+def backfill_payroll_months():
+	if not frappe.db.table_exists("Multi Company Payroll Run"):
+		return
+	months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+	for row in frappe.get_all("Multi Company Payroll Run", filters={"start_date": ["is", "set"]}, fields=["name", "start_date", "payroll_month", "payroll_year"]):
+		if row.payroll_month and row.payroll_year:
+			continue
+		date = frappe.utils.getdate(row.start_date)
+		frappe.db.set_value("Multi Company Payroll Run", row.name, {"payroll_month": months[date.month - 1], "payroll_year": date.year}, update_modified=False)
 
 
 def ensure_party_types():

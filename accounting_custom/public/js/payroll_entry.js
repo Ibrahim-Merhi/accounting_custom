@@ -55,9 +55,11 @@ function add_payroll_flow_actions(frm) {
 		},
 	}).then((response) => {
 		const has_submitted_entry = Boolean(response.message?.submitted);
-		const label = has_submitted_entry ? __("View Bank Entry") : __("Create Bank Entry");
+		const has_payment_plan = Boolean((frm.doc.custom_bank_payment_allocations || []).length);
+		if (!has_payment_plan && !has_submitted_entry) return;
+		const label = has_payment_plan ? __("Create Bank Entry") : __("View Bank Entry");
 		frm.add_custom_button(label, () => {
-			if (has_submitted_entry) {
+			if (!has_payment_plan && has_submitted_entry) {
 				open_payroll_bank_entry(frm);
 				return;
 			}

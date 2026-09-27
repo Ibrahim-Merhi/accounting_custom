@@ -42,6 +42,17 @@ class CustomPayrollEntry(PayrollEntry):
 				accounting_dimensions, precision, entry_type="payable", party=row.employee, accounts=accounts,
 			)
 		return None
+	def get_outstanding_payable_rows(self, precision=2):
+		paid = {}
+		for row in frappe.db.sql("""select a.party as employee, a.cost_center, sum(a.debit_in_account_currency) amount from `tabJournal Entry Account` a join `tabJournal Entry` j on j.name=a.parent where j.docstatus=1 and j.voucher_type='Bank Entry' and a.reference_type='Payroll Entry' and a.reference_name=%s and a.account=%s group by a.party, a.cost_center""", (self.name, self.payroll_payable_account), as_dict=True):
+			paid[(row.employee, row.cost_center)] = flt(row.amount)
+		result = []
+		for row in self._get_managed_payable_rows(precision):
+			amount = flt(row.amount) - paid.get((row.employee, row.cost_center), 0)
+			if amount > 0.01:
+				result.append(frappe._dict({"employee": row.employee, "cost_center": row.cost_center, "amount": round(flt(amount), int(precision))}))
+		return result
+
 	@frappe.whitelist()
 	def get_bank_payment_allocation_defaults(self):
 		self.check_permission("read")
@@ -50,25 +61,9 @@ class CustomPayrollEntry(PayrollEntry):
 		payment_account = frappe.db.get_value("Company", self.company, "custom_default_payroll_payment_account")
 		if not payment_account:
 			frappe.throw(_("Set Default Payroll Payment Account in Company {0}.").format(self.company))
-		rows = frappe.db.sql("""
-			select jea.cost_center,
-				sum(jea.credit_in_account_currency - jea.debit_in_account_currency) as amount
-			from `tabJournal Entry Account` jea
-			where jea.reference_type = 'Payroll Entry'
-				and jea.reference_name = %s and jea.account = %s and jea.docstatus = 1
-			group by jea.cost_center
-			having amount > 0
-			order by jea.cost_center
-		""", (self.name, self.payroll_payable_account), as_dict=True)
-		if not rows:
-			grouped = {}
-			for row in self._get_managed_payable_rows(2):
-				grouped[row.cost_center] = grouped.get(row.cost_center, 0) + flt(row.amount)
-			rows = [frappe._dict(cost_center=cost_center, amount=amount) for cost_center, amount in sorted(grouped.items()) if amount > 0]
-		return [
-			{"payment_account": payment_account, "cost_center": row.cost_center, "amount": flt(row.amount, 2)}
-			for row in rows
-		]
+		return [{"employee": row.employee, "payment_account": payment_account, "cost_center": row.cost_center, "amount": row.amount} for row in self.get_outstanding_payable_rows()]
+
+
 	@frappe.whitelist()
 	def ensure_bank_payment_allocation_defaults(self):
 		self.check_permission("write")
@@ -106,73 +101,39 @@ class CustomPayrollEntry(PayrollEntry):
 		rows = self.get("custom_bank_payment_allocations") or []
 		if not self._is_managed_payroll() or not rows:
 			return super().set_accounting_entries_for_bank_entry(je_payment_amount, user_remark)
-
 		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency")
 		company_currency = erpnext.get_company_currency(self.company)
-		accounting_dimensions = get_accounting_dimensions() or []
-		currencies = []
-		payment_groups = {}
+		dimensions = get_accounting_dimensions() or []
+		currencies, credits, debits = [], {}, {}
+		outstanding = {(r.employee, r.cost_center): r.amount for r in self.get_outstanding_payable_rows(precision)}
 		for row in rows:
-			account = frappe.db.get_value(
-				"Account", row.payment_account,
-				["company", "account_type", "is_group", "disabled"], as_dict=True,
-			)
-			if not account or account.company != self.company or account.is_group or account.disabled:
-				frappe.throw(_("Row {0}: select an enabled ledger account belonging to {1}.").format(row.idx, self.company))
-			if account.account_type not in ("Bank", "Cash"):
-				frappe.throw(_("Row {0}: payment account must have Account Type Bank or Cash.").format(row.idx))
+			account = frappe.db.get_value("Account", row.payment_account, ["company", "account_type", "is_group", "disabled"], as_dict=True)
+			if not account or account.company != self.company or account.is_group or account.disabled or account.account_type not in ("Bank", "Cash"):
+				frappe.throw(_("Row {0}: select an enabled Bank or Cash ledger belonging to {1}.").format(row.idx, self.company))
+			if frappe.db.get_value("Employee", row.employee, "company") != self.company:
+				frappe.throw(_("Row {0}: employee must belong to {1}.").format(row.idx, self.company))
 			if frappe.db.get_value("Cost Center", row.cost_center, "company") != self.company:
 				frappe.throw(_("Row {0}: cost center must belong to {1}.").format(row.idx, self.company))
 			if flt(row.amount) <= 0:
 				frappe.throw(_("Row {0}: amount must be greater than zero.").format(row.idx))
-			key = (row.payment_account, row.cost_center)
-			payment_groups[key] = payment_groups.get(key, 0) + flt(row.amount)
-
-		payment_total = sum(payment_groups.values())
-		if abs(payment_total - flt(je_payment_amount)) > 0.01:
-			frappe.throw(_("Bank / Cash allocation total {0} must equal net payroll {1}.").format(payment_total, je_payment_amount))
-
-		payable_rows = self._get_managed_payable_rows(precision)
-		payable_by_cost_center = {}
-		for row in payable_rows:
-			payable_by_cost_center[row.cost_center] = payable_by_cost_center.get(row.cost_center, 0) + row.amount
-		payment_by_cost_center = {}
-		for (_account, cost_center), amount in payment_groups.items():
-			payment_by_cost_center[cost_center] = payment_by_cost_center.get(cost_center, 0) + amount
-		if any(abs(payable_by_cost_center.get(cost_center, 0) - payment_by_cost_center.get(cost_center, 0)) > 0.01 for cost_center in set(payable_by_cost_center) | set(payment_by_cost_center)):
-			frappe.throw(_("Bank / Cash amounts must match the net payroll amount for each cost center."))
-
+			key = (row.employee, row.cost_center)
+			debits[key] = debits.get(key, 0) + flt(row.amount)
+			credits[(row.payment_account, row.cost_center)] = credits.get((row.payment_account, row.cost_center), 0) + flt(row.amount)
+		for key, amount in debits.items():
+			if amount > outstanding.get(key, 0) + 0.01:
+				frappe.throw(_("Payment for employee {0} and cost center {1} exceeds the outstanding payroll payable.").format(*key))
 		accounts = []
-		for (payment_account, cost_center), payment_amount in sorted(payment_groups.items()):
-			exchange_rate, amount = self.get_amount_and_exchange_rate_for_journal_entry(
-				payment_account, payment_amount, company_currency, currencies
-			)
-			accounts.append(self.update_accounting_dimensions({
-				"account": payment_account,
-				"credit_in_account_currency": flt(amount, precision),
-				"exchange_rate": flt(exchange_rate),
-				"cost_center": cost_center,
-			}, accounting_dimensions))
+		for (account, cost_center), amount in sorted(credits.items()):
+			rate, converted = self.get_amount_and_exchange_rate_for_journal_entry(account, amount, company_currency, currencies)
+			accounts.append(self.update_accounting_dimensions({"account": account, "credit_in_account_currency": flt(converted, precision), "exchange_rate": flt(rate), "cost_center": cost_center}, dimensions))
+		for (employee, cost_center), amount in sorted(debits.items()):
+			rate, converted = self.get_amount_and_exchange_rate_for_journal_entry(self.payroll_payable_account, amount, company_currency, currencies)
+			accounts.append(self.update_accounting_dimensions({"account": self.payroll_payable_account, "debit_in_account_currency": flt(converted, precision), "exchange_rate": flt(rate), "reference_type": self.doctype, "reference_name": self.name, "party_type": "Employee", "party": employee, "cost_center": cost_center}, dimensions))
+		self.make_journal_entry(accounts, currencies, voucher_type="Bank Entry", user_remark=_("Payroll payment from {0} to {1}").format(self.start_date, self.end_date))
+		self.set("custom_bank_payment_allocations", [])
+		self.flags.ignore_validate_update_after_submit = True
+		self.save(ignore_permissions=True)
 
-		for payable in payable_rows:
-			exchange_rate, amount = self.get_amount_and_exchange_rate_for_journal_entry(
-				self.payroll_payable_account, payable.amount, company_currency, currencies
-			)
-			accounts.append(self.update_accounting_dimensions({
-				"account": self.payroll_payable_account,
-				"debit_in_account_currency": flt(amount, precision),
-				"exchange_rate": flt(exchange_rate),
-				"reference_type": self.doctype,
-				"reference_name": self.name,
-				"party_type": "Employee",
-				"party": payable.employee,
-				"cost_center": payable.cost_center,
-			}, accounting_dimensions))
-
-		self.make_journal_entry(
-			accounts, currencies, voucher_type="Bank Entry",
-			user_remark=_("Payment of {0} from {1} to {2}").format(user_remark, self.start_date, self.end_date),
-		)
 
 	def _get_managed_payable_rows(self, precision):
 		rows = []
@@ -189,6 +150,11 @@ class CustomPayrollEntry(PayrollEntry):
 			for (employee, cost_center), amount in deductions.items():
 				if employee == slip.employee:
 					amounts[cost_center] = amounts.get(cost_center, 0) - amount
+			unallocated_deduction = max(sum(amounts.values()) - flt(slip.net_pay), 0)
+			positive_total = sum(max(amount, 0) for amount in amounts.values())
+			if unallocated_deduction and positive_total:
+				for cost_center in list(amounts):
+					amounts[cost_center] -= unallocated_deduction * max(amounts[cost_center], 0) / positive_total
 			if not amounts:
 				amounts = {self.cost_center: flt(slip.net_pay)}
 			if abs(sum(amounts.values()) - flt(slip.net_pay)) > 0.01:
@@ -197,7 +163,7 @@ class CustomPayrollEntry(PayrollEntry):
 				if amount < -0.01:
 					frappe.throw(_("Deductions exceed salary allocated to cost center {0} for employee {1}.").format(cost_center, slip.employee))
 				if amount > 0.01:
-					rows.append(frappe._dict(employee=slip.employee, cost_center=cost_center, amount=flt(amount, precision)))
+					rows.append(frappe._dict(employee=slip.employee, cost_center=cost_center, amount=round(flt(amount), int(precision))))
 		return rows
 	def make_journal_entry(self, accounts, *args, **kwargs):
 		if not self._is_managed_payroll():
@@ -239,6 +205,14 @@ class CustomPayrollEntry(PayrollEntry):
 		manual_rows = self.get("custom_manual_deductions") or []
 		for item in items:
 			allocations = self._profile_allocations(item.employee, item.salary_component) if component_type == "earnings" else [row for row in manual_rows if row.employee == item.employee and row.salary_component == item.salary_component]
+			employee_advance = self.get_advance_deduction(component_type, item)
+			if employee_advance:
+				for cost_center, percentage in self.get_payroll_cost_centers_for_employee(item.employee, item.salary_structure).items():
+					amount = flt(item.amount) * percentage / 100
+					self.add_advance_deduction_entry(item, amount, cost_center, employee_advance)
+					if employee_wise_accounting_enabled:
+						self.set_employee_based_payroll_payable_entries(component_type, item.employee, amount)
+				continue
 			if allocations:
 				allocation_total = sum(flt(row.amount) for row in allocations)
 				for allocation in allocations:

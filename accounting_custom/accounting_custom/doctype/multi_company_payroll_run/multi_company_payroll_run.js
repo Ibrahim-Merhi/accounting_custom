@@ -20,10 +20,11 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 			frm.add_custom_button(__("Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
 		}
 	},
-	start_date(frm) {
-		if (!frm.doc.start_date) return;
-
-		frm.set_value("end_date", moment(frm.doc.start_date).endOf("month").format("YYYY-MM-DD"));
+	onload(frm) {
+		if (frm.is_new()) {
+			frm.set_value("payroll_month", moment().format("MMMM"));
+			frm.set_value("payroll_year", moment().year());
+		}
 	},
 	manual_deductions_add(frm) { setTimeout(()=>frm.refresh_field("manual_deductions"),0); },
 });
@@ -116,3 +117,13 @@ function map_deduction_employee(frm, cdt, cdn) {
 	const match=(frm.doc.employees||[]).find(e=>e.employee===row.employee && e.company===row.company);
 	frappe.model.set_value(cdt,cdn,"payroll_employee",match?.payroll_employee||"");
 }
+
+frappe.ui.form.on("Multi Company Payroll Employee", {
+	pay_this_run(frm, cdt, cdn) {
+		const row = locals[cdt][cdn];
+		const available = flt(row.net_salary) - flt(row.previously_paid);
+		if (flt(row.pay_this_run) < 0) frappe.model.set_value(cdt, cdn, "pay_this_run", 0);
+		if (flt(row.pay_this_run) > available) frappe.model.set_value(cdt, cdn, "pay_this_run", available);
+		frappe.model.set_value(cdt, cdn, "deferred_amount", Math.max(available - flt(row.pay_this_run), 0));
+	},
+});

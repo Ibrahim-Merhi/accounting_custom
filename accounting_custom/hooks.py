@@ -37,6 +37,7 @@ doctype_js = {
 	"Cost Center": "public/js/arabic_name.js",
 	"Donor": "public/js/donor.js",
 	"Employee": "public/js/employee.js",
+	"Employee Advance": "public/js/employee_advance.js",
 	"Payroll Entry": "public/js/payroll_entry.js",
 	"Journal Entry": "public/js/company_exchange_rate.js",
 	"Payment Entry": "public/js/company_exchange_rate.js",
@@ -200,6 +201,10 @@ doc_events = {
 	"Employee": {
 		"validate": "accounting_custom.accounting.employee_profile.validate_employee_accounting_profile",
 		"on_update": "accounting_custom.accounting.employee_profile.sync_company_payroll_identities",
+	},
+	"Employee Advance": {
+		"before_validate": "accounting_custom.accounting.salary_advance.prepare_salary_advance",
+		"on_cancel": "accounting_custom.accounting.salary_advance.cancel_installment_schedule",
 	},
 	"Payroll Entry": {
 		"validate": "accounting_custom.accounting.payroll.validate_payroll_manual_deductions",
