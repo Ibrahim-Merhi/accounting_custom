@@ -16,6 +16,8 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}
 		if (frm.doc.docstatus===1) {
+			frm.add_custom_button(__("4 per A4"), () => print_payslips(frm, "Payroll Payslips - 4 per A4"), __("Print Payslips"));
+			frm.add_custom_button(__("6 per A4"), () => print_payslips(frm, "Payroll Payslips - 6 per A4"), __("Print Payslips"));
 			frm.dashboard.set_headline_alert(__("Payroll completed. Continue with each company Payroll Entry to review payment allocations and create the Bank Entry."), "green");
 			frm.add_custom_button(__("Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
 		}
@@ -127,3 +129,8 @@ frappe.ui.form.on("Multi Company Payroll Employee", {
 		frappe.model.set_value(cdt, cdn, "deferred_amount", Math.max(available - flt(row.pay_this_run), 0));
 	},
 });
+
+function print_payslips(frm, format) {
+	const url = `/printview?doctype=${encodeURIComponent(frm.doctype)}&name=${encodeURIComponent(frm.docname)}&format=${encodeURIComponent(format)}&no_letterhead=1&trigger_print=1`;
+	window.open(url, "_blank");
+}

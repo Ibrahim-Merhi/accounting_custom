@@ -368,21 +368,60 @@ def _accounting_receipt_html(html):
 	return html
 
 
-def ensure_consolidated_payslip_print_format():
-	name = "Employee Consolidated Payslip"
-	html = r'''
+
+PAYSLIP_CSS = r"""
 <style>
-.payslip{font-family:Arial,sans-serif;color:#1f2937;padding:18px}.payslip-head{display:flex;justify-content:space-between;border-bottom:3px solid #111827;padding-bottom:14px;margin-bottom:18px}.payslip-title{font-size:25px;font-weight:700}.payslip-meta{text-align:right}.summary{display:flex;gap:12px;margin:18px 0}.summary>div{flex:1;border:1px solid #d1d5db;border-radius:7px;padding:12px}.summary .value{font-size:20px;font-weight:700;margin-top:5px}.net{background:#f0fdf4;border-color:#86efac!important}.breakdown{width:100%;border-collapse:collapse;margin-top:18px}.breakdown th,.breakdown td{border:1px solid #d1d5db;padding:9px;text-align:left}.breakdown th{background:#f3f4f6}.amount{text-align:right!important}.footer{margin-top:24px;color:#6b7280;font-size:11px}@media print{.payslip{padding:0}}
+.print-heading{display:none!important}.print-format{padding:0!important;margin:0!important}
+.ps{font-family:Arial,"Noto Naskh Arabic",sans-serif;color:#172033;direction:rtl;border:1px solid #98a2b3;border-radius:10px;overflow:hidden;background:#fff}.ps *{box-sizing:border-box}.ps-head{padding:16px 18px;background:#f8fafc;border-bottom:3px solid #7f1d1d;display:flex;justify-content:space-between;align-items:center}.ps-title{color:#8b1111;font-size:24px;font-weight:800}.ps-period{text-align:left;direction:ltr;font-size:12px;color:#475467}.ps-person{padding:12px 18px;display:grid;grid-template-columns:2fr 1fr;gap:10px;border-bottom:1px solid #d0d5dd}.ps-label{font-size:10px;color:#667085;margin-bottom:3px}.ps-value{font-size:14px;font-weight:700}.ps-body{padding:12px 18px}.ps-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.ps-box{border:1px solid #d0d5dd;border-radius:7px;overflow:hidden}.ps-box-title{padding:7px 10px;background:#f2f4f7;font-size:13px;font-weight:800}.ps-row{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-top:1px solid #eaecf0;font-size:12px}.ps-total{font-weight:800;background:#f9fafb}.ps-net{margin-top:12px;border:2px solid #157347;background:#ecfdf3;border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;font-size:17px;font-weight:800}.ps-declaration{margin-top:12px;padding:9px 11px;border:1px dashed #98a2b3;border-radius:7px;font-size:11px;line-height:1.7}.ps-sign{display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-top:18px;font-size:11px}.ps-sign div{padding-top:22px;border-top:1px solid #667085}.ps-foot{padding:7px 18px;background:#f8fafc;border-top:1px solid #eaecf0;color:#667085;font-size:9px;direction:ltr;text-align:center}
+@media print{.ps{page-break-inside:avoid;break-inside:avoid}.print-format{background:#fff!important}}
 </style>
-<div class="payslip">
- <div class="payslip-head"><div><div class="payslip-title">Consolidated Payslip</div><div>{{ doc.employee_name }}</div><div class="text-muted">{{ doc.employee }}</div></div><div class="payslip-meta"><strong>{{ doc.name }}</strong><br>{{ frappe.utils.formatdate(doc.start_date) }} – {{ frappe.utils.formatdate(doc.end_date) }}<br>Status: {{ doc.status }}</div></div>
- <div class="summary"><div><span>Gross Pay</span><div class="value">{{ frappe.utils.fmt_money(doc.gross_pay, currency=doc.currency) }}</div></div><div><span>Deductions</span><div class="value">{{ frappe.utils.fmt_money(doc.total_deduction, currency=doc.currency) }}</div></div><div class="net"><span>Net Pay</span><div class="value">{{ frappe.utils.fmt_money(doc.net_pay, currency=doc.currency) }}</div></div></div>
- <h4>Company Breakdown</h4>
- <table class="breakdown"><thead><tr><th>Company</th><th>Internal Salary Slip</th><th>Status</th><th class="amount">Gross</th><th class="amount">Deductions</th><th class="amount">Net Pay</th></tr></thead><tbody>{% for row in doc.companies %}<tr><td>{{ row.company }}</td><td>{{ row.salary_slip }}</td><td>{{ row.slip_status }}</td><td class="amount">{{ frappe.utils.fmt_money(row.gross_pay, currency=doc.currency) }}</td><td class="amount">{{ frappe.utils.fmt_money(row.total_deduction, currency=doc.currency) }}</td><td class="amount"><strong>{{ frappe.utils.fmt_money(row.net_pay, currency=doc.currency) }}</strong></td></tr>{% endfor %}</tbody></table>
- <div class="footer">This consolidated employee copy combines company-specific payroll documents for the same period. Accounting remains posted separately by company.</div>
-</div>'''
-	values = {"doc_type": "Employee Consolidated Payslip", "module": "Accounting Custom", "standard": "No", "custom_format": 1, "disabled": 0, "print_format_type": "Jinja", "html": html, "margin_top": 8, "margin_bottom": 8, "margin_left": 8, "margin_right": 8}
-	if frappe.db.exists("Print Format", name):
-		frappe.db.set_value("Print Format", name, values, update_modified=False)
-	else:
-		frappe.get_doc({"doctype": "Print Format", "name": name, **values}).insert(ignore_permissions=True)
+"""
+
+PAYSLIP_CARD = r"""
+<div class="ps">
+ <div class="ps-head"><div><div class="ps-title">وثيقة استلام راتب</div><div class="ps-label">Salary Receipt</div></div><div class="ps-period"><b>{{ frappe.utils.formatdate(slip.start_date, "MMMM yyyy") }}</b><br>{{ frappe.utils.formatdate(slip.start_date) }} — {{ frappe.utils.formatdate(slip.end_date) }}</div></div>
+ <div class="ps-person"><div><div class="ps-label">الاسم / Employee</div><div class="ps-value">{{ slip.employee_name }}</div></div><div><div class="ps-label">المسمى الوظيفي / Designation</div><div class="ps-value">{{ slip.designation or "—" }}</div></div></div>
+ <div class="ps-body"><div class="ps-columns">
+  <div class="ps-box"><div class="ps-box-title">الراتب والإضافات / Earnings</div><div class="ps-row"><span>الراتب الأساسي</span><b>{{ "{:,.0f}".format(slip.basic_salary or 0) }}</b></div><div class="ps-row"><span>بدل المواصلات</span><b>{{ "{:,.0f}".format(slip.transportation or 0) }}</b></div><div class="ps-row"><span>الإعانة العائلية</span><b>{{ "{:,.0f}".format(slip.family_allowance or 0) }}</b></div>{% if slip.other_earnings %}<div class="ps-row"><span>إضافات أخرى</span><b>{{ "{:,.0f}".format(slip.other_earnings) }}</b></div>{% endif %}<div class="ps-row ps-total"><span>الإجمالي</span><b>{{ "{:,.0f}".format(slip.gross_pay or 0) }} {{ slip.currency }}</b></div></div>
+  <div class="ps-box"><div class="ps-box-title">الخصومات / Deductions</div><div class="ps-row"><span>الضرائب</span><b>{{ "{:,.0f}".format(slip.tax_deduction or 0) }}</b></div><div class="ps-row"><span>سلفة على الراتب</span><b>{{ "{:,.0f}".format(slip.advance_deduction or 0) }}</b></div><div class="ps-row"><span>خصومات أخرى</span><b>{{ "{:,.0f}".format(slip.other_deduction or 0) }}</b></div><div class="ps-row ps-total"><span>إجمالي الخصومات</span><b>{{ "{:,.0f}".format(slip.total_deduction or 0) }} {{ slip.currency }}</b></div></div>
+ </div><div class="ps-net"><span>صافي المبلغ المدفوع / Net Pay</span><span>{{ "{:,.0f}".format(slip.net_pay or 0) }} {{ slip.currency }}</span></div>
+ <div class="ps-declaration">بإمضائي على هذه الوثيقة، أقرّ باستلام راتبي عن الشهر المذكور أعلاه بقيمة صافي المبلغ المبين.</div><div class="ps-sign"><div>توقيع الموظف</div><div>التاريخ</div></div></div>
+ <div class="ps-foot">{{ slip.name }}</div>
+</div>
+"""
+
+
+def _individual_payslip_html():
+	return PAYSLIP_CSS + "{% set slip = doc %}" + PAYSLIP_CARD
+
+
+def _batch_payslip_html(per_page):
+	gap = "7" if per_page == 6 else "10"
+	font = "8" if per_page == 6 else "9"
+	title = "14" if per_page == 6 else "16"
+	return PAYSLIP_CSS + f"""
+<style>
+.batch-grid{{display:grid;grid-template-columns:1fr 1fr;gap:{gap}mm}}.batch-grid .ps{{font-size:{font}px}}.batch-grid .ps-head{{padding:7px 9px;border-bottom-width:2px}}.batch-grid .ps-title{{font-size:{title}px}}.batch-grid .ps-period{{font-size:8px}}.batch-grid .ps-person{{padding:6px 9px;gap:5px}}.batch-grid .ps-label{{font-size:7px}}.batch-grid .ps-value{{font-size:9px}}.batch-grid .ps-body{{padding:6px 9px}}.batch-grid .ps-columns{{gap:6px}}.batch-grid .ps-box-title{{padding:3px 5px;font-size:8px}}.batch-grid .ps-row{{padding:2px 5px;font-size:7.5px}}.batch-grid .ps-net{{margin-top:5px;padding:4px 6px;font-size:9px}}.batch-grid .ps-declaration{{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}}.batch-grid .ps-sign{{margin-top:7px;gap:12px;font-size:7px}}.batch-grid .ps-sign div{{padding-top:10px}}.batch-grid .ps-foot{{padding:2px 8px;font-size:6px}}.batch-grid .ps:nth-child({per_page}n){{page-break-after:always}}@page{{size:A4 portrait;margin:7mm}}
+</style>
+<div class="batch-grid">
+{{% for employee_group in doc.employees|groupby("employee") %}}
+ {{% set payslip_name = frappe.db.get_value("Employee Consolidated Payslip", {{"employee": employee_group.grouper, "start_date": doc.start_date, "end_date": doc.end_date}}, "name") %}}
+ {{% if payslip_name %}}{{% set slip = frappe.get_doc("Employee Consolidated Payslip", payslip_name) %}}{PAYSLIP_CARD}{{% endif %}}
+{{% endfor %}}
+</div>"""
+
+
+def ensure_consolidated_payslip_print_format():
+	if frappe.db.exists("Print Format", "Employee Consolidated Payslip"):
+		frappe.db.set_value("Print Format", "Employee Consolidated Payslip", "disabled", 1, update_modified=False)
+	formats = {
+		"Employee Payslip - Professional": ("Employee Consolidated Payslip", _individual_payslip_html()),
+		"Payroll Payslips - 4 per A4": ("Multi Company Payroll Run", _batch_payslip_html(4)),
+		"Payroll Payslips - 6 per A4": ("Multi Company Payroll Run", _batch_payslip_html(6)),
+	}
+	for name, (doctype, html) in formats.items():
+		values = {"doc_type": doctype, "module": "Accounting Custom", "standard": "No", "custom_format": 1, "disabled": 0, "print_format_type": "Jinja", "html": html, "margin_top": 7, "margin_bottom": 7, "margin_left": 7, "margin_right": 7}
+		if frappe.db.exists("Print Format", name):
+			frappe.db.set_value("Print Format", name, values, update_modified=False)
+		else:
+			frappe.get_doc({"doctype": "Print Format", "name": name, **values}).insert(ignore_permissions=True)

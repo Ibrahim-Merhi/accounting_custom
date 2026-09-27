@@ -21,12 +21,15 @@ def sync_consolidated_payslip(master_employee, start_date, end_date):
 	doc.payslip_id = name
 	doc.employee = master_employee
 	doc.employee_name = frappe.db.get_value("Employee", master_employee, "employee_name")
+	doc.designation = frappe.db.get_value("Employee", master_employee, "designation")
 	doc.start_date = start_date
 	doc.end_date = end_date
 	doc.currency = slips[0].currency
 	doc.gross_pay = sum(flt(row.gross_pay) for row in slips)
 	doc.total_deduction = sum(flt(row.total_deduction) for row in slips)
 	doc.net_pay = sum(flt(row.net_pay) for row in slips)
+	for fieldname, amount in _component_totals([row.name for row in slips]).items():
+		doc.set(fieldname, amount)
 	doc.company_count = len(slips)
 	doc.status = "Submitted" if all(row.docstatus == 1 for row in slips) else "Partial"
 	doc.set("companies", [])
@@ -35,6 +38,33 @@ def sync_consolidated_payslip(master_employee, start_date, end_date):
 	doc.flags.ignore_permissions = True
 	doc.save()
 	return doc.name
+
+
+def _component_totals(salary_slips):
+	totals = {
+		"basic_salary": 0, "transportation": 0, "family_allowance": 0,
+		"other_earnings": 0, "tax_deduction": 0,
+		"advance_deduction": 0, "other_deduction": 0,
+	}
+	if not salary_slips:
+		return totals
+	for row in frappe.get_all(
+		"Salary Detail",
+		filters={"parent": ["in", salary_slips], "parenttype": "Salary Slip"},
+		fields=["parentfield", "salary_component", "amount"],
+	):
+		component = (row.salary_component or "").strip().lower()
+		amount = flt(row.amount)
+		if row.parentfield == "earnings":
+			if component == "basic salary": totals["basic_salary"] += amount
+			elif component == "transportation": totals["transportation"] += amount
+			elif component == "family allowance": totals["family_allowance"] += amount
+			else: totals["other_earnings"] += amount
+		elif row.parentfield == "deductions":
+			if "tax" in component or "ضريب" in component: totals["tax_deduction"] += amount
+			elif any(token in component for token in ("advance", "loan", "سلف")): totals["advance_deduction"] += amount
+			else: totals["other_deduction"] += amount
+	return totals
 
 
 def sync_employee_payslips(master_employee):

@@ -7,6 +7,8 @@ from accounting_custom.setup.print_formats import (
 	_muntada_voucher_html,
 	_payment_html,
 	_standard_company_html,
+	_individual_payslip_html,
+	_batch_payslip_html,
 )
 
 
@@ -102,3 +104,30 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn("Test Donor", html)
 		self.assertIn("100.00", html)
+
+
+	def test_professional_payslip_has_requested_fields_without_removed_ids(self):
+		doc = frappe._dict(
+			name="CPS-TEST", employee_name="موظف تجريبي", designation="Accountant",
+			start_date="2027-03-01", end_date="2027-03-31", currency="USD",
+			basic_salary=500, transportation=100, family_allowance=50,
+			other_earnings=0, gross_pay=650, tax_deduction=10,
+			advance_deduction=40, other_deduction=0, total_deduction=50, net_pay=600,
+		)
+		html = frappe.render_template(_individual_payslip_html(), {"doc": doc})
+		self.assertIn("وثيقة استلام راتب", html)
+		self.assertIn("موظف تجريبي", html)
+		self.assertIn("600 USD", html)
+		self.assertNotIn("MOF #", html)
+		self.assertNotIn("NSSF", html)
+		self.assertNotIn("رقم الموظف", html)
+
+	def test_batch_payslip_formats_define_exact_page_break_density(self):
+		four = _batch_payslip_html(4)
+		six = _batch_payslip_html(6)
+		self.assertIn("nth-child(4n)", four)
+		self.assertIn("nth-child(6n)", six)
+		self.assertIn('groupby("employee")', four)
+		self.assertIn("A4 portrait", six)
+		rendered = frappe.render_template(four, {"doc": frappe._dict(employees=[], start_date="2027-03-01", end_date="2027-03-31")})
+		self.assertIn("batch-grid", rendered)
