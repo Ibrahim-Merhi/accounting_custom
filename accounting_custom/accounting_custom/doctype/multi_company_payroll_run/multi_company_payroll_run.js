@@ -15,7 +15,10 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 		if (!frm.is_new() && frm.doc.docstatus===0 && !frm.doc.companies?.some(r=>r.payroll_entry)) {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}
-		if (frm.doc.docstatus===1) frm.dashboard.set_headline_alert(__("Payroll completed. Open company Payroll Entries, Salary Slips, and Journal Entries from the tables below."), "green");
+		if (frm.doc.docstatus===1) {
+			frm.dashboard.set_headline_alert(__("Payroll completed. Continue with each company Payroll Entry to review payment allocations and create the Bank Entry."), "green");
+			frm.add_custom_button(__("Next: Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
+		}
 	},
 	start_date(frm) {
 		if (!frm.doc.start_date) return;
@@ -24,6 +27,44 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 	},
 	manual_deductions_add(frm) { setTimeout(()=>frm.refresh_field("manual_deductions"),0); },
 });
+
+
+function show_company_payroll_entries(frm) {
+	const entries = (frm.doc.companies || []).filter((row) => row.payroll_entry);
+	if (!entries.length) {
+		frappe.msgprint(__("No company Payroll Entries were generated for this run."));
+		return;
+	}
+	if (entries.length === 1) {
+		frappe.set_route("Form", "Payroll Entry", entries[0].payroll_entry);
+		return;
+	}
+
+	const escape = (value) => frappe.utils.escape_html(String(value || ""));
+	const dialog = new frappe.ui.Dialog({
+		title: __("Continue Payroll Processing"),
+		fields: [{fieldtype: "HTML", fieldname: "payroll_entries"}],
+	});
+	const rows = entries.map((row) => `
+		<div class="d-flex align-items-center justify-content-between border-bottom py-3">
+			<div>
+				<div class="font-weight-bold">${escape(row.company)}</div>
+				<div class="text-muted small">${escape(row.payroll_entry)} · ${escape(row.status || __("Ready"))}</div>
+			</div>
+			<button class="btn btn-sm btn-primary open-company-payroll" data-payroll-entry="${escape(row.payroll_entry)}">
+				${__("Open Payroll Entry")}
+			</button>
+		</div>`).join("");
+	dialog.fields_dict.payroll_entries.$wrapper.html(`
+		<p class="text-muted mb-2">${__("Complete the payment step for each company. Each entry keeps its own payable account, currency, and accounting records.")}</p>
+		${rows}
+	`);
+	dialog.fields_dict.payroll_entries.$wrapper.on("click", ".open-company-payroll", (event) => {
+		dialog.hide();
+		frappe.set_route("Form", "Payroll Entry", event.currentTarget.dataset.payrollEntry);
+	});
+	dialog.show();
+}
 
 frappe.ui.form.on("Multi Company Payroll Deduction", {
 	employee(frm, cdt, cdn) {

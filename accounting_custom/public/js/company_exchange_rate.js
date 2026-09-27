@@ -27,12 +27,31 @@ frappe.ui.form.on("Journal Entry", {
 	refresh(frm) {
 		enable_wide_journal_grid(frm);
 		show_more_journal_rows(frm);
+		add_payroll_journal_actions(frm);
 		if (frm.is_new()) return set_all_journal_exchange_rates(frm);
 	},
 	validate(frm) {
 		return set_all_journal_exchange_rates(frm, true);
 	},
 });
+
+
+function add_payroll_journal_actions(frm) {
+	const payroll_reference = (frm.doc.accounts || []).find((row) =>
+		row.reference_type === "Payroll Entry" && row.reference_name
+	)?.reference_name;
+	if (!payroll_reference) return;
+
+	frm.add_custom_button(__("Back to Payroll Entry"), () => {
+		frappe.set_route("Form", "Payroll Entry", payroll_reference);
+	}, __("Payroll Flow"));
+	if (frm.doc.docstatus === 0) {
+		frm.dashboard.set_headline_alert(
+			__("Final payroll step: review this Bank Entry and submit it to post the payment."),
+			"blue"
+		);
+	}
+}
 
 function enable_wide_journal_grid(frm) {
 	const grid = frm.fields_dict.accounts?.grid;
