@@ -78,6 +78,9 @@ function render_secure_salary_profile(frm) {
 function render_salary_workspace(frm, profile) {
 	const field = frm.get_field("custom_secure_salary_profile");
 	if (!field) return;
+	const section = field.$wrapper.closest(".form-section");
+	section.addClass("salary-profile-form-section");
+	field.$wrapper.closest(".form-column").addClass("salary-profile-form-column");
 	const action_label = profile.exists ? __("Edit Present Salary") : __("Create Salary Profile");
 	field.$wrapper.html(`<div class="frappe-card salary-workspace">
 		<div class="salary-tabs" role="tablist" aria-label="${__("Salary Profile Sections")}">
