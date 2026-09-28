@@ -3,6 +3,7 @@ frappe.ui.form.on("Employee", {
 		set_employee_position_queries(frm);
 	},
 	refresh(frm) {
+		apply_company_details_grid_configuration(frm);
 		render_secure_salary_profile(frm);
 	},
 });
@@ -31,6 +32,28 @@ frappe.ui.form.on("Employee Branch Assignment", {
 		);
 	},
 });
+
+function apply_company_details_grid_configuration(frm) {
+	if (frm.__company_details_grid_configured) return;
+	const field = frm.get_field("custom_branches");
+	if (!field?.grid) return;
+	const desired = [
+		{fieldname: "company", columns: 2},
+		{fieldname: "branch", columns: 2},
+		{fieldname: "department", columns: 2},
+		{fieldname: "designation", columns: 1},
+		{fieldname: "employment_type", columns: 2},
+		{fieldname: "left_position", columns: 1},
+	];
+	const settings = frappe.get_user_settings(frm.doctype, "GridView") || {};
+	const current = settings[field.grid.doctype] || [];
+	if (JSON.stringify(current) === JSON.stringify(desired)) return;
+	frm.__company_details_grid_configured = true;
+	frappe.model.user_settings.save(frm.doctype, "GridView", {[field.grid.doctype]: desired}).then((result) => {
+		frappe.model.user_settings[frm.doctype] = result.message || result;
+		field.grid.reset_grid();
+	});
+}
 
 function position_company(cdt, cdn) {
 	return locals[cdt][cdn].company;
