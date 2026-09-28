@@ -333,3 +333,89 @@
 		padding: 14px;
 	}
 }
+
+
+/* Salary Profile: theme-safe surfaces and tables */
+.salary-workspace,
+.salary-workspace .salary-tab-content {
+	background: var(--card-bg);
+	color: var(--text-color);
+}
+
+.salary-workspace .border,
+.salary-workspace .table-responsive {
+	border-color: var(--border-color) !important;
+}
+
+.salary-workspace .border.rounded {
+	background: var(--control-bg);
+	color: var(--text-color);
+}
+
+.salary-workspace .table {
+	margin-bottom: 0;
+	background: var(--card-bg);
+	color: var(--text-color);
+}
+
+.salary-workspace .table > thead > tr > th,
+.salary-workspace .table > tbody > tr > td,
+.salary-workspace .table > tfoot > tr > td {
+	border-color: var(--table-border-color) !important;
+	color: var(--text-color);
+	vertical-align: middle;
+}
+
+.salary-workspace .table > thead.bg-light > tr > th,
+.salary-workspace .table > thead > tr.bg-light > th {
+	background: var(--subtle-fg) !important;
+	color: var(--heading-color) !important;
+}
+
+.salary-workspace .table > tbody > tr > td {
+	background: var(--card-bg) !important;
+}
+
+.salary-workspace .table-hover > tbody > tr:hover > td {
+	background: var(--control-bg) !important;
+	color: var(--text-color);
+}
+
+.salary-workspace .table > tfoot > tr > td {
+	background: var(--subtle-fg) !important;
+	color: var(--heading-color);
+}
+
+.salary-workspace h5,
+.salary-workspace h6,
+.salary-workspace strong,
+.salary-workspace .font-weight-bold {
+	color: var(--heading-color);
+}
+
+.salary-workspace .salary-tab .badge.badge-light {
+	border-color: var(--border-color);
+	background: var(--control-bg);
+	color: var(--text-color);
+}
+
+[data-theme="dark"] .salary-workspace {
+	border-color: var(--dark-border-color);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .salary-workspace .salary-tabs {
+	border-color: var(--dark-border-color);
+	background: var(--subtle-fg);
+}
+
+[data-theme="dark"] .salary-workspace .salary-tab.active {
+	border-color: var(--gray-600);
+	background: var(--control-bg);
+	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .salary-workspace .salary-revision-card,
+[data-theme="dark"] .salary-workspace .salary-revision-component {
+	border-color: var(--dark-border-color);
+}
