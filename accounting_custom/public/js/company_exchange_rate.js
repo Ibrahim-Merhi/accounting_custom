@@ -304,15 +304,17 @@ async function fetch_company_rate(frm, from_currency, transaction_date, mandator
 async function set_all_journal_exchange_rates(frm, mandatory = false) {
 	if (frm.company_exchange_rate_loading || !frm.doc.company || !frm.doc.posting_date) return;
 	frm.company_exchange_rate_loading = true;
+	let changed = false;
 	try {
 		for (const row of frm.doc.accounts || []) {
 			if (!row.account_currency) continue;
 			const rate = await fetch_company_rate(frm, row.account_currency, frm.doc.posting_date, mandatory);
 			if (Math.abs(flt(row.exchange_rate) - rate) > 0.0000001) {
 				await frappe.model.set_value(row.doctype, row.name, "exchange_rate", rate);
+				changed = true;
 			}
 		}
-		frm.refresh_field("accounts");
+		if (changed) frm.refresh_field("accounts");
 	} catch (error) {
 		if (mandatory) frappe.validated = false;
 		throw error;
@@ -322,6 +324,12 @@ async function set_all_journal_exchange_rates(frm, mandatory = false) {
 }
 
 async function set_journal_row_exchange_rate(frm, cdt, cdn) {
+	// Server-created payroll Bank Entries are already populated before routing to
+	// the form. Ignore delayed child-table events raised while that saved document
+	// is loading; otherwise their asynchronous response can race the user first
+	// edit/save of cheque_no and cheque_date. Real row edits mark the form dirty
+	// first, so their exchange-rate updates continue to run normally.
+	if (!frm.is_new() && !frm.is_dirty()) return;
 	const row = locals[cdt][cdn];
 	if (!row?.account_currency || !frm.doc.company || !frm.doc.posting_date) return;
 	const rate = await fetch_company_rate(frm, row.account_currency, frm.doc.posting_date, false);
