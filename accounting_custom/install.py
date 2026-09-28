@@ -39,6 +39,7 @@ def setup_accounting_customizations():
 	ensure_party_type_permissions()
 	ensure_payroll_account_manager_permissions()
 	ensure_employee_link_title()
+	synchronize_employee_naming_series()
 	ensure_custom_fields()
 	backfill_payroll_months()
 	ensure_multi_company_payroll_link()
@@ -54,6 +55,27 @@ def setup_accounting_customizations():
 	backfill_journal_entry_transaction_currency()
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
+
+
+def synchronize_employee_naming_series():
+	"""Keep the standard Employee counter ahead of existing master employees."""
+	series = "HR-EMP-"
+	maximum = frappe.db.sql(
+		"""
+		select max(cast(substring_index(name, '-', -1) as unsigned))
+		from tabEmployee
+		where name regexp '^HR-EMP-[0-9]+$'
+		"""
+	)[0][0] or 0
+	if not maximum:
+		return
+	frappe.db.sql(
+		"""
+		insert into tabSeries (name, current) values (%s, %s)
+		on duplicate key update current = greatest(current, values(current))
+		""",
+		(series, maximum),
+	)
 
 
 def backfill_payroll_months():
