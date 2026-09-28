@@ -27,12 +27,15 @@ SECTIONS = [
 		("Payment Memo", "DocType"),
 	]),
 	("Payroll", [
-		("Employee Salary Profile", "DocType"),
 		("Multi Company Payroll Run", "DocType"),
-		("Employee Salary History", "Report"),
-		("Payroll Cost Center Allocation", "DocType"),
+		("Employee Advance", "DocType"),
 		("Employee Monthly Adjustment", "DocType"),
+		("Employee Salary Profile", "DocType"),
+		("Employee Salary Revision", "DocType"),
+		("Employee Consolidated Payslip", "DocType"),
+		("Payroll Cost Center Allocation", "DocType"),
 		("Payroll Review", "DocType"),
+		("Employee Salary History", "Report"),
 	]),
 	("Accounting Setup", [
 		("Accounting User Guide", "DocType"),
