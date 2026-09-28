@@ -396,12 +396,20 @@ def _individual_payslip_html():
 
 
 def _batch_payslip_html(per_page):
-	gap = "7" if per_page == 6 else "10"
-	font = "8" if per_page == 6 else "9"
-	title = "14" if per_page == 6 else "16"
+	if per_page == 1:
+		layout_css = """
+.batch-grid{display:block}.batch-grid .ps{display:block;width:100%;page-break-after:always;break-after:page}.batch-grid .ps:last-child{page-break-after:auto;break-after:auto}@page{size:A4 portrait;margin:10mm}
+"""
+	else:
+		gap = "7" if per_page == 6 else "10"
+		font = "8" if per_page == 6 else "9"
+		title = "14" if per_page == 6 else "16"
+		layout_css = f"""
+.batch-grid{{display:grid;grid-template-columns:1fr 1fr;gap:{gap}mm}}.batch-grid .ps{{font-size:{font}px}}.batch-grid .ps-head{{padding:7px 9px;border-bottom-width:2px}}.batch-grid .ps-title{{font-size:{title}px}}.batch-grid .ps-period{{font-size:8px}}.batch-grid .ps-person{{padding:6px 9px;gap:5px}}.batch-grid .ps-label{{font-size:7px}}.batch-grid .ps-value{{font-size:9px}}.batch-grid .ps-body{{padding:6px 9px}}.batch-grid .ps-columns{{gap:6px}}.batch-grid .ps-box-title{{padding:3px 5px;font-size:8px}}.batch-grid .ps-row{{padding:2px 5px;font-size:7.5px}}.batch-grid .ps-net{{margin-top:5px;padding:4px 6px;font-size:9px}}.batch-grid .ps-declaration{{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}}.batch-grid .ps-sign{{margin-top:7px;gap:12px;font-size:7px}}.batch-grid .ps-sign div{{padding-top:10px}}.batch-grid .ps-foot{{padding:2px 8px;font-size:6px}}.batch-grid .ps:nth-child({per_page}n){{page-break-after:always;break-after:page}}@page{{size:A4 portrait;margin:7mm}}
+"""
 	return PAYSLIP_CSS + f"""
 <style>
-.batch-grid{{display:grid;grid-template-columns:1fr 1fr;gap:{gap}mm}}.batch-grid .ps{{font-size:{font}px}}.batch-grid .ps-head{{padding:7px 9px;border-bottom-width:2px}}.batch-grid .ps-title{{font-size:{title}px}}.batch-grid .ps-period{{font-size:8px}}.batch-grid .ps-person{{padding:6px 9px;gap:5px}}.batch-grid .ps-label{{font-size:7px}}.batch-grid .ps-value{{font-size:9px}}.batch-grid .ps-body{{padding:6px 9px}}.batch-grid .ps-columns{{gap:6px}}.batch-grid .ps-box-title{{padding:3px 5px;font-size:8px}}.batch-grid .ps-row{{padding:2px 5px;font-size:7.5px}}.batch-grid .ps-net{{margin-top:5px;padding:4px 6px;font-size:9px}}.batch-grid .ps-declaration{{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}}.batch-grid .ps-sign{{margin-top:7px;gap:12px;font-size:7px}}.batch-grid .ps-sign div{{padding-top:10px}}.batch-grid .ps-foot{{padding:2px 8px;font-size:6px}}.batch-grid .ps:nth-child({per_page}n){{page-break-after:always}}@page{{size:A4 portrait;margin:7mm}}
+{layout_css}
 </style>
 <div class="batch-grid">
 {{% for employee_group in doc.employees|groupby("employee") %}}
@@ -416,6 +424,7 @@ def ensure_consolidated_payslip_print_format():
 		frappe.db.set_value("Print Format", "Employee Consolidated Payslip", "disabled", 1, update_modified=False)
 	formats = {
 		"Employee Payslip - Professional": ("Employee Consolidated Payslip", _individual_payslip_html()),
+		"Payroll Payslips - 1 per A4": ("Multi Company Payroll Run", _batch_payslip_html(1)),
 		"Payroll Payslips - 4 per A4": ("Multi Company Payroll Run", _batch_payslip_html(4)),
 		"Payroll Payslips - 6 per A4": ("Multi Company Payroll Run", _batch_payslip_html(6)),
 	}

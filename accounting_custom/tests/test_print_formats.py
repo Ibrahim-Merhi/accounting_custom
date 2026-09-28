@@ -123,8 +123,12 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertNotIn("رقم الموظف", html)
 
 	def test_batch_payslip_formats_define_exact_page_break_density(self):
+		one = _batch_payslip_html(1)
 		four = _batch_payslip_html(4)
 		six = _batch_payslip_html(6)
+		self.assertIn("display:block", one)
+		self.assertIn("page-break-after:always", one)
+		self.assertNotIn(".batch-grid{display:grid", one)
 		self.assertIn("nth-child(4n)", four)
 		self.assertIn("nth-child(6n)", six)
 		self.assertIn('groupby("employee")', four)
