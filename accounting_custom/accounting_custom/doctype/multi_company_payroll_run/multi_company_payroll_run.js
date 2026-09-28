@@ -44,33 +44,62 @@ function payroll_entries(frm) {
 	return [...entries.values()];
 }
 
-function render_company_summary(frm) {
+async function company_processing_steps(frm) {
+	const entries = payroll_entries(frm);
+	if (!entries.length) return [];
+	const metadata = await frappe.db.get_list("Payroll Entry", {
+		filters: {name: ["in", entries.map((row) => row.payroll_entry)]},
+		fields: ["name", "company", "custom_multi_company_payroll_run", "custom_payment_payroll_run", "docstatus"],
+		limit: entries.length,
+	});
+	const details = new Map(metadata.map((row) => [row.name, row]));
+	const companies = new Map();
+	entries.forEach((entry) => {
+		const detail = details.get(entry.payroll_entry) || {};
+		const company = detail.company || entry.company;
+		if (!companies.has(company)) companies.set(company, {company, entries: []});
+		companies.get(company).entries.push({...entry, ...detail, payroll_entry: entry.payroll_entry});
+	});
+	return [...companies.values()].map((group) => {
+		const current = group.entries.find((entry) => entry.custom_multi_company_payroll_run === frm.doc.name)
+			|| group.entries.find((entry) => entry.custom_payment_payroll_run === frm.doc.name)
+			|| group.entries[0];
+		return {...group, current, prior_entries: group.entries.filter((entry) => entry.payroll_entry !== current.payroll_entry)};
+	});
+}
+
+async function render_company_summary(frm) {
 	const submitted = frm.doc.docstatus === 1;
 	frm.toggle_display("company_summary_html", submitted);
 	frm.toggle_display("companies", !submitted);
 	if (!submitted || !frm.fields_dict.company_summary_html) return;
 	const escape = (value) => frappe.utils.escape_html(String(value || ""));
+	const steps = await company_processing_steps(frm);
 	const summaries = new Map();
 	(frm.doc.companies || []).forEach((row) => {
-		if (!summaries.has(row.company)) summaries.set(row.company, {company: row.company, account: row.payroll_payable_account, currency: row.currency, gross: 0, employees: new Set(), entries: new Set()});
-		const item = summaries.get(row.company); item.gross += flt(row.gross_salary); if (row.payroll_entry) item.entries.add(row.payroll_entry);
+		if (!summaries.has(row.company)) summaries.set(row.company, {company: row.company, account: row.payroll_payable_account, currency: row.currency, gross: 0, employees: new Set()});
+		const item = summaries.get(row.company); item.gross += flt(row.gross_salary);
 	});
 	(frm.doc.employees || []).forEach((row) => {
-		if (!summaries.has(row.company)) summaries.set(row.company, {company: row.company, account: "", currency: "", gross: 0, employees: new Set(), entries: new Set()});
-		const item = summaries.get(row.company); item.employees.add(row.employee); if (row.source_payroll_entry) item.entries.add(row.source_payroll_entry);
+		if (!summaries.has(row.company)) summaries.set(row.company, {company: row.company, account: "", currency: "", gross: 0, employees: new Set()});
+		summaries.get(row.company).employees.add(row.employee);
 	});
-	const rows = [...summaries.values()].map((item) => `<tr><td><strong>${escape(item.company)}</strong></td><td>${escape(item.account)}</td><td>${escape(item.currency)}</td><td class="text-right">${item.employees.size}</td><td class="text-right">${format_currency(item.gross, item.currency, 0)}</td><td>${[...item.entries].map(name => `<a href="/app/payroll-entry/${encodeURIComponent(name)}">${escape(name)}</a>`).join("<br>")}</td><td><span class="indicator-pill green">${__("Completed")}</span></td></tr>`).join("");
-	frm.fields_dict.company_summary_html.$wrapper.html(`<div class="table-responsive"><table class="table table-bordered"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Payroll Payable Account")}</th><th>${__("Currency")}</th><th class="text-right">${__("Employees")}</th><th class="text-right">${__("Gross Salary")}</th><th>${__("Payroll Entries")}</th><th>${__("Status")}</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+	const rows = steps.map((step) => {
+		const item = summaries.get(step.company);
+		const history = step.prior_entries.length ? `<div class="text-muted small mt-1">${step.prior_entries.length} ${__("earlier payment release(s) kept in history")}</div>` : "";
+		return `<tr><td><strong>${escape(step.company)}</strong></td><td>${escape(item?.account)}</td><td>${escape(item?.currency)}</td><td class="text-right">${item?.employees.size || 0}</td><td class="text-right">${format_currency(item?.gross || 0, item?.currency, 0)}</td><td><a href="/app/payroll-entry/${encodeURIComponent(step.current.payroll_entry)}"><strong>${escape(step.current.payroll_entry)}</strong></a>${history}</td><td><span class="indicator-pill green">${__("Completed")}</span></td></tr>`;
+	}).join("");
+	frm.fields_dict.company_summary_html.$wrapper.html(`<div class="table-responsive"><table class="table table-bordered"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Payroll Payable Account")}</th><th>${__("Currency")}</th><th class="text-right">${__("Employees")}</th><th class="text-right">${__("Gross Salary")}</th><th>${__("Payroll Entry")}</th><th>${__("Status")}</th></tr></thead><tbody>${rows}</tbody></table></div>`);
 }
 
-function show_company_payroll_entries(frm) {
-	const entries = payroll_entries(frm);
-	if (!entries.length) { frappe.msgprint(__("No company Payroll Entries were generated for this run.")); return; }
-	if (entries.length === 1) { frappe.set_route("Form", "Payroll Entry", entries[0].payroll_entry); return; }
+async function show_company_payroll_entries(frm) {
+	const steps = await company_processing_steps(frm);
+	if (!steps.length) { frappe.msgprint(__("No company Payroll Entries were generated for this run.")); return; }
+	if (steps.length === 1) { frappe.set_route("Form", "Payroll Entry", steps[0].current.payroll_entry); return; }
 	const escape = (value) => frappe.utils.escape_html(String(value || ""));
 	const dialog = new frappe.ui.Dialog({title: __("Continue Payroll Processing"), fields: [{fieldtype: "HTML", fieldname: "payroll_entries"}]});
-	const rows = entries.map((row) => `<div class="d-flex align-items-center justify-content-between border-bottom py-3"><div><div class="font-weight-bold">${escape(row.company)}</div><div class="text-muted small">${escape(row.payroll_entry)} · ${escape(row.status || __("Ready"))}</div></div><button class="btn btn-sm btn-primary open-company-payroll" data-payroll-entry="${escape(row.payroll_entry)}">${__("Open Payroll Entry")}</button></div>`).join("");
-	dialog.fields_dict.payroll_entries.$wrapper.html(`<p class="text-muted mb-2">${__("Complete the payment step for each underlying Payroll Entry. The summary remains one row per company.")}</p>${rows}`);
+	const rows = steps.map((step) => `<div class="d-flex align-items-center justify-content-between border-bottom py-3"><div><div class="font-weight-bold">${escape(step.company)}</div><div class="text-muted small">${escape(step.current.payroll_entry)} · ${step.current.docstatus === 1 ? __("Submitted") : __("Draft")}</div></div><button class="btn btn-sm btn-primary open-company-payroll" data-payroll-entry="${escape(step.current.payroll_entry)}">${__("Open Payroll Entry")}</button></div>`).join("");
+	dialog.fields_dict.payroll_entries.$wrapper.html(`<p class="text-muted mb-2">${__("Open and complete the current Payroll Entry for each company. Earlier submitted payrolls remain in history and are not shown as new payroll steps.")}</p>${rows}`);
 	dialog.fields_dict.payroll_entries.$wrapper.on("click", ".open-company-payroll", (event) => {dialog.hide(); frappe.set_route("Form", "Payroll Entry", event.currentTarget.dataset.payrollEntry);});
 	dialog.show();
 }
