@@ -396,27 +396,35 @@ def _individual_payslip_html():
 
 
 def _batch_payslip_html(per_page):
+	columns = 1 if per_page == 1 else 2
+	rows = 1 if per_page == 1 else per_page // 2
+	gap = "0" if per_page == 1 else ("6mm" if per_page == 6 else "8mm")
 	if per_page == 1:
-		layout_css = """
-.batch-grid{display:block}.batch-grid .ps{display:block;width:100%;page-break-after:always;break-after:page}.batch-grid .ps:last-child{page-break-after:auto;break-after:auto}@page{size:A4 portrait;margin:10mm}
-"""
+		card_css = ""
 	else:
-		gap = "7" if per_page == 6 else "10"
 		font = "8" if per_page == 6 else "9"
 		title = "14" if per_page == 6 else "16"
-		layout_css = f"""
-.batch-grid{{display:grid;grid-template-columns:1fr 1fr;gap:{gap}mm}}.batch-grid .ps{{font-size:{font}px}}.batch-grid .ps-head{{padding:7px 9px;border-bottom-width:2px}}.batch-grid .ps-title{{font-size:{title}px}}.batch-grid .ps-period{{font-size:8px}}.batch-grid .ps-person{{padding:6px 9px;gap:5px}}.batch-grid .ps-label{{font-size:7px}}.batch-grid .ps-value{{font-size:9px}}.batch-grid .ps-body{{padding:6px 9px}}.batch-grid .ps-columns{{gap:6px}}.batch-grid .ps-box-title{{padding:3px 5px;font-size:8px}}.batch-grid .ps-row{{padding:2px 5px;font-size:7.5px}}.batch-grid .ps-net{{margin-top:5px;padding:4px 6px;font-size:9px}}.batch-grid .ps-declaration{{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}}.batch-grid .ps-sign{{margin-top:7px;gap:12px;font-size:7px}}.batch-grid .ps-sign div{{padding-top:10px}}.batch-grid .ps-foot{{padding:2px 8px;font-size:6px}}.batch-grid .ps:nth-child({per_page}n){{page-break-after:always;break-after:page}}@page{{size:A4 portrait;margin:7mm}}
+		card_css = f"""
+.batch-grid .ps{{height:100%;font-size:{font}px;display:flex;flex-direction:column}}
+.batch-grid .ps-head{{padding:7px 9px;border-bottom-width:2px}}.batch-grid .ps-title{{font-size:{title}px}}.batch-grid .ps-period{{font-size:8px}}.batch-grid .ps-person{{padding:6px 9px;gap:5px}}.batch-grid .ps-label{{font-size:7px}}.batch-grid .ps-value{{font-size:9px}}.batch-grid .ps-body{{padding:6px 9px;flex:1}}.batch-grid .ps-columns{{gap:6px}}.batch-grid .ps-box-title{{padding:3px 5px;font-size:8px}}.batch-grid .ps-row{{padding:2px 5px;font-size:7.5px}}.batch-grid .ps-net{{margin-top:5px;padding:4px 6px;font-size:9px}}.batch-grid .ps-declaration{{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}}.batch-grid .ps-sign{{margin-top:7px;gap:12px;font-size:7px}}.batch-grid .ps-sign div{{padding-top:10px}}.batch-grid .ps-foot{{padding:2px 8px;font-size:6px}}
+"""
+	layout_css = f"""
+.batch-grid{{display:grid;grid-template-columns:repeat({columns},1fr);grid-template-rows:repeat({rows},1fr);gap:{gap};height:280mm;page-break-after:always;break-after:page}}
+.batch-grid:last-of-type{{page-break-after:auto;break-after:auto}}
+.batch-grid>.ps{{min-height:0}}
+{card_css}
+@page{{size:A4 portrait;margin:7mm}}
 """
 	return PAYSLIP_CSS + f"""
 <style>
 {layout_css}
 </style>
-<div class="batch-grid">
 {{% for employee_group in doc.employees|groupby("employee") %}}
+ {{% if loop.index0 % {per_page} == 0 %}}<div class="batch-grid">{{% endif %}}
  {{% set payslip_name = frappe.db.get_value("Employee Consolidated Payslip", {{"employee": employee_group.grouper, "start_date": doc.start_date, "end_date": doc.end_date}}, "name") %}}
  {{% if payslip_name %}}{{% set slip = frappe.get_doc("Employee Consolidated Payslip", payslip_name) %}}{PAYSLIP_CARD}{{% endif %}}
-{{% endfor %}}
-</div>"""
+ {{% if loop.index % {per_page} == 0 or loop.last %}}</div>{{% endif %}}
+{{% endfor %}}"""
 
 
 def ensure_consolidated_payslip_print_format():
