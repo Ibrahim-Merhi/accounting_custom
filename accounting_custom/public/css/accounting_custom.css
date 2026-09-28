@@ -139,6 +139,12 @@
 	flex: 0 0 100% !important;
 }
 
+.salary-profile-form-section .salary-profile-form-column > form > .input-max-width {
+	width: 100% !important;
+	max-width: none !important;
+	padding-right: 0 !important;
+}
+
 .salary-profile-form-section .salary-profile-form-column ~ .form-column:empty {
 	display: none !important;
 }
