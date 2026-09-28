@@ -403,8 +403,8 @@ def _batch_payslip_html(per_page):
 		card_css = ""
 	elif per_page == 4:
 		card_css = """
-.batch-grid .ps{height:100%;font-size:11px;display:flex;flex-direction:column}
-.batch-grid .ps-head{padding:12px 14px;border-bottom-width:3px}.batch-grid .ps-title{font-size:20px}.batch-grid .ps-period{font-size:10px;line-height:1.5}.batch-grid .ps-person{padding:10px 14px;gap:9px}.batch-grid .ps-label{font-size:9px}.batch-grid .ps-value{font-size:12px}.batch-grid .ps-body{padding:10px 12px;flex:1;display:flex;flex-direction:column;gap:8px}.batch-grid .ps-columns{gap:9px}.batch-grid .ps-box-title{padding:6px 8px;font-size:11px}.batch-grid .ps-row{padding:5px 8px;font-size:10px}.batch-grid .ps-net{margin-top:0;padding:8px 10px;font-size:13px}.batch-grid .ps-declaration{margin-top:0;padding:7px 8px;font-size:9px;line-height:1.5}.batch-grid .ps-sign{margin-top:auto;gap:18px;font-size:10px}.batch-grid .ps-sign div{padding-top:22px}.batch-grid .ps-foot{padding:5px 10px;font-size:8px}
+.batch-grid .ps{height:100%;font-size:13px;display:flex;flex-direction:column}
+.batch-grid .ps-head{padding:12px 14px;border-bottom-width:3px}.batch-grid .ps-title{font-size:24px}.batch-grid .ps-period{font-size:12px;line-height:1.5}.batch-grid .ps-person{padding:10px 14px;gap:9px}.batch-grid .ps-label{font-size:11px}.batch-grid .ps-value{font-size:14px}.batch-grid .ps-body{padding:10px 12px;flex:1;display:flex;flex-direction:column;gap:8px}.batch-grid .ps-columns{gap:9px}.batch-grid .ps-box-title{padding:7px 8px;font-size:13px}.batch-grid .ps-row{padding:6px 8px;font-size:12px}.batch-grid .ps-net{margin-top:0;padding:9px 10px;font-size:15px}.batch-grid .ps-declaration{margin-top:0;padding:8px;font-size:11px;line-height:1.5}.batch-grid .ps-sign{margin-top:auto;gap:18px;font-size:12px}.batch-grid .ps-sign div{padding-top:22px}.batch-grid .ps-foot{padding:5px 10px;font-size:9px}
 """
 	else:
 		card_css = """
