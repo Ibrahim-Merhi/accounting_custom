@@ -12,6 +12,7 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 		frm.set_query("source_cost_center", "manual_deductions", (_doc, cdt, cdn) => ({filters:{name:["in",get_source_allocations(frm, locals[cdt][cdn]).filter(r=>!locals[cdt][cdn].source_account || r.account===locals[cdt][cdn].source_account).map(r=>r.cost_center)]}}));
 	},
 	refresh(frm) {
+		render_company_summary(frm);
 		if (!frm.is_new() && frm.doc.docstatus===0 && !frm.doc.companies?.some(r=>r.payroll_entry)) {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}
@@ -32,40 +33,45 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 });
 
 
-function show_company_payroll_entries(frm) {
-	const entries = (frm.doc.companies || []).filter((row) => row.payroll_entry);
-	if (!entries.length) {
-		frappe.msgprint(__("No company Payroll Entries were generated for this run."));
-		return;
-	}
-	if (entries.length === 1) {
-		frappe.set_route("Form", "Payroll Entry", entries[0].payroll_entry);
-		return;
-	}
+function payroll_entries(frm) {
+	const entries = new Map();
+	(frm.doc.employees || []).forEach((row) => {
+		if (row.source_payroll_entry) entries.set(row.source_payroll_entry, {payroll_entry: row.source_payroll_entry, company: row.company, status: row.status});
+	});
+	(frm.doc.companies || []).forEach((row) => {
+		if (row.payroll_entry) entries.set(row.payroll_entry, {payroll_entry: row.payroll_entry, company: row.company, status: row.status});
+	});
+	return [...entries.values()];
+}
 
+function render_company_summary(frm) {
+	const submitted = frm.doc.docstatus === 1;
+	frm.toggle_display("company_summary_html", submitted);
+	frm.toggle_display("companies", !submitted);
+	if (!submitted || !frm.fields_dict.company_summary_html) return;
 	const escape = (value) => frappe.utils.escape_html(String(value || ""));
-	const dialog = new frappe.ui.Dialog({
-		title: __("Continue Payroll Processing"),
-		fields: [{fieldtype: "HTML", fieldname: "payroll_entries"}],
+	const summaries = new Map();
+	(frm.doc.companies || []).forEach((row) => {
+		if (!summaries.has(row.company)) summaries.set(row.company, {company: row.company, account: row.payroll_payable_account, currency: row.currency, gross: 0, employees: new Set(), entries: new Set()});
+		const item = summaries.get(row.company); item.gross += flt(row.gross_salary); if (row.payroll_entry) item.entries.add(row.payroll_entry);
 	});
-	const rows = entries.map((row) => `
-		<div class="d-flex align-items-center justify-content-between border-bottom py-3">
-			<div>
-				<div class="font-weight-bold">${escape(row.company)}</div>
-				<div class="text-muted small">${escape(row.payroll_entry)} · ${escape(row.status || __("Ready"))}</div>
-			</div>
-			<button class="btn btn-sm btn-primary open-company-payroll" data-payroll-entry="${escape(row.payroll_entry)}">
-				${__("Open Payroll Entry")}
-			</button>
-		</div>`).join("");
-	dialog.fields_dict.payroll_entries.$wrapper.html(`
-		<p class="text-muted mb-2">${__("Complete the payment step for each company. Each entry keeps its own payable account, currency, and accounting records.")}</p>
-		${rows}
-	`);
-	dialog.fields_dict.payroll_entries.$wrapper.on("click", ".open-company-payroll", (event) => {
-		dialog.hide();
-		frappe.set_route("Form", "Payroll Entry", event.currentTarget.dataset.payrollEntry);
+	(frm.doc.employees || []).forEach((row) => {
+		if (!summaries.has(row.company)) summaries.set(row.company, {company: row.company, account: "", currency: "", gross: 0, employees: new Set(), entries: new Set()});
+		const item = summaries.get(row.company); item.employees.add(row.employee); if (row.source_payroll_entry) item.entries.add(row.source_payroll_entry);
 	});
+	const rows = [...summaries.values()].map((item) => `<tr><td><strong>${escape(item.company)}</strong></td><td>${escape(item.account)}</td><td>${escape(item.currency)}</td><td class="text-right">${item.employees.size}</td><td class="text-right">${format_currency(item.gross, item.currency, 0)}</td><td>${[...item.entries].map(name => `<a href="/app/payroll-entry/${encodeURIComponent(name)}">${escape(name)}</a>`).join("<br>")}</td><td><span class="indicator-pill green">${__("Completed")}</span></td></tr>`).join("");
+	frm.fields_dict.company_summary_html.$wrapper.html(`<div class="table-responsive"><table class="table table-bordered"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Payroll Payable Account")}</th><th>${__("Currency")}</th><th class="text-right">${__("Employees")}</th><th class="text-right">${__("Gross Salary")}</th><th>${__("Payroll Entries")}</th><th>${__("Status")}</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+}
+
+function show_company_payroll_entries(frm) {
+	const entries = payroll_entries(frm);
+	if (!entries.length) { frappe.msgprint(__("No company Payroll Entries were generated for this run.")); return; }
+	if (entries.length === 1) { frappe.set_route("Form", "Payroll Entry", entries[0].payroll_entry); return; }
+	const escape = (value) => frappe.utils.escape_html(String(value || ""));
+	const dialog = new frappe.ui.Dialog({title: __("Continue Payroll Processing"), fields: [{fieldtype: "HTML", fieldname: "payroll_entries"}]});
+	const rows = entries.map((row) => `<div class="d-flex align-items-center justify-content-between border-bottom py-3"><div><div class="font-weight-bold">${escape(row.company)}</div><div class="text-muted small">${escape(row.payroll_entry)} · ${escape(row.status || __("Ready"))}</div></div><button class="btn btn-sm btn-primary open-company-payroll" data-payroll-entry="${escape(row.payroll_entry)}">${__("Open Payroll Entry")}</button></div>`).join("");
+	dialog.fields_dict.payroll_entries.$wrapper.html(`<p class="text-muted mb-2">${__("Complete the payment step for each underlying Payroll Entry. The summary remains one row per company.")}</p>${rows}`);
+	dialog.fields_dict.payroll_entries.$wrapper.on("click", ".open-company-payroll", (event) => {dialog.hide(); frappe.set_route("Form", "Payroll Entry", event.currentTarget.dataset.payrollEntry);});
 	dialog.show();
 }
 

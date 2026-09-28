@@ -71,6 +71,18 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         entry.save.assert_called_once()
         self.assertIsNone(entry.custom_payment_payroll_run)
 
+    def test_company_entry_names_keep_all_entries_without_duplicate_company_rows(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "companies": [{"company": "Company", "payroll_entry": "PE-NEW"}],
+            "employees": [
+                {"employee": "MASTER-1", "company": "Company", "payroll_employee": "PAY-1", "source_payroll_entry": "PE-OLD"},
+                {"employee": "MASTER-2", "company": "Company", "payroll_employee": "PAY-2", "source_payroll_entry": "PE-NEW"},
+                {"employee": "MASTER-3", "company": "Other", "payroll_employee": "PAY-3", "source_payroll_entry": "PE-OTHER"},
+            ],
+        })
+        self.assertEqual(run._company_entry_names("Company", run.companies[0]), ["PE-NEW", "PE-OLD"])
+
     def test_outstanding_payable_subtracts_prior_bank_payments(self):
         entry = CustomPayrollEntry({"doctype": "Payroll Entry", "name": "PE-1", "payroll_payable_account": "Payable"})
         payable = [frappe._dict({"employee": "EMP-1", "cost_center": "CC-1", "amount": 500})]

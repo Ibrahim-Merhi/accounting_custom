@@ -54,26 +54,35 @@ class MultiCompanyPayrollRun(Document):
 		)
 
 	def on_cancel(self):
+		processed = set()
 		for row in reversed(self.companies):
-			if not row.payroll_entry or not frappe.db.exists("Payroll Entry", row.payroll_entry):
-				continue
-			entry = frappe.get_doc("Payroll Entry", row.payroll_entry)
-			if entry.get("custom_multi_company_payroll_run") != self.name:
-				linked_payment = frappe.db.exists("Journal Entry", {"custom_multi_company_payroll_run": self.name, "docstatus": ["<", 2]})
-				if linked_payment:
-					frappe.throw(_("Cancel or delete Bank Entry {0} before cancelling this payroll release.").format(linked_payment))
-				if entry.get("custom_payment_payroll_run") == self.name:
-					entry.set("custom_bank_payment_allocations", [])
-					entry.custom_payment_payroll_run = None
-					entry.flags.ignore_validate_update_after_submit = True
-					entry.save(ignore_permissions=True)
-				continue
-			if entry.docstatus == 1:
-				entry.cancel()
-			elif entry.docstatus == 0:
-				for slip in entry.get_linked_salary_slips():
-					frappe.delete_doc("Salary Slip", slip.name, ignore_permissions=True)
+			for entry_name in reversed(self._company_entry_names(row.company, row)):
+				if entry_name in processed or not frappe.db.exists("Payroll Entry", entry_name):
+					continue
+				processed.add(entry_name)
+				entry = frappe.get_doc("Payroll Entry", entry_name)
+				if entry.get("custom_multi_company_payroll_run") != self.name:
+					linked_payment = frappe.db.exists("Journal Entry", {"custom_multi_company_payroll_run": self.name, "docstatus": ["<", 2]})
+					if linked_payment:
+						frappe.throw(_("Cancel or delete Bank Entry {0} before cancelling this payroll release.").format(linked_payment))
+					if entry.get("custom_payment_payroll_run") == self.name:
+						entry.set("custom_bank_payment_allocations", [])
+						entry.custom_payment_payroll_run = None
+						entry.flags.ignore_validate_update_after_submit = True
+						entry.save(ignore_permissions=True)
+					continue
+				if entry.docstatus == 1:
+					entry.cancel()
+				elif entry.docstatus == 0:
+					for slip in entry.get_linked_salary_slips():
+						frappe.delete_doc("Salary Slip", slip.name, ignore_permissions=True)
 		self.db_set("status", "Cancelled", update_modified=False)
+
+	def _company_entry_names(self, company, company_row=None):
+		entries = {row.source_payroll_entry for row in self.employees if row.company == company and row.source_payroll_entry}
+		if company_row and company_row.payroll_entry:
+			entries.add(company_row.payroll_entry)
+		return sorted(entries)
 
 	def _validate_company_rows(self, require_accounts=False):
 		for row in self.companies:
@@ -174,14 +183,18 @@ class MultiCompanyPayrollRun(Document):
 			net_after_deductions = net if entry else net - scheduled
 			outstanding = max(net_after_deductions - paid, 0)
 			self.append("employees", {"employee": employee, "employee_name": data["name"], "company": company, "payroll_employee": payroll_employee, "gross_salary": net, "deductions": scheduled, "previously_paid": paid, "pay_this_run": outstanding, "deferred_amount": 0, "net_salary": net_after_deductions, "source_payroll_entry": entry or None, "salary_slip": data["slip"].name if data["slip"] else None, "status": "Outstanding Payment" if entry else "Ready"})
-			g = groups.setdefault((company, entry), {"employees": set(), "amount": 0})
+			g = groups.setdefault(company, {"employees": set(), "amount": 0, "entries": set(), "needs_new_entry": False})
 			g["employees"].add(payroll_employee)
 			g["amount"] += outstanding
+			if entry: g["entries"].add(entry)
+			else: g["needs_new_entry"] = True
 		if not self.employees:
 			frappe.throw(_("No unpaid employees were found for this payroll month."))
-		for (company, entry), data in sorted(groups.items()):
+		for company, data in sorted(groups.items()):
 			payable, currency = frappe.db.get_value("Company", company, ["default_payroll_payable_account", "default_currency"]) or (None, None)
-			self.append("companies", {"company": company, "payroll_payable_account": payable, "currency": currency, "employee_count": len(data["employees"]), "gross_salary": data["amount"], "payroll_entry": entry or None, "status": "Outstanding Payment" if entry else "Ready"})
+			entry = next(iter(data["entries"])) if len(data["entries"]) == 1 and not data["needs_new_entry"] else None
+			status = "Outstanding Payment" if data["entries"] and not data["needs_new_entry"] else "Ready"
+			self.append("companies", {"company": company, "payroll_payable_account": payable, "currency": currency, "employee_count": len(data["employees"]), "gross_salary": data["amount"], "payroll_entry": entry, "payroll_entry_count": len(data["entries"]), "status": status})
 		self.status = "Employees Loaded"
 		self.save()
 		return {"companies": len(self.companies), "employees": len(self.employees)}
@@ -217,7 +230,7 @@ class MultiCompanyPayrollRun(Document):
 
 	def _process_company(self, row):
 		if not row.payroll_entry:
-			row.status = "Deferred"
+			row.status = "Payment Release" if self._company_entry_names(row.company, row) else "Deferred"
 			return
 		entry=frappe.get_doc("Payroll Entry", row.payroll_entry)
 		if len(entry.employees)>30: frappe.throw(_("Company {0} has more than 30 employees. Split the run to ensure synchronous audited processing.").format(row.company))
@@ -241,45 +254,51 @@ class MultiCompanyPayrollRun(Document):
 
 	def _configure_payment_plans(self):
 		for company_row in self.companies:
-			if not company_row.payroll_entry:
-				continue
-			entry = frappe.get_doc("Payroll Entry", company_row.payroll_entry)
 			payment_account = frappe.db.get_value("Company", company_row.company, "custom_default_payroll_payment_account")
 			if not payment_account:
 				frappe.throw(_("Set Default Payroll Payment Account in Company {0}.").format(company_row.company))
-			plans = {r.payroll_employee: flt(r.pay_this_run) for r in self.employees if r.source_payroll_entry == entry.name}
-			entry.set("custom_bank_payment_allocations", [])
-			by_employee = {}
-			for payable in entry.get_outstanding_payable_rows():
-				by_employee.setdefault(payable.employee, []).append(payable)
-			for employee, target in plans.items():
-				rows = by_employee.get(employee, [])
-				available = sum(flt(row.amount) for row in rows)
-				if target > available + 0.01:
-					frappe.throw(_("Pay This Run for employee {0} exceeds the outstanding payable.").format(employee))
-				remaining = target
-				for index, payable in enumerate(rows):
-					amount = remaining if index == len(rows) - 1 else min(flt(payable.amount), flt(target) * flt(payable.amount) / available) if available else 0
-					remaining -= amount
-					if amount > 0.01:
-						entry.append("custom_bank_payment_allocations", {"employee": employee, "payment_account": payment_account, "cost_center": payable.cost_center, "amount": amount})
-			entry.payment_account = payment_account
-			entry.custom_payment_payroll_run = self.name
-			entry.flags.ignore_validate_update_after_submit = True
-			entry.save(ignore_permissions=True)
+			for entry_name in self._company_entry_names(company_row.company, company_row):
+				entry = frappe.get_doc("Payroll Entry", entry_name)
+				plans = {r.payroll_employee: flt(r.pay_this_run) for r in self.employees if r.source_payroll_entry == entry.name}
+				entry.set("custom_bank_payment_allocations", [])
+				by_employee = {}
+				for payable in entry.get_outstanding_payable_rows():
+					by_employee.setdefault(payable.employee, []).append(payable)
+				for employee, target in plans.items():
+					rows = by_employee.get(employee, [])
+					available = sum(flt(row.amount) for row in rows)
+					if target > available + 0.01:
+						frappe.throw(_("Pay This Run for employee {0} exceeds the outstanding payable.").format(employee))
+					remaining = target
+					for index, payable in enumerate(rows):
+						amount = remaining if index == len(rows) - 1 else min(flt(payable.amount), flt(target) * flt(payable.amount) / available) if available else 0
+						remaining -= amount
+						if amount > 0.01:
+							entry.append("custom_bank_payment_allocations", {"employee": employee, "payment_account": payment_account, "cost_center": payable.cost_center, "amount": amount})
+				entry.payment_account = payment_account
+				entry.custom_payment_payroll_run = self.name
+				entry.flags.ignore_validate_update_after_submit = True
+				entry.save(ignore_permissions=True)
 
 	def _refresh_generated_documents(self):
 		for company_row in self.companies:
-			if not company_row.payroll_entry:
-				continue
-			slips=frappe.get_all("Salary Slip", filters={"payroll_entry":company_row.payroll_entry,"docstatus":1}, fields=["name","employee","net_pay"])
-			company_row.salary_slip_count=len(slips)
-			journals=frappe.get_all("Journal Entry Account", filters={"reference_type":"Payroll Entry","reference_name":company_row.payroll_entry,"docstatus":1}, pluck="parent", distinct=True)
-			company_row.journal_entry=journals[0] if journals else None
-			by_employee={s.employee:s for s in slips}
+			entry_names = self._company_entry_names(company_row.company, company_row)
+			company_row.payroll_entry_count = len(entry_names)
+			all_slips, journals = [], []
+			for entry_name in entry_names:
+				all_slips.extend(frappe.get_all("Salary Slip", filters={"payroll_entry": entry_name, "docstatus": 1}, fields=["name", "employee", "net_pay"]))
+				journals.extend(frappe.get_all("Journal Entry Account", filters={"reference_type": "Payroll Entry", "reference_name": entry_name, "docstatus": 1}, pluck="parent", distinct=True))
+			company_row.salary_slip_count = len(all_slips)
+			company_row.journal_entry = journals[0] if len(set(journals)) == 1 else None
+			if len(entry_names) > 1:
+				company_row.payroll_entry = None
+			company_row.status = _("Completed ({0} Payroll Entries)").format(len(entry_names)) if len(entry_names) > 1 else "Completed"
+			by_employee = {slip.employee: slip for slip in all_slips}
 			for employee_row in self.employees:
-				if employee_row.source_payroll_entry != company_row.payroll_entry: continue
-				slip=by_employee.get(employee_row.payroll_employee)
-				employee_row.salary_slip=slip.name if slip else employee_row.salary_slip; employee_row.net_salary=slip.net_pay if slip else employee_row.net_salary; employee_row.status="Payment Ready" if employee_row.pay_this_run else "Deferred"
+				if employee_row.company != company_row.company: continue
+				slip = by_employee.get(employee_row.payroll_employee)
+				employee_row.salary_slip = slip.name if slip else employee_row.salary_slip
+				employee_row.net_salary = slip.net_pay if slip else employee_row.net_salary
+				employee_row.status = "Payment Ready" if employee_row.pay_this_run else "Deferred"
 		for employee in {row.employee for row in self.employees}:
 			sync_consolidated_payslip(employee, self.start_date, self.end_date)
