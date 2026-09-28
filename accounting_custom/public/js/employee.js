@@ -79,8 +79,16 @@ function render_salary_workspace(frm, profile) {
 	const field = frm.get_field("custom_secure_salary_profile");
 	if (!field) return;
 	const section = field.$wrapper.closest(".form-section");
+	const column = field.$wrapper.closest(".form-column");
 	section.addClass("salary-profile-form-section");
-	field.$wrapper.closest(".form-column").addClass("salary-profile-form-column");
+	column
+		.removeClass((_, classes) => (classes.match(/(^|\s)col-sm-\S+/g) || []).join(" "))
+		.addClass("col-sm-12 salary-profile-form-column")
+		.css({width: "100%", maxWidth: "100%", flex: "0 0 100%"});
+	field.$wrapper.closest(".input-max-width").css({width: "100%", maxWidth: "none", paddingRight: 0});
+	column.siblings(".form-column").filter(function () {
+		return !$(this).find(".frappe-control:visible").length;
+	}).hide();
 	const action_label = profile.exists ? __("Edit Present Salary") : __("Create Salary Profile");
 	field.$wrapper.html(`<div class="frappe-card salary-workspace">
 		<div class="salary-tabs" role="tablist" aria-label="${__("Salary Profile Sections")}">
