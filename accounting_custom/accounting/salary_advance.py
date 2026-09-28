@@ -7,6 +7,46 @@ from frappe.utils import add_months, flt, get_first_day, get_last_day, getdate
 from accounting_custom.accounting.employee_profile import get_payroll_employee
 
 
+def _deduction_component_for_account(company, advance_account):
+    if not company or not advance_account:
+        return None
+    components = frappe.get_all(
+        "Salary Component Account",
+        filters={"company": company, "account": advance_account},
+        pluck="parent",
+    )
+    for component in components:
+        if frappe.db.get_value("Salary Component", component, "type") == "Deduction":
+            return component
+    return None
+
+
+@frappe.whitelist()
+def get_salary_advance_defaults(employee_profile, company=None):
+    identities = frappe.get_all(
+        "Employee",
+        filters={"custom_master_employee": employee_profile, "status": "Active"},
+        fields=["name", "company"],
+        order_by="company asc",
+    )
+    if company:
+        identities = [row for row in identities if row.company == company]
+    options = []
+    for identity in identities:
+        advance_account, currency = frappe.db.get_value(
+            "Company", identity.company,
+            ["default_employee_advance_account", "default_currency"],
+        ) or (None, None)
+        options.append({
+            "employee": identity.name,
+            "company": identity.company,
+            "advance_account": advance_account,
+            "currency": currency,
+            "deduction_component": _deduction_component_for_account(identity.company, advance_account),
+        })
+    return options
+
+
 def prepare_salary_advance(doc, method=None):
     if not doc.get("custom_salary_installment_plan"):
         return
@@ -22,15 +62,33 @@ def prepare_salary_advance(doc, method=None):
         frappe.throw(_("Repayment Months must be at least 1."))
     if not doc.get("custom_repayment_start_date"):
         frappe.throw(_("Select a Repayment Start Month."))
-    if not doc.get("custom_salary_deduction_component"):
-        frappe.throw(_("Select a Salary Deduction Component."))
-    if frappe.db.get_value("Salary Component", doc.custom_salary_deduction_component, "type") != "Deduction":
-        frappe.throw(_("Salary Deduction Component must be a deduction."))
-    component_account = frappe.db.get_value("Salary Component Account", {"parent": doc.custom_salary_deduction_component, "company": doc.company}, "account")
-    if component_account != doc.advance_account:
-        frappe.throw(_("The deduction component account for {0} must be the Employee Advance account {1}.").format(doc.company, doc.advance_account))
+    default_account = frappe.db.get_value("Company", doc.company, "default_employee_advance_account")
+    doc.advance_account = default_account or doc.get("advance_account")
+    if not doc.advance_account:
+        frappe.throw(_("Set a Default Employee Advance Account for company {0}.").format(doc.company))
+    component = doc.get("custom_salary_deduction_component")
+    component_account = frappe.db.get_value(
+        "Salary Component Account",
+        {"parent": component, "company": doc.company},
+        "account",
+    ) if component else None
+    if (
+        not component
+        or frappe.db.get_value("Salary Component", component, "type") != "Deduction"
+        or component_account != doc.advance_account
+    ):
+        component = _deduction_component_for_account(doc.company, doc.advance_account)
+    if not component:
+        frappe.throw(_("Configure a deduction Salary Component using Employee Advance account {0} for company {1}.").format(doc.advance_account, doc.company))
+    doc.custom_salary_deduction_component = component
+    monthly_amount = flt(doc.get("custom_monthly_installment"))
+    if monthly_amount <= 0:
+        monthly_amount = flt(doc.advance_amount) / months
+    if abs(monthly_amount * months - flt(doc.advance_amount)) > 0.01:
+        frappe.throw(_("Monthly Deduction Amount x Number of Months must equal the Amount Given."))
     doc.custom_repayment_start_date = get_first_day(doc.custom_repayment_start_date)
-    doc.custom_monthly_installment = flt(doc.advance_amount) / months
+    doc.custom_monthly_installment = monthly_amount
+    doc.purpose = doc.purpose or _("Salary Advance")
 
 
 def create_installment_schedule(doc, method=None):
