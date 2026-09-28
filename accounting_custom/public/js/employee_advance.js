@@ -76,14 +76,10 @@ function configure_simple_salary_advance_form(frm) {
 }
 
 async function load_salary_advance_defaults(frm, company = null) {
-	const response = await frappe.call({
-		method: "accounting_custom.accounting.salary_advance.get_salary_advance_defaults",
-		args: {
-			employee_profile: frm.doc.custom_employee_profile,
-			company,
-		},
-	});
-	const options = response.message || [];
+	const options = await get_salary_advance_options(
+		frm.doc.custom_employee_profile,
+		company
+	);
 	if (!options.length) {
 		frappe.throw(__("This employee has no active company payroll details."));
 	}
@@ -116,6 +112,49 @@ async function load_salary_advance_defaults(frm, company = null) {
 		frm.salary_advance_applying_defaults = false;
 	}
 	configure_simple_salary_advance_form(frm);
+}
+
+async function get_salary_advance_options(employee_profile, selected_company = null) {
+	const employee = await frappe.db.get_doc("Employee", employee_profile);
+	let companies = [...new Set(
+		(employee.custom_branches || [])
+			.filter((row) => !row.left_position && row.company)
+			.map((row) => row.company)
+	)];
+	if (!companies.length && employee.company) companies = [employee.company];
+	if (selected_company) {
+		companies = companies.filter((company) => company === selected_company);
+	}
+
+	const deduction_components = await frappe.db.get_list("Salary Component", {
+		filters: { type: "Deduction", disabled: 0 },
+		fields: ["name"],
+		limit: 0,
+	});
+	const component_documents = await Promise.all(
+		deduction_components.map((row) => frappe.db.get_doc("Salary Component", row.name))
+	);
+
+	return Promise.all(companies.map(async (company) => {
+		const company_values = await frappe.db.get_value("Company", company, [
+			"default_employee_advance_account",
+			"default_currency",
+		]);
+		const message = company_values.message || {};
+		const deduction_component = component_documents.find((component) =>
+			(component.accounts || []).some((row) =>
+				row.company === company &&
+				row.account === message.default_employee_advance_account
+			)
+		)?.name;
+		return {
+			employee: employee_profile,
+			company,
+			advance_account: message.default_employee_advance_account,
+			currency: message.default_currency,
+			deduction_component,
+		};
+	}));
 }
 
 function set_default_monthly_deduction(frm) {
