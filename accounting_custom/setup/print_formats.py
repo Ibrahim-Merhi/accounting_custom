@@ -401,12 +401,15 @@ def _batch_payslip_html(per_page):
 	gap = "0" if per_page == 1 else ("6mm" if per_page == 6 else "8mm")
 	if per_page == 1:
 		card_css = ""
+	elif per_page == 4:
+		card_css = """
+.batch-grid .ps{height:100%;font-size:11px;display:flex;flex-direction:column}
+.batch-grid .ps-head{padding:12px 14px;border-bottom-width:3px}.batch-grid .ps-title{font-size:20px}.batch-grid .ps-period{font-size:10px;line-height:1.5}.batch-grid .ps-person{padding:10px 14px;gap:9px}.batch-grid .ps-label{font-size:9px}.batch-grid .ps-value{font-size:12px}.batch-grid .ps-body{padding:10px 12px;flex:1;display:flex;flex-direction:column;gap:8px}.batch-grid .ps-columns{gap:9px}.batch-grid .ps-box-title{padding:6px 8px;font-size:11px}.batch-grid .ps-row{padding:5px 8px;font-size:10px}.batch-grid .ps-net{margin-top:0;padding:8px 10px;font-size:13px}.batch-grid .ps-declaration{margin-top:0;padding:7px 8px;font-size:9px;line-height:1.5}.batch-grid .ps-sign{margin-top:auto;gap:18px;font-size:10px}.batch-grid .ps-sign div{padding-top:22px}.batch-grid .ps-foot{padding:5px 10px;font-size:8px}
+"""
 	else:
-		font = "8" if per_page == 6 else "9"
-		title = "14" if per_page == 6 else "16"
-		card_css = f"""
-.batch-grid .ps{{height:100%;font-size:{font}px;display:flex;flex-direction:column}}
-.batch-grid .ps-head{{padding:7px 9px;border-bottom-width:2px}}.batch-grid .ps-title{{font-size:{title}px}}.batch-grid .ps-period{{font-size:8px}}.batch-grid .ps-person{{padding:6px 9px;gap:5px}}.batch-grid .ps-label{{font-size:7px}}.batch-grid .ps-value{{font-size:9px}}.batch-grid .ps-body{{padding:6px 9px;flex:1}}.batch-grid .ps-columns{{gap:6px}}.batch-grid .ps-box-title{{padding:3px 5px;font-size:8px}}.batch-grid .ps-row{{padding:2px 5px;font-size:7.5px}}.batch-grid .ps-net{{margin-top:5px;padding:4px 6px;font-size:9px}}.batch-grid .ps-declaration{{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}}.batch-grid .ps-sign{{margin-top:7px;gap:12px;font-size:7px}}.batch-grid .ps-sign div{{padding-top:10px}}.batch-grid .ps-foot{{padding:2px 8px;font-size:6px}}
+		card_css = """
+.batch-grid .ps{height:100%;font-size:8px;display:flex;flex-direction:column}
+.batch-grid .ps-head{padding:7px 9px;border-bottom-width:2px}.batch-grid .ps-title{font-size:14px}.batch-grid .ps-period{font-size:8px}.batch-grid .ps-person{padding:6px 9px;gap:5px}.batch-grid .ps-label{font-size:7px}.batch-grid .ps-value{font-size:9px}.batch-grid .ps-body{padding:6px 9px;flex:1;display:flex;flex-direction:column}.batch-grid .ps-columns{gap:6px}.batch-grid .ps-box-title{padding:3px 5px;font-size:8px}.batch-grid .ps-row{padding:2px 5px;font-size:7.5px}.batch-grid .ps-net{margin-top:5px;padding:4px 6px;font-size:9px}.batch-grid .ps-declaration{margin-top:5px;padding:3px 5px;font-size:7px;line-height:1.35}.batch-grid .ps-sign{margin-top:auto;gap:12px;font-size:7px}.batch-grid .ps-sign div{padding-top:10px}.batch-grid .ps-foot{padding:2px 8px;font-size:6px}
 """
 	layout_css = f"""
 .batch-grid{{display:grid;grid-template-columns:repeat({columns},1fr);grid-template-rows:repeat({rows},1fr);gap:{gap};height:280mm;page-break-after:always;break-after:page}}
