@@ -308,7 +308,9 @@ async function set_all_journal_exchange_rates(frm, mandatory = false) {
 		for (const row of frm.doc.accounts || []) {
 			if (!row.account_currency) continue;
 			const rate = await fetch_company_rate(frm, row.account_currency, frm.doc.posting_date, mandatory);
-			await frappe.model.set_value(row.doctype, row.name, "exchange_rate", rate);
+			if (Math.abs(flt(row.exchange_rate) - rate) > 0.0000001) {
+				await frappe.model.set_value(row.doctype, row.name, "exchange_rate", rate);
+			}
 		}
 		frm.refresh_field("accounts");
 	} catch (error) {
@@ -323,7 +325,9 @@ async function set_journal_row_exchange_rate(frm, cdt, cdn) {
 	const row = locals[cdt][cdn];
 	if (!row?.account_currency || !frm.doc.company || !frm.doc.posting_date) return;
 	const rate = await fetch_company_rate(frm, row.account_currency, frm.doc.posting_date, false);
-	await frappe.model.set_value(cdt, cdn, "exchange_rate", rate);
+	if (Math.abs(flt(row.exchange_rate) - rate) > 0.0000001) {
+		await frappe.model.set_value(cdt, cdn, "exchange_rate", rate);
+	}
 }
 
 async function set_payment_exchange_rates(frm, mandatory = false) {
