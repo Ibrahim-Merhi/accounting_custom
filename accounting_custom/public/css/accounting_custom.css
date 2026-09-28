@@ -366,9 +366,8 @@
 	vertical-align: middle;
 }
 
-.salary-workspace .table > thead.bg-light > tr > th,
-.salary-workspace .table > thead > tr.bg-light > th {
-	background: var(--subtle-fg) !important;
+.salary-workspace .table > thead.salary-table-head > tr > th {
+	background-color: var(--subtle-fg) !important;
 	color: var(--heading-color) !important;
 }
 
@@ -393,10 +392,14 @@
 	color: var(--heading-color);
 }
 
-.salary-workspace .salary-tab .badge.badge-light {
+.salary-workspace .salary-tab-count {
 	border-color: var(--border-color);
-	background: var(--control-bg);
-	color: var(--text-color);
+	background-color: var(--control-bg) !important;
+	color: var(--text-color) !important;
+}
+
+.salary-workspace .salary-emphasis {
+	color: var(--primary) !important;
 }
 
 [data-theme="dark"] .salary-workspace {
@@ -418,4 +421,52 @@
 [data-theme="dark"] .salary-workspace .salary-revision-card,
 [data-theme="dark"] .salary-workspace .salary-revision-component {
 	border-color: var(--dark-border-color);
+}
+
+
+[data-theme="dark"] .salary-workspace,
+[data-theme="dark"] .salary-workspace .salary-tab-content {
+	background-color: #171717 !important;
+	color: #f3f3f3 !important;
+}
+
+[data-theme="dark"] .salary-workspace .table > thead.salary-table-head > tr > th {
+	border-color: #383838 !important;
+	background-color: #2a2a2a !important;
+	color: #f3f3f3 !important;
+}
+
+[data-theme="dark"] .salary-workspace .table > tbody > tr > td {
+	border-color: #383838 !important;
+	background-color: #171717 !important;
+	color: #f3f3f3 !important;
+}
+
+[data-theme="dark"] .salary-workspace .table > tfoot > tr > td {
+	border-color: #383838 !important;
+	background-color: #232323 !important;
+	color: #ffffff !important;
+}
+
+[data-theme="dark"] .salary-workspace .border.rounded,
+[data-theme="dark"] .salary-workspace .salary-revision-component,
+[data-theme="dark"] .salary-workspace .salary-revision-changes,
+[data-theme="dark"] .salary-workspace .salary-revision-details {
+	border-color: #383838 !important;
+	background-color: #232323 !important;
+	color: #f3f3f3 !important;
+}
+
+[data-theme="dark"] .salary-workspace .salary-emphasis {
+	color: #7db5ff !important;
+}
+
+[data-theme="dark"] .salary-workspace .salary-tab-count {
+	border: 1px solid #555 !important;
+	background-color: #383838 !important;
+	color: #ffffff !important;
+}
+
+[data-theme="dark"] .salary-workspace .text-muted {
+	color: #b8b8b8 !important;
 }

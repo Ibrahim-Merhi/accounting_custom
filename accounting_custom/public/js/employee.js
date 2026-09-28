@@ -84,7 +84,7 @@ function render_salary_workspace(frm, profile) {
 			<button type="button" class="salary-tab active" role="tab" aria-selected="true" data-salary-tab="present">${__("Present Salary")}</button>
 			<button type="button" class="salary-tab" role="tab" aria-selected="false" data-salary-tab="past">
 				<span>${__("Past Salary and Changes")}</span>
-				<span class="badge badge-light">${profile.revision_count || 0}</span>
+				<span class="badge salary-tab-count">${profile.revision_count || 0}</span>
 			</button>
 		</div>
 		<div class="salary-tab-content p-4" data-salary-panel="present">
@@ -128,7 +128,7 @@ function render_present_salary(profile) {
 }
 
 function salary_total_card(label, value, emphasized = false) {
-	return `<div class="col-sm-3 mb-3"><div class="border rounded p-3 h-100"><small class="text-muted">${label}</small><div class="${emphasized ? "font-weight-bold text-primary" : "font-weight-bold"}">${format_salary_amount(value)}</div></div></div>`;
+	return `<div class="col-sm-3 mb-3"><div class="border rounded p-3 h-100"><small class="text-muted">${label}</small><div class="${emphasized ? "font-weight-bold salary-emphasis" : "font-weight-bold"}">${format_salary_amount(value)}</div></div></div>`;
 }
 
 function render_allocation_table(label, allocations) {
@@ -136,7 +136,7 @@ function render_allocation_table(label, allocations) {
 	const rows = allocations.map((row) => `<tr><td>${escape_html(row.company)}</td><td>${escape_html(row.account)}</td><td>${escape_html(row.cost_center)}</td><td class="text-right">${format_salary_amount(row.amount)}</td><td class="text-right">${format_percent(row.percentage)}</td></tr>`).join("");
 	const total_amount = allocations.reduce((sum, row) => sum + flt(row.amount), 0);
 	const total_percentage = allocations.reduce((sum, row) => sum + flt(row.percentage), 0);
-	return `<div class="mb-4"><div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">${label}</h6><span class="text-muted small">${allocations.length} ${__("allocation(s)")}</span></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="bg-light"><tr><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th class="text-right">${__("Amount")}</th><th class="text-right">${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="font-weight-bold"><td colspan="3">${__("Total")}</td><td class="text-right">${format_salary_amount(total_amount)}</td><td class="text-right">${format_percent(total_percentage)}</td></tr></tfoot></table></div></div>`;
+	return `<div class="mb-4"><div class="d-flex justify-content-between align-items-center mb-2"><h6 class="mb-0">${label}</h6><span class="text-muted small">${allocations.length} ${__("allocation(s)")}</span></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="salary-table-head"><tr><th>${__("Company")}</th><th>${__("Account")}</th><th>${__("Cost Center")}</th><th class="text-right">${__("Amount")}</th><th class="text-right">${__("Percentage")}</th></tr></thead><tbody>${rows}</tbody><tfoot><tr class="font-weight-bold"><td colspan="3">${__("Total")}</td><td class="text-right">${format_salary_amount(total_amount)}</td><td class="text-right">${format_percent(total_percentage)}</td></tr></tfoot></table></div></div>`;
 }
 
 function render_salary_history(revisions) {
@@ -149,7 +149,7 @@ function render_salary_history(revisions) {
 			<div class="salary-revision-card-body">
 				<div class="salary-revision-heading">
 					<div><span class="badge ${current ? "badge-success" : "badge-secondary"} mr-2">${current ? __("Current") : __("Archived")}</span><strong>${__("Revision")} #${row.revision_number}</strong></div>
-					<div class="font-weight-bold text-primary">${format_salary_amount(row.total_salary)}</div>
+					<div class="font-weight-bold salary-emphasis">${format_salary_amount(row.total_salary)}</div>
 				</div>
 				<div class="row salary-revision-meta">
 					<div class="col-md-4"><strong>${__("Effective Period")}:</strong> ${period}</div>
@@ -281,7 +281,7 @@ function update_salary_dialog_totals(dialog) {
 function render_salary_slips(slips) {
 	if (!slips || !slips.length) return "";
 	const rows = slips.map((slip) => `<tr><td><a href="/app/employee-consolidated-payslip/${encodeURIComponent(slip.name)}"><strong>${escape_html(slip.name)}</strong></a><div class="text-muted small">${slip.company_count} ${__("companies")}</div></td><td>${frappe.datetime.str_to_user(slip.start_date)} – ${frappe.datetime.str_to_user(slip.end_date)}</td><td><span class="indicator-pill ${slip.status === "Submitted" ? "green" : "orange"}">${__(slip.status)}</span></td><td class="text-right">${format_salary_amount(slip.gross_pay, slip.currency)}</td><td class="text-right">${format_salary_amount(slip.total_deduction, slip.currency)}</td><td class="text-right font-weight-bold">${format_salary_amount(slip.net_pay, slip.currency)}</td><td><a class="btn btn-xs btn-primary" target="_blank" href="/printview?doctype=Employee%20Consolidated%20Payslip&name=${encodeURIComponent(slip.name)}&format=Employee%20Payslip%20-%20Professional&no_letterhead=1&trigger_print=1">${__("Print Payslip")}</a></td></tr>`).join("");
-	return `<div class="mt-4"><div class="d-flex justify-content-between align-items-center mb-2"><div><h5 class="mb-1">${__("Payslips")}</h5><div class="text-muted small">${__("One consolidated payslip per pay period; company accounting is shown inside.")}</div></div></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="bg-light"><tr><th>${__("Payslip")}</th><th>${__("Period")}</th><th>${__("Status")}</th><th class="text-right">${__("Gross Pay")}</th><th class="text-right">${__("Deductions")}</th><th class="text-right">${__("Net Pay")}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+	return `<div class="mt-4"><div class="d-flex justify-content-between align-items-center mb-2"><div><h5 class="mb-1">${__("Payslips")}</h5><div class="text-muted small">${__("One consolidated payslip per pay period; company accounting is shown inside.")}</div></div></div><div class="table-responsive"><table class="table table-bordered table-hover"><thead class="salary-table-head"><tr><th>${__("Payslip")}</th><th>${__("Period")}</th><th>${__("Status")}</th><th class="text-right">${__("Gross Pay")}</th><th class="text-right">${__("Deductions")}</th><th class="text-right">${__("Net Pay")}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function format_salary_amount(value, currency) {
