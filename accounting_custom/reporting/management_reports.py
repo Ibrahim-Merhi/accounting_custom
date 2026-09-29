@@ -158,7 +158,7 @@ def period_balance_comparison(filters, cash_bank=False):
 		{"fieldname":"dimension","label":_("Account" if cash_bank else "Cost Center"),"fieldtype":"Data","width":240},
 		{"fieldname":"previous_balance","label":_("Previous Period"),"fieldtype":"Currency","width":150},
 		{"fieldname":"current_balance","label":_("Current Period"),"fieldtype":"Currency","width":150},
-		{"fieldname":"change","label":_("Change"),"fieldtype":"Currency","width":140},
+		{"fieldname":"balance_change","label":_("Change"),"fieldtype":"Currency","width":140},
 	]
 	dimension = "gle.account" if cash_bank else "coalesce(gle.cost_center, 'Unassigned')"
 	account_join = "inner join `tabAccount` account on account.name=gle.account" if cash_bank else ""
@@ -168,7 +168,7 @@ def period_balance_comparison(filters, cash_bank=False):
 		sum(case when gle.posting_date <= %(previous_to)s then gle.debit-gle.credit else 0 end) previous_balance,
 		sum(case when gle.posting_date <= %(current_to)s then gle.debit-gle.credit else 0 end) current_balance,
 		sum(case when gle.posting_date <= %(current_to)s then gle.debit-gle.credit else 0 end)
-		-sum(case when gle.posting_date <= %(previous_to)s then gle.debit-gle.credit else 0 end) change
+		-sum(case when gle.posting_date <= %(previous_to)s then gle.debit-gle.credit else 0 end) balance_change
 		from `tabGL Entry` gle {account_join}
 		where gle.company=%(company)s and gle.is_cancelled=0 {account_condition}
 		group by {dimension} order by {dimension}""", filters, as_dict=True,
