@@ -92,18 +92,31 @@ function configure_simple_salary_advance_form(frm) {
 	const simple_fields = [
 		"employee", "employee_name", "posting_date", "department", "currency_section",
 		"currency", "exchange_rate", "purpose", "paid_amount", "pending_amount",
-		"claimed_amount", "section_break_7",
+		"claimed_amount",
 		"repay_unclaimed_amount_from_salary", "more_info_section",
 		"custom_salary_installment_plan", "custom_salary_deduction_component",
 	];
 	simple_fields.forEach((fieldname) => frm.toggle_display(fieldname, false));
 	frm.toggle_display("company", Boolean(frm.salary_advance_companies?.length > 1));
 	frm.toggle_enable("company", frm.is_new());
+	[
+		"section_break_7",
+		"advance_account",
+		"custom_advance_cost_center",
+		"mode_of_payment",
+	].forEach((fieldname) => frm.toggle_display(fieldname, true));
+	frm.set_df_property("section_break_8", "label", __("Advance Amount"));
+	frm.set_df_property("custom_salary_installment_section", "label", __("Repayment Plan"));
+	frm.set_df_property("section_break_7", "label", __("Payment & Accounting"));
 	frm.set_df_property("advance_amount", "label", __("Amount Given"));
+	frm.set_df_property("advance_account", "description", __("Account used to track the amount owed by the employee."));
+	frm.set_df_property("custom_advance_cost_center", "description", __("Cost center used for the advance payment and payroll recovery."));
+	frm.set_df_property("mode_of_payment", "description", __("Select how the advance will be paid to the employee."));
 	frm.set_df_property("custom_monthly_installment", "label", __("Monthly Deduction Amount"));
 	frm.set_df_property("custom_repayment_start_date", "label", __("Deduction Start Date"));
 	frm.set_df_property("custom_monthly_installment", "read_only", 0);
 	frm.set_df_property("advance_account", "reqd", 1);
+	frm.set_df_property("custom_advance_cost_center", "reqd", 1);
 	frm.set_df_property("mode_of_payment", "reqd", 1);
 }
 
