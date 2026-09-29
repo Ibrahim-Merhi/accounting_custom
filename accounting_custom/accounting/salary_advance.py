@@ -8,6 +8,54 @@ from frappe.utils import add_months, flt, get_first_day, get_last_day, getdate
 from accounting_custom.accounting.employee_profile import get_payroll_employee
 
 
+def ensure_itihad_salary_advance_setup():
+    """Create the requested Itihad employee-advance ledger and payroll mapping."""
+    company = "Itihad"
+    if not frappe.db.exists("Company", company):
+        return
+    parent = "4280 - Employees Accounts Receivable - ITHD"
+    if not frappe.db.exists("Account", parent):
+        return
+    account = frappe.db.get_value(
+        "Account", {"company": company, "account_number": "429", "is_group": 0}, "name"
+    )
+    if not account:
+        account_doc = frappe.get_doc({
+            "doctype": "Account",
+            "account_name": "Employee Salary Advances",
+            "account_number": "429",
+            "parent_account": parent,
+            "company": company,
+            "account_currency": frappe.db.get_value("Company", company, "default_currency") or "USD",
+            "is_group": 0,
+        })
+        account_doc.insert(ignore_permissions=True)
+        account = account_doc.name
+    frappe.db.set_value(
+        "Company", company, "default_employee_advance_account", account, update_modified=False
+    )
+
+    component_name = "Salary Advance"
+    if frappe.db.exists("Salary Component", component_name):
+        component = frappe.get_doc("Salary Component", component_name)
+        component.type = "Deduction"
+        component.disabled = 0
+    else:
+        component = frappe.get_doc({
+            "doctype": "Salary Component",
+            "salary_component": component_name,
+            "salary_component_abbr": "SAL ADV",
+            "type": "Deduction",
+        })
+    mapping = next((row for row in component.get("accounts") or [] if row.company == company), None)
+    if mapping:
+        mapping.account = account
+    else:
+        component.append("accounts", {"company": company, "account": account})
+    component.flags.ignore_permissions = True
+    component.save()
+
+
 def _deduction_component_for_account(company, advance_account):
     if not company or not advance_account:
         return None
@@ -71,8 +119,14 @@ def prepare_salary_advance(doc, method=None):
     account = frappe.db.get_value(
         "Account", doc.advance_account, ["company", "root_type", "is_group", "disabled"], as_dict=True
     )
-    if not account or account.company != doc.company or account.root_type != "Asset" or account.is_group or account.disabled:
-        frappe.throw(_("Select an enabled Asset ledger belonging to company {0}.").format(doc.company))
+    if (
+        not account
+        or account.company != doc.company
+        or account.root_type not in ("Asset", "Liability")
+        or account.is_group
+        or account.disabled
+    ):
+        frappe.throw(_("Select an enabled balance-sheet ledger belonging to company {0}.").format(doc.company))
     if not doc.get("custom_advance_cost_center"):
         frappe.throw(_("Select an Advance Cost Center."))
     cost_center = frappe.db.get_value(

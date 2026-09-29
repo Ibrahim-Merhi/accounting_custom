@@ -15,7 +15,7 @@ class TestSalaryAdvanceInstallments(FrappeTestCase):
     def test_advance_is_split_into_selected_number_of_months(self, get_value, _get_employee):
         def value(doctype, filters, field, **kwargs):
             if doctype == "Account":
-                return frappe._dict(company="Company", root_type="Asset", is_group=0, disabled=0)
+                return frappe._dict(company="Company", root_type="Liability", is_group=0, disabled=0)
             if doctype == "Cost Center":
                 return frappe._dict(company="Company", is_group=0, disabled=0)
             if doctype == "Salary Component":
