@@ -29,13 +29,14 @@ frappe.ui.form.on("Employee Advance", {
 			await load_salary_advance_defaults(frm, frm.doc.company);
 		}
 		if (frm.doc.custom_monthly_installment && frm.doc.custom_repayment_months) {
-			frm.dashboard.set_headline_alert(
-				__("{0} will be deducted monthly for {1} month(s).", [
-					format_currency(frm.doc.custom_monthly_installment, frm.doc.currency),
-					frm.doc.custom_repayment_months,
-				]),
-				"blue"
-			);
+			const headline = __("{0} will be deducted monthly for {1} month(s).", [
+				format_currency(frm.doc.custom_monthly_installment, frm.doc.currency),
+				frm.doc.custom_repayment_months,
+			]);
+			if (frm.salary_advance_headline !== headline) {
+				frm.salary_advance_headline = headline;
+				frm.dashboard.set_headline_alert(headline, "blue");
+			}
 		}
 	},
 	async custom_employee_profile(frm) {
@@ -123,7 +124,24 @@ function configure_simple_salary_advance_form(frm) {
 	frm.set_df_property("mode_of_payment", "reqd", 1);
 }
 
-async function load_salary_advance_defaults(frm, company = null) {
+function load_salary_advance_defaults(frm, company = null) {
+	const key = `${frm.doc.custom_employee_profile || ""}:${company || ""}`;
+	if (frm.salary_advance_defaults_request?.key === key) {
+		return frm.salary_advance_defaults_request.promise;
+	}
+	const request = {
+		key,
+		promise: apply_salary_advance_defaults(frm, company),
+	};
+	frm.salary_advance_defaults_request = request;
+	return request.promise.finally(() => {
+		if (frm.salary_advance_defaults_request === request) {
+			frm.salary_advance_defaults_request = null;
+		}
+	});
+}
+
+async function apply_salary_advance_defaults(frm, company = null) {
 	const options = await get_salary_advance_options(
 		frm.doc.custom_employee_profile,
 		company
@@ -136,10 +154,13 @@ async function load_salary_advance_defaults(frm, company = null) {
 	if (options.length > 1 && !company) {
 		await frm.set_value("employee", null);
 		await frm.set_value("company", null);
-		frappe.show_alert({
-			message: __("Select the company responsible for this salary advance."),
-			indicator: "blue",
-		});
+		if (frm.salary_advance_company_prompted_for !== frm.doc.custom_employee_profile) {
+			frm.salary_advance_company_prompted_for = frm.doc.custom_employee_profile;
+			frappe.show_alert({
+				message: __("Select the company responsible for this salary advance."),
+				indicator: "blue",
+			});
+		}
 		return;
 	}
 	const selected = options[0];
