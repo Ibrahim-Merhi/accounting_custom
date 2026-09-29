@@ -150,12 +150,29 @@ async function load_salary_advance_defaults(frm, company = null) {
 }
 
 async function get_salary_advance_options(employee_profile, selected_company = null) {
-	const employee = await frappe.db.get_doc("Employee", employee_profile);
-	let companies = [...new Set(
-		(employee.custom_branches || [])
-			.filter((row) => !row.left_position && row.company)
-			.map((row) => row.company)
-	)];
+	const [employee, payroll_identities] = await Promise.all([
+		frappe.db.get_doc("Employee", employee_profile),
+		frappe.db.get_list("Employee", {
+			filters: {
+				custom_master_employee: employee_profile,
+				custom_is_payroll_identity: 1,
+				status: "Active",
+			},
+			fields: ["name", "company"],
+			limit: 0,
+		}),
+	]);
+	const identity_by_company = Object.fromEntries(
+		payroll_identities.filter((row) => row.company).map((row) => [row.company, row.name])
+	);
+	let companies = [...new Set(payroll_identities.map((row) => row.company).filter(Boolean))];
+	if (!companies.length) {
+		companies = [...new Set(
+			(employee.custom_branches || [])
+				.filter((row) => !row.left_position && row.company)
+				.map((row) => row.company)
+		)];
+	}
 	if (!companies.length && employee.company) companies = [employee.company];
 	if (selected_company) {
 		companies = companies.filter((company) => company === selected_company);
@@ -184,7 +201,7 @@ async function get_salary_advance_options(employee_profile, selected_company = n
 			)
 		)?.name;
 		return {
-			employee: employee_profile,
+			employee: identity_by_company[company] || employee_profile,
 			company,
 			advance_account: message.default_employee_advance_account,
 			currency: message.default_currency,
