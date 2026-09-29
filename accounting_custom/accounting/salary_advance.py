@@ -1,5 +1,6 @@
 from calendar import monthrange
 
+import erpnext
 import frappe
 from frappe import _
 from frappe.utils import add_months, flt, get_first_day, get_last_day, getdate
@@ -42,6 +43,7 @@ def get_salary_advance_defaults(employee_profile, company=None):
             "company": identity.company,
             "advance_account": advance_account,
             "currency": currency,
+            "cost_center": erpnext.get_default_cost_center(identity.company),
             "deduction_component": _deduction_component_for_account(identity.company, advance_account),
         })
     return options
@@ -63,9 +65,23 @@ def prepare_salary_advance(doc, method=None):
     if not doc.get("custom_repayment_start_date"):
         frappe.throw(_("Select a Repayment Start Month."))
     default_account = frappe.db.get_value("Company", doc.company, "default_employee_advance_account")
-    doc.advance_account = default_account or doc.get("advance_account")
+    doc.advance_account = doc.get("advance_account") or default_account
     if not doc.advance_account:
-        frappe.throw(_("Set a Default Employee Advance Account for company {0}.").format(doc.company))
+        frappe.throw(_("Select an Employee Advance Account for company {0}.").format(doc.company))
+    account = frappe.db.get_value(
+        "Account", doc.advance_account, ["company", "root_type", "is_group", "disabled"], as_dict=True
+    )
+    if not account or account.company != doc.company or account.root_type != "Asset" or account.is_group or account.disabled:
+        frappe.throw(_("Select an enabled Asset ledger belonging to company {0}.").format(doc.company))
+    if not doc.get("custom_advance_cost_center"):
+        frappe.throw(_("Select an Advance Cost Center."))
+    cost_center = frappe.db.get_value(
+        "Cost Center", doc.custom_advance_cost_center, ["company", "is_group", "disabled"], as_dict=True
+    )
+    if not cost_center or cost_center.company != doc.company or cost_center.is_group or cost_center.disabled:
+        frappe.throw(_("Select an enabled Cost Center belonging to company {0}.").format(doc.company))
+    if not doc.get("mode_of_payment"):
+        frappe.throw(_("Select a Mode of Payment."))
     component = doc.get("custom_salary_deduction_component")
     component_account = frappe.db.get_value(
         "Salary Component Account",
@@ -129,3 +145,16 @@ def cancel_installment_schedule(doc, method=None):
 def ensure_paid_installment_schedules():
     for name in frappe.get_all("Employee Advance", filters={"docstatus": 1, "custom_salary_installment_plan": 1, "paid_amount": [">", 0]}, pluck="name"):
         create_installment_schedule(frappe.get_doc("Employee Advance", name))
+
+@frappe.whitelist()
+def make_salary_advance_bank_entry(dt, dn):
+    """Create the standard advance payment journal using its selected cost center."""
+    from hrms.hr.doctype.employee_advance.employee_advance import make_bank_entry
+
+    doc = frappe.get_doc(dt, dn)
+    if not doc.get("custom_advance_cost_center"):
+        frappe.throw(_("Select an Advance Cost Center before paying this advance."))
+    journal = make_bank_entry(dt, dn)
+    for row in journal.get("accounts") or []:
+        row.cost_center = doc.custom_advance_cost_center
+    return journal

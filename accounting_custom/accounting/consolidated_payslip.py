@@ -51,7 +51,7 @@ def _component_totals(salary_slips):
 	for row in frappe.get_all(
 		"Salary Detail",
 		filters={"parent": ["in", salary_slips], "parenttype": "Salary Slip"},
-		fields=["parentfield", "salary_component", "amount"],
+		fields=["parentfield", "salary_component", "amount", "additional_salary"],
 	):
 		component = (row.salary_component or "").strip().lower()
 		amount = flt(row.amount)
@@ -61,8 +61,12 @@ def _component_totals(salary_slips):
 			elif component == "family allowance": totals["family_allowance"] += amount
 			else: totals["other_earnings"] += amount
 		elif row.parentfield == "deductions":
+			is_employee_advance = bool(
+				row.additional_salary
+				and frappe.db.get_value("Additional Salary", row.additional_salary, "ref_doctype") == "Employee Advance"
+			)
 			if "tax" in component or "ضريب" in component: totals["tax_deduction"] += amount
-			elif any(token in component for token in ("advance", "loan", "سلف")): totals["advance_deduction"] += amount
+			elif is_employee_advance or any(token in component for token in ("advance", "loan", "سلف")): totals["advance_deduction"] += amount
 			else: totals["other_deduction"] += amount
 	return totals
 

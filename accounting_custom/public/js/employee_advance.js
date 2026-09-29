@@ -8,8 +8,12 @@ frappe.ui.form.on("Employee Advance", {
 				? { name: ["in", frm.salary_advance_companies] }
 				: {},
 		}));
+		frm.set_query("custom_advance_cost_center", () => ({
+			filters: {company: frm.doc.company, is_group: 0, disabled: 0},
+		}));
 	},
 	async refresh(frm) {
+		if (frm.doc.__onload) frm.doc.__onload.make_payment_via_journal_entry = 1;
 		configure_simple_salary_advance_form(frm);
 		if (frm.is_new() && !frm.doc.custom_salary_installment_plan) {
 			await frm.set_value("custom_salary_installment_plan", 1);
@@ -62,7 +66,7 @@ function configure_simple_salary_advance_form(frm) {
 	const simple_fields = [
 		"employee", "employee_name", "posting_date", "department", "currency_section",
 		"currency", "exchange_rate", "purpose", "paid_amount", "pending_amount",
-		"claimed_amount", "section_break_7", "advance_account", "mode_of_payment",
+		"claimed_amount", "section_break_7",
 		"repay_unclaimed_amount_from_salary", "more_info_section",
 		"custom_salary_installment_plan", "custom_salary_deduction_component",
 	];
@@ -73,6 +77,8 @@ function configure_simple_salary_advance_form(frm) {
 	frm.set_df_property("custom_monthly_installment", "label", __("Monthly Deduction Amount"));
 	frm.set_df_property("custom_repayment_start_date", "label", __("Deduction Start Date"));
 	frm.set_df_property("custom_monthly_installment", "read_only", 0);
+	frm.set_df_property("advance_account", "reqd", 1);
+	frm.set_df_property("mode_of_payment", "reqd", 1);
 }
 
 async function load_salary_advance_defaults(frm, company = null) {
@@ -106,6 +112,9 @@ async function load_salary_advance_defaults(frm, company = null) {
 		await frm.set_value("employee", selected.employee);
 		await frm.set_value("company", selected.company);
 		await frm.set_value("advance_account", selected.advance_account);
+		if (!frm.doc.custom_advance_cost_center && selected.cost_center) {
+			await frm.set_value("custom_advance_cost_center", selected.cost_center);
+		}
 		await frm.set_value("currency", selected.currency);
 		await frm.set_value("custom_salary_deduction_component", selected.deduction_component);
 	} finally {
@@ -139,6 +148,7 @@ async function get_salary_advance_options(employee_profile, selected_company = n
 		const company_values = await frappe.db.get_value("Company", company, [
 			"default_employee_advance_account",
 			"default_currency",
+			"cost_center",
 		]);
 		const message = company_values.message || {};
 		const deduction_component = component_documents.find((component) =>
@@ -152,6 +162,7 @@ async function get_salary_advance_options(employee_profile, selected_company = n
 			company,
 			advance_account: message.default_employee_advance_account,
 			currency: message.default_currency,
+			cost_center: message.cost_center,
 			deduction_component,
 		};
 	}));

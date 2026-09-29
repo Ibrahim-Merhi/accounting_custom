@@ -93,3 +93,39 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
             rows = entry.get_outstanding_payable_rows()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].amount, 300, repr(rows))
+
+    def test_advance_recovery_posts_payable_debit_and_advance_credit(self):
+        entry = CustomPayrollEntry({"doctype": "Payroll Entry", "payroll_payable_account": "421 - Salaries Payable"})
+        entry._advance_deduction_entries = [{
+            "employee": "EMP-1", "account": "429 - Employee Advances", "cost_center": "CC-1",
+            "amount": 40, "reference_name": "ADV-1",
+        }]
+        rows = []
+
+        def add(account, cost_center, amount, _currencies, _company_currency, payable_amount,
+                _dimensions, _precision, entry_type="credit", **kwargs):
+            rows.append((account, cost_center, amount, entry_type, kwargs.get("party")))
+            return payable_amount + amount if entry_type == "debit" else payable_amount - amount
+
+        with patch.object(entry, "get_accounting_entries_and_payable_amount", side_effect=add):
+            payable = entry.set_accounting_entries_for_advance_deductions([], [], "USD", [], 2, 500)
+
+        self.assertEqual(payable, 500)
+        self.assertEqual(rows[0], ("429 - Employee Advances", "CC-1", 40, "credit", "EMP-1"))
+        self.assertEqual(rows[1], ("421 - Salaries Payable", "CC-1", 40, "debit", "EMP-1"))
+
+    def test_advance_recovery_restores_gross_payable_credit(self):
+        entry = CustomPayrollEntry({"doctype": "Payroll Entry", "payroll_payable_account": "421 - Salaries Payable"})
+        entry._advance_deduction_entries = [{"employee": "EMP-1", "cost_center": "CC-1", "amount": 40}]
+        calls = []
+        with patch.object(entry, "_is_managed_payroll", return_value=True), patch.object(
+            entry, "_get_managed_payable_rows", return_value=[frappe._dict(employee="EMP-1", cost_center="CC-1", amount=460)]
+        ), patch.object(
+            entry, "get_accounting_entries_and_payable_amount", side_effect=lambda *args, **kwargs: calls.append((args[0], args[2], kwargs.get("entry_type")))
+        ):
+            entry.set_payable_amount_against_payroll_payable_account([], [], "USD", [], 2, 500, entry.payroll_payable_account, False)
+
+        self.assertEqual(calls, [
+            ("421 - Salaries Payable", 460, "payable"),
+            ("421 - Salaries Payable", 40, "payable"),
+        ])

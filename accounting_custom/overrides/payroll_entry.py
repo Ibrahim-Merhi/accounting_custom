@@ -41,6 +41,14 @@ class CustomPayrollEntry(PayrollEntry):
 				payroll_payable_account, row.cost_center, row.amount, currencies, company_currency, 0,
 				accounting_dimensions, precision, entry_type="payable", party=row.employee, accounts=accounts,
 			)
+		# Advance recovery is displayed explicitly as Payroll Payable debit / Advance credit.
+		# Add the recovered amount back to the payable credit so its net remains the salary actually paid.
+		for entry in getattr(self, "_advance_deduction_entries", []):
+			self.get_accounting_entries_and_payable_amount(
+				payroll_payable_account, entry.get("cost_center"), entry.get("amount"), currencies,
+				company_currency, 0, accounting_dimensions, precision, entry_type="payable",
+				party=entry.get("employee"), accounts=accounts,
+			)
 		return None
 	def get_outstanding_payable_rows(self, precision=2):
 		paid = {}
@@ -203,6 +211,40 @@ class CustomPayrollEntry(PayrollEntry):
 		if self._is_managed_payroll() or self.flags.get("suppress_salary_slip_email"):
 			return
 		return super().email_salary_slip(submitted_ss)
+
+	def add_advance_deduction_entry(self, item, amount, cost_center, employee_advance):
+		advance = frappe.db.get_value(
+			"Employee Advance", employee_advance,
+			["advance_account", "custom_advance_cost_center"], as_dict=True,
+		)
+		if not advance or not advance.advance_account or not advance.custom_advance_cost_center:
+			frappe.throw(_("Employee Advance {0} is missing its account or cost center.").format(employee_advance))
+		self._advance_deduction_entries.append({
+			"employee": item.employee,
+			"account": advance.advance_account,
+			"amount": amount,
+			"cost_center": advance.custom_advance_cost_center,
+			"reference_type": "Employee Advance",
+			"reference_name": employee_advance,
+		})
+
+	def set_accounting_entries_for_advance_deductions(
+		self, accounts, currencies, company_currency, accounting_dimensions, precision, payable_amount,
+	):
+		for entry in self._advance_deduction_entries:
+			payable_amount = self.get_accounting_entries_and_payable_amount(
+				entry.get("account"), entry.get("cost_center"), entry.get("amount"), currencies,
+				company_currency, payable_amount, accounting_dimensions, precision,
+				entry_type="credit", accounts=accounts, party=entry.get("employee"),
+				reference_type="Employee Advance", reference_name=entry.get("reference_name"), is_advance="Yes",
+			)
+			payable_amount = self.get_accounting_entries_and_payable_amount(
+				self.payroll_payable_account, entry.get("cost_center"), entry.get("amount"), currencies,
+				company_currency, payable_amount, accounting_dimensions, precision,
+				entry_type="debit", accounts=accounts, party=entry.get("employee"),
+				reference_type="Employee Advance", reference_name=entry.get("reference_name"),
+			)
+		return payable_amount
 
 	def get_salary_component_total(self, component_type=None, employee_wise_accounting_enabled=False):
 		if component_type not in ("earnings", "deductions") or not self._is_managed_payroll():

@@ -119,6 +119,7 @@ CUSTOM_FIELDS = {
 	"Employee Advance": [
 		{"fieldname": "custom_salary_installment_section", "label": "Salary Advance Repayment", "fieldtype": "Section Break", "insert_after": "repay_unclaimed_amount_from_salary"},
 		{"fieldname": "custom_salary_installment_plan", "label": "Deduct in Payroll Installments", "fieldtype": "Check", "insert_after": "custom_salary_installment_section"},
+		{"fieldname": "custom_advance_cost_center", "label": "Advance Cost Center", "fieldtype": "Link", "options": "Cost Center", "insert_after": "advance_account", "depends_on": "eval:doc.custom_salary_installment_plan", "mandatory_depends_on": "eval:doc.custom_salary_installment_plan"},
 		{"fieldname": "custom_employee_profile", "label": "Employee Profile", "fieldtype": "Link", "options": "Employee", "insert_after": "custom_salary_installment_plan", "depends_on": "eval:doc.custom_salary_installment_plan", "mandatory_depends_on": "eval:doc.custom_salary_installment_plan"},
 		{"fieldname": "custom_repayment_start_date", "label": "Repayment Start Month", "fieldtype": "Date", "insert_after": "custom_employee_profile", "depends_on": "eval:doc.custom_salary_installment_plan", "mandatory_depends_on": "eval:doc.custom_salary_installment_plan"},
 		{"fieldname": "custom_repayment_months", "label": "Number of Months", "fieldtype": "Int", "insert_after": "custom_repayment_start_date", "depends_on": "eval:doc.custom_salary_installment_plan", "mandatory_depends_on": "eval:doc.custom_salary_installment_plan"},

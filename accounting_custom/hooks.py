@@ -242,9 +242,9 @@ doc_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "accounting_custom.event.get_events"
-# }
+override_whitelisted_methods = {
+	"hrms.hr.doctype.employee_advance.employee_advance.make_bank_entry": "accounting_custom.accounting.salary_advance.make_salary_advance_bank_entry",
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
