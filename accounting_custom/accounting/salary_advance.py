@@ -164,4 +164,43 @@ def make_salary_advance_bank_entry(dt, dn):
     journal = make_bank_entry(dt, dn)
     for row in journal.get("accounts") or []:
         row.cost_center = doc.custom_advance_cost_center
+        if row.get("reference_type") == "Employee Advance" and row.get("reference_name") == doc.name:
+            row.party_type = "Employee"
+            row.party = doc.employee
+            row.is_advance = "Yes"
     return journal
+
+
+def sync_salary_advance_payment(doc, method=None):
+    """Keep advance totals correct when legacy charts do not produce party-linked GL rows."""
+    references = {
+        row.reference_name
+        for row in (doc.get("accounts") or [])
+        if row.reference_type == "Employee Advance" and row.reference_name
+    }
+    for name in references:
+        if not frappe.db.exists("Employee Advance", name):
+            continue
+        advance = frappe.get_doc("Employee Advance", name)
+        advance.set_total_advance_paid()
+        if flt(advance.paid_amount):
+            create_installment_schedule(advance)
+            continue
+        rows = frappe.get_all(
+            "Journal Entry Account",
+            filters={
+                "reference_type": "Employee Advance",
+                "reference_name": name,
+                "is_advance": "Yes",
+                "docstatus": 1,
+            },
+            fields=["debit_in_account_currency", "credit_in_account_currency"],
+        )
+        paid_amount = sum(flt(row.debit_in_account_currency) for row in rows)
+        return_amount = sum(flt(row.credit_in_account_currency) for row in rows)
+        advance.db_set("paid_amount", paid_amount, update_modified=False)
+        advance.db_set("return_amount", return_amount, update_modified=False)
+        advance.reload()
+        advance.set_status(update=True)
+        if paid_amount:
+            create_installment_schedule(advance)

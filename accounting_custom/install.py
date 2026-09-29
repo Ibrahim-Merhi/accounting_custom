@@ -69,19 +69,24 @@ def ensure_employee_advance_layout():
 	for definition in (
 		{
 			"fieldname": "custom_repayment_column",
-			"label": "Repayment Column",
+			"label": "",
 			"fieldtype": "Column Break",
 			"insert_after": "custom_repayment_months",
 		},
 		{
 			"fieldname": "custom_accounting_column",
-			"label": "Accounting Column",
+			"label": "",
 			"fieldtype": "Column Break",
 			"insert_after": "custom_advance_cost_center",
 		},
 	):
 		if not frappe.get_meta("Employee Advance").has_field(definition["fieldname"]):
 			create_custom_field("Employee Advance", {**definition, "module": "Accounting Custom"})
+		else:
+			frappe.db.set_value(
+				"Custom Field", f"Employee Advance-{definition['fieldname']}",
+				"label", "", update_modified=False,
+			)
 	frappe.clear_cache(doctype="Employee Advance")
 
 	preferred_order = [
@@ -89,6 +94,7 @@ def ensure_employee_advance_layout():
 		"section_break_8",
 		"custom_employee_profile",
 		"company",
+		"posting_date",
 		"column_break_11",
 		"advance_amount",
 		"custom_repayment_start_date",

@@ -178,6 +178,8 @@ doc_events = {
 		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
 		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_journal_entry_exchange_rates",
 		"validate": "accounting_custom.accounting.branch.validate_journal_entry_branch",
+		"on_submit": "accounting_custom.accounting.salary_advance.sync_salary_advance_payment",
+		"on_cancel": "accounting_custom.accounting.salary_advance.sync_salary_advance_payment",
 	},
 	"Payment Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_payment_entry_series",
