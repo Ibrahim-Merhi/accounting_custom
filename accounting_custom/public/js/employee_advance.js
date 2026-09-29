@@ -97,15 +97,18 @@ function configure_simple_salary_advance_form(frm) {
 		"custom_salary_installment_plan", "custom_salary_deduction_component",
 	];
 	simple_fields.forEach((fieldname) => frm.toggle_display(fieldname, false));
-	frm.toggle_display("company", Boolean(frm.salary_advance_companies?.length > 1));
-	frm.toggle_enable("company", frm.is_new());
+	frm.toggle_display("company", true);
+	frm.toggle_enable(
+		"company",
+		frm.is_new() && Boolean(frm.salary_advance_companies?.length > 1)
+	);
 	[
 		"section_break_7",
 		"advance_account",
 		"custom_advance_cost_center",
 		"mode_of_payment",
 	].forEach((fieldname) => frm.toggle_display(fieldname, true));
-	frm.set_df_property("section_break_8", "label", __("Advance Amount"));
+	frm.set_df_property("section_break_8", "label", __("Advance Details"));
 	frm.set_df_property("custom_salary_installment_section", "label", __("Repayment Plan"));
 	frm.set_df_property("section_break_7", "label", __("Payment & Accounting"));
 	frm.set_df_property("advance_amount", "label", __("Amount Given"));

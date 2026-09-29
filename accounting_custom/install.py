@@ -1,3 +1,5 @@
+import json
+
 import frappe
 
 from accounting_custom.accounting_custom.doctype.accounting_payment_entry.accounting_payment_entry import (
@@ -41,6 +43,7 @@ def setup_accounting_customizations():
 	ensure_employee_link_title()
 	synchronize_employee_naming_series()
 	ensure_custom_fields()
+	ensure_employee_advance_layout()
 	backfill_payroll_months()
 	ensure_multi_company_payroll_link()
 	normalize_payroll_identity_titles()
@@ -55,6 +58,76 @@ def setup_accounting_customizations():
 	backfill_journal_entry_transaction_currency()
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
+
+
+def ensure_employee_advance_layout():
+	"""Keep the simplified salary-advance form compact and two-column."""
+	if not frappe.db.exists("DocType", "Employee Advance"):
+		return
+	from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+
+	for definition in (
+		{
+			"fieldname": "custom_repayment_column",
+			"label": "Repayment Column",
+			"fieldtype": "Column Break",
+			"insert_after": "custom_repayment_months",
+		},
+		{
+			"fieldname": "custom_accounting_column",
+			"label": "Accounting Column",
+			"fieldtype": "Column Break",
+			"insert_after": "custom_advance_cost_center",
+		},
+	):
+		if not frappe.get_meta("Employee Advance").has_field(definition["fieldname"]):
+			create_custom_field("Employee Advance", {**definition, "module": "Accounting Custom"})
+	frappe.clear_cache(doctype="Employee Advance")
+
+	preferred_order = [
+		"naming_series",
+		"section_break_8",
+		"custom_employee_profile",
+		"company",
+		"column_break_11",
+		"advance_amount",
+		"custom_repayment_start_date",
+		"custom_salary_installment_section",
+		"custom_repayment_months",
+		"custom_repayment_column",
+		"custom_monthly_installment",
+		"section_break_7",
+		"advance_account",
+		"custom_advance_cost_center",
+		"custom_accounting_column",
+		"mode_of_payment",
+	]
+	all_fields = [field.fieldname for field in frappe.get_meta("Employee Advance").fields]
+	field_order = preferred_order + [field for field in all_fields if field not in preferred_order]
+	_set_property("Employee Advance", None, "field_order", json.dumps(field_order), "Data")
+	_set_property("Employee Advance", "section_break_8", "label", "Advance Details", "Data")
+	_set_property("Employee Advance", "custom_salary_installment_section", "label", "Repayment Plan", "Data")
+	_set_property("Employee Advance", "section_break_7", "label", "Payment & Accounting", "Data")
+	frappe.clear_cache(doctype="Employee Advance")
+
+
+def _set_property(doctype, fieldname, property_name, value, property_type):
+	name = f"{doctype}-{fieldname or 'main'}-{property_name}"
+	if frappe.db.exists("Property Setter", name):
+		frappe.db.set_value(
+			"Property Setter", name,
+			{"value": value, "property_type": property_type},
+			update_modified=False,
+		)
+		return
+	frappe.make_property_setter({
+		"doctype": doctype,
+		"doctype_or_field": "DocField" if fieldname else "DocType",
+		"fieldname": fieldname,
+		"property": property_name,
+		"property_type": property_type,
+		"value": value,
+	})
 
 
 def synchronize_employee_naming_series():
