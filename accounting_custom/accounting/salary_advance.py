@@ -158,20 +158,3 @@ def make_salary_advance_bank_entry(dt, dn):
     for row in journal.get("accounts") or []:
         row.cost_center = doc.custom_advance_cost_center
     return journal
-
-@frappe.whitelist()
-def get_salary_advance_payment(employee_advance):
-    """Return the latest active payment journal for an Employee Advance."""
-    frappe.get_doc("Employee Advance", employee_advance).check_permission("read")
-    rows = frappe.get_all(
-        "Journal Entry Account",
-        filters={
-            "reference_type": "Employee Advance",
-            "reference_name": employee_advance,
-            "docstatus": ["<", 2],
-        },
-        fields=["parent"],
-        order_by="creation desc",
-        limit=1,
-    )
-    return {"doctype": "Journal Entry", "name": rows[0].parent} if rows else None
