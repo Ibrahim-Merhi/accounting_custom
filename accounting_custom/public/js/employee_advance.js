@@ -72,19 +72,19 @@ function configure_salary_advance_actions(frm) {
 			.addClass("btn-primary");
 		return;
 	}
-	frappe.db.get_list("Journal Entry Account", {
-		filters: {
-			reference_type: "Employee Advance",
-			reference_name: frm.doc.name,
-			docstatus: ["<", 2],
-		},
-		fields: ["parent"],
+	frappe.db.get_list("Journal Entry", {
+		filters: [
+			["Journal Entry Account", "reference_type", "=", "Employee Advance"],
+			["Journal Entry Account", "reference_name", "=", frm.doc.name],
+			["Journal Entry", "docstatus", "<", 2],
+		],
+		fields: ["name"],
 		order_by: "creation desc",
 		limit: 1,
 	}).then((rows) => {
-		if (!rows[0]?.parent) return;
+		if (!rows[0]?.name) return;
 		frm.add_custom_button(__("Open Payment Entry"), () => {
-			frappe.set_route("Form", "Journal Entry", rows[0].parent);
+			frappe.set_route("Form", "Journal Entry", rows[0].name);
 		}).addClass("btn-primary");
 	});
 }
