@@ -4,6 +4,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from accounting_custom.accounting.salary_advance import (
+    get_salary_advance_payment,
     make_salary_advance_bank_entry,
     prepare_salary_advance,
 )
@@ -52,3 +53,14 @@ class TestSalaryAdvanceInstallments(FrappeTestCase):
         journal = make_salary_advance_bank_entry("Employee Advance", "ADV-1")
 
         self.assertEqual([row.cost_center for row in journal.accounts], ["Projects - CO", "Projects - CO"])
+
+    @patch("accounting_custom.accounting.salary_advance.frappe.get_all")
+    @patch("accounting_custom.accounting.salary_advance.frappe.get_doc")
+    def test_existing_payment_journal_can_be_opened(self, get_doc, get_all):
+        advance = get_doc.return_value
+        get_all.return_value = [frappe._dict(parent="JV-1")]
+
+        payment = get_salary_advance_payment("ADV-1")
+
+        advance.check_permission.assert_called_once_with("read")
+        self.assertEqual(payment, {"doctype": "Journal Entry", "name": "JV-1"})

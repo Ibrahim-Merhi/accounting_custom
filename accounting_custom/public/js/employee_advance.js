@@ -15,6 +15,7 @@ frappe.ui.form.on("Employee Advance", {
 	async refresh(frm) {
 		if (frm.doc.__onload) frm.doc.__onload.make_payment_via_journal_entry = 1;
 		configure_simple_salary_advance_form(frm);
+		configure_salary_advance_actions(frm);
 		if (frm.is_new() && !frm.doc.custom_salary_installment_plan) {
 			await frm.set_value("custom_salary_installment_plan", 1);
 		}
@@ -61,6 +62,26 @@ frappe.ui.form.on("Employee Advance", {
 		}
 	},
 });
+
+function configure_salary_advance_actions(frm) {
+	frm.remove_custom_button(__("Payment"), __("Create"));
+	if (frm.doc.docstatus !== 1) return;
+	if (flt(frm.doc.paid_amount) < flt(frm.doc.advance_amount)) {
+		frm.add_custom_button(__("Pay Advance"), () => frm.events.make_payment_entry(frm))
+			.addClass("btn-primary");
+		return;
+	}
+	frappe.call({
+		method: "accounting_custom.accounting.salary_advance.get_salary_advance_payment",
+		args: {employee_advance: frm.doc.name},
+		callback: ({message}) => {
+			if (!message?.name) return;
+			frm.add_custom_button(__("Open Payment Entry"), () => {
+				frappe.set_route("Form", message.doctype, message.name);
+			}).addClass("btn-primary");
+		},
+	});
+}
 
 function configure_simple_salary_advance_form(frm) {
 	const simple_fields = [
