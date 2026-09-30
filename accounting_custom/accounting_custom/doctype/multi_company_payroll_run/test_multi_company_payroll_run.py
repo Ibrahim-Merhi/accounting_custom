@@ -106,6 +106,26 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         self.assertEqual(run.companies[0].gross_salary, 200)
         self.assertEqual(run.companies[0].payroll_payable_account, "Payable A")
 
+    def test_missing_payroll_entry_links_are_cleared_before_recreation(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "companies": [{"company": "Company", "payroll_entry": "PE-MISSING", "status": "Created"}],
+            "employees": [{
+                "employee": "MASTER-1", "company": "Company", "payroll_employee": "PAY-1",
+                "source_payroll_entry": "PE-MISSING", "salary_slip": "SS-MISSING", "status": "Payment Ready",
+            }],
+        })
+        with patch(
+            "accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.get_all",
+            return_value=[],
+        ):
+            run._clear_missing_payroll_entry_links()
+        self.assertIsNone(run.companies[0].payroll_entry)
+        self.assertEqual(run.companies[0].status, "Ready")
+        self.assertIsNone(run.employees[0].source_payroll_entry)
+        self.assertIsNone(run.employees[0].salary_slip)
+        self.assertEqual(run.employees[0].status, "Ready")
+
     def test_large_company_is_queued_instead_of_blocked(self):
         run = frappe.get_doc({
             "doctype": "Multi Company Payroll Run",

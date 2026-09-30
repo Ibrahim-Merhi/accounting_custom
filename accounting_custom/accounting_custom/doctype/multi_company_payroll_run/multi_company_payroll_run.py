@@ -43,6 +43,7 @@ class MultiCompanyPayrollRun(Document):
 			frappe.throw(_("Get Employees before submitting payroll."))
 		self.status = "Processing"
 		self.approval_status = "Direct Accounts Manager Approval"
+		self._clear_missing_payroll_entry_links()
 		self._create_payroll_entries()
 		queued = False
 		for company_row in self.companies:
@@ -97,6 +98,25 @@ class MultiCompanyPayrollRun(Document):
 					for slip in entry.get_linked_salary_slips():
 						frappe.delete_doc("Salary Slip", slip.name, ignore_permissions=True)
 		self.db_set("status", "Cancelled", update_modified=False)
+
+	def _clear_missing_payroll_entry_links(self):
+		linked_names = {
+			name for name in [
+				*[row.payroll_entry for row in self.companies if row.payroll_entry],
+				*[row.source_payroll_entry for row in self.employees if row.source_payroll_entry],
+			] if name
+		}
+		existing = set(frappe.get_all("Payroll Entry", filters={"name": ["in", list(linked_names)]}, pluck="name")) if linked_names else set()
+		for row in self.companies:
+			if row.payroll_entry and row.payroll_entry not in existing:
+				row.payroll_entry = None
+				row.payroll_entry_count = 0
+				row.status = "Ready"
+		for row in self.employees:
+			if row.source_payroll_entry and row.source_payroll_entry not in existing:
+				row.source_payroll_entry = None
+				row.salary_slip = None
+				row.status = "Ready"
 
 	def _company_entry_names(self, company, company_row=None):
 		entries = {row.source_payroll_entry for row in self.employees if row.company == company and row.source_payroll_entry}
