@@ -308,10 +308,13 @@ class MultiCompanyPayrollRun(Document):
 			row.status = "Payment Release" if self._company_entry_names(row.company, row) else "Deferred"
 			return
 		entry=frappe.get_doc("Payroll Entry", row.payroll_entry)
-		if entry.docstatus==0: entry.submit()
 		if len(entry.employees) > 30:
+			# Do not submit before the parent transaction commits. HRMS queues slip
+			# creation from Payroll Entry.on_submit and that worker must be able to
+			# read this newly-created Payroll Entry from the database.
 			row.status = "Queued"
 			return True
+		if entry.docstatus==0: entry.submit()
 		if not entry.salary_slips_submitted:
 			entry.flags.suppress_salary_slip_email = True
 			message_count = len(frappe.local.message_log)
@@ -397,6 +400,9 @@ def complete_queued_payroll_run(payroll_run):
 			if company_row.status != "Queued" or not company_row.payroll_entry:
 				continue
 			entry = frappe.get_doc("Payroll Entry", company_row.payroll_entry)
+			if entry.docstatus == 0:
+				entry.submit()
+				entry.reload()
 			if not entry.salary_slips_created:
 				args = frappe._dict({
 					"salary_slip_based_on_timesheet": entry.salary_slip_based_on_timesheet,

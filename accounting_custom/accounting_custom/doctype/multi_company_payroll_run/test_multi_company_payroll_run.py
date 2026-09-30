@@ -141,7 +141,7 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
             queued = run._process_company(run.companies[0])
         self.assertTrue(queued)
         self.assertEqual(run.companies[0].status, "Queued")
-        entry.submit.assert_called_once()
+        entry.submit.assert_not_called()
         entry.submit_salary_slips.assert_not_called()
 
     def test_processing_run_enqueues_long_background_job_after_submit(self):
