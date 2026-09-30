@@ -11,6 +11,34 @@ PROFILE_COMPONENTS = {"Basic Salary", "Transportation", "Family Allowance"}
 
 class CustomPayrollEntry(PayrollEntry):
 
+	@frappe.whitelist()
+	def create_salary_slips(self):
+		"""Create large managed payrolls in the owning long worker."""
+		if not getattr(frappe.flags, "accounting_custom_sync_payroll", False):
+			return super().create_salary_slips()
+
+		self.check_permission("write")
+		employees = [row.employee for row in self.employees if row.employee]
+		if not employees:
+			return
+
+		from hrms.payroll.doctype.payroll_entry.payroll_entry import create_salary_slips_for_employees
+
+		args = frappe._dict({
+			"salary_slip_based_on_timesheet": self.salary_slip_based_on_timesheet,
+			"payroll_frequency": self.payroll_frequency,
+			"start_date": self.start_date,
+			"end_date": self.end_date,
+			"company": self.company,
+			"posting_date": self.posting_date,
+			"deduct_tax_for_unclaimed_employee_benefits": self.deduct_tax_for_unclaimed_employee_benefits,
+			"deduct_tax_for_unsubmitted_tax_exemption_proof": self.deduct_tax_for_unsubmitted_tax_exemption_proof,
+			"payroll_entry": self.name,
+			"exchange_rate": self.exchange_rate,
+			"currency": self.currency,
+		})
+		create_salary_slips_for_employees(employees, args, publish_progress=False)
+
 	def _is_managed_payroll(self):
 		if self.get("custom_multi_company_payroll_run"):
 			return True
@@ -198,6 +226,7 @@ class CustomPayrollEntry(PayrollEntry):
 				child = dict(row)
 				child.update({amount_field: part, "party_type": "Employee", "party": employee})
 				expanded.append(child)
+		self._reconcile_journal_rounding(expanded, args, kwargs)
 		result = super().make_journal_entry(expanded, *args, **kwargs)
 		run = self.get("custom_payment_payroll_run") or self.get("custom_multi_company_payroll_run")
 		if run:
@@ -205,6 +234,39 @@ class CustomPayrollEntry(PayrollEntry):
 			if journal:
 				frappe.db.set_value("Journal Entry", journal[0][0], "custom_multi_company_payroll_run", run, update_modified=False)
 		return result
+
+	def _reconcile_journal_rounding(self, accounts, args=(), kwargs=None):
+		"""Put a currency-rounding remainder on the final payable row."""
+		kwargs = kwargs or {}
+		voucher_type = kwargs.get("voucher_type")
+		if voucher_type is None and len(args) > 2:
+			voucher_type = args[2]
+		if voucher_type != "Journal Entry":
+			return
+
+		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency") or 2
+		total_debit = flt(sum(flt(row.get("debit_in_account_currency")) for row in accounts), precision)
+		total_credit = flt(sum(flt(row.get("credit_in_account_currency")) for row in accounts), precision)
+		difference = flt(total_debit - total_credit, precision)
+		if not difference:
+			return
+
+		payable_account = kwargs.get("payroll_payable_account")
+		if payable_account is None and len(args) > 1:
+			payable_account = args[1]
+		payable_account = payable_account or self.payroll_payable_account
+		target = next((row for row in reversed(accounts) if row.get("account") == payable_account), None)
+		if not target:
+			return
+
+		if flt(target.get("credit_in_account_currency")):
+			target["credit_in_account_currency"] = flt(
+				flt(target.get("credit_in_account_currency")) + difference, precision
+			)
+		elif flt(target.get("debit_in_account_currency")):
+			target["debit_in_account_currency"] = flt(
+				flt(target.get("debit_in_account_currency")) - difference, precision
+			)
 
 	def email_salary_slip(self, submitted_ss):
 		"""Custom multi-company payroll keeps slips in-app and never emails them."""

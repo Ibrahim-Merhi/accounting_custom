@@ -401,7 +401,12 @@ def complete_queued_payroll_run(payroll_run):
 				continue
 			entry = frappe.get_doc("Payroll Entry", company_row.payroll_entry)
 			if entry.docstatus == 0:
-				entry.submit()
+				# This function already owns a long worker. Avoid a second creation job.
+				frappe.flags.accounting_custom_sync_payroll = True
+				try:
+					entry.submit()
+				finally:
+					frappe.flags.accounting_custom_sync_payroll = False
 				entry.reload()
 			if not entry.salary_slips_created:
 				args = frappe._dict({

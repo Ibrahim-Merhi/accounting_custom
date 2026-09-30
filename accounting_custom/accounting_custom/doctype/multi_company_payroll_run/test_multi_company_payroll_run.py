@@ -158,6 +158,23 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         self.assertTrue(enqueue.call_args.kwargs["enqueue_after_commit"])
         self.assertEqual(enqueue.call_args.kwargs["payroll_run"], "MCPR-LARGE")
 
+    def test_large_managed_entry_creates_slips_in_owning_worker(self):
+        entry = CustomPayrollEntry({
+            "doctype": "Payroll Entry", "name": "PE-LARGE", "company": "Itihad",
+            "employees": [{"employee": "EMP-1"}, {"employee": "EMP-2"}],
+        })
+        frappe.flags.accounting_custom_sync_payroll = True
+        try:
+            with patch.object(entry, "check_permission"), patch(
+                "hrms.payroll.doctype.payroll_entry.payroll_entry.create_salary_slips_for_employees"
+            ) as create:
+                entry.create_salary_slips()
+        finally:
+            frappe.flags.accounting_custom_sync_payroll = False
+        create.assert_called_once()
+        self.assertEqual(create.call_args.args[0], ["EMP-1", "EMP-2"])
+        self.assertFalse(create.call_args.kwargs["publish_progress"])
+
     def test_company_with_all_rows_removed_is_deferred(self):
         run = frappe.get_doc({
             "doctype": "Multi Company Payroll Run",
@@ -244,3 +261,22 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
             ("421 - Salaries Payable", 460, "payable"),
             ("421 - Salaries Payable", 40, "payable"),
         ])
+
+    def test_accrual_rounding_is_reconciled_on_final_payable_row(self):
+        entry = CustomPayrollEntry({
+            "doctype": "Payroll Entry", "payroll_payable_account": "421 - Salaries Payable",
+        })
+        accounts = [
+            {"account": "631 - Salaries", "debit_in_account_currency": 100},
+            {"account": "421 - Salaries Payable", "credit_in_account_currency": 33.33},
+            {"account": "421 - Salaries Payable", "credit_in_account_currency": 66.68},
+        ]
+        with patch("accounting_custom.overrides.payroll_entry.frappe.get_precision", return_value=2):
+            entry._reconcile_journal_rounding(
+                accounts, args=([], "421 - Salaries Payable"), kwargs={"voucher_type": "Journal Entry"}
+            )
+        self.assertEqual(accounts[-1]["credit_in_account_currency"], 66.67)
+        self.assertEqual(
+            round(sum(row.get("debit_in_account_currency", 0) for row in accounts), 2),
+            round(sum(row.get("credit_in_account_currency", 0) for row in accounts), 2),
+        )
