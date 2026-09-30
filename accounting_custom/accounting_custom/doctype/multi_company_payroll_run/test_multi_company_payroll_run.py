@@ -106,6 +106,38 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         self.assertEqual(run.companies[0].gross_salary, 200)
         self.assertEqual(run.companies[0].payroll_payable_account, "Payable A")
 
+    def test_large_company_is_queued_instead_of_blocked(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "companies": [{"company": "Company", "payroll_entry": "PE-LARGE", "status": "Created"}],
+        })
+        entry = MagicMock()
+        entry.docstatus = 0
+        entry.employees = [frappe._dict(employee=f"EMP-{index}") for index in range(31)]
+        with patch(
+            "accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.get_doc",
+            return_value=entry,
+        ):
+            queued = run._process_company(run.companies[0])
+        self.assertTrue(queued)
+        self.assertEqual(run.companies[0].status, "Queued")
+        entry.submit.assert_called_once()
+        entry.submit_salary_slips.assert_not_called()
+
+    def test_processing_run_enqueues_long_background_job_after_submit(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run", "name": "MCPR-LARGE", "status": "Processing",
+        })
+        with patch(
+            "accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.enqueue"
+        ) as enqueue:
+            run.on_submit()
+        enqueue.assert_called_once()
+        self.assertEqual(enqueue.call_args.kwargs["queue"], "long")
+        self.assertEqual(enqueue.call_args.kwargs["timeout"], 3000)
+        self.assertTrue(enqueue.call_args.kwargs["enqueue_after_commit"])
+        self.assertEqual(enqueue.call_args.kwargs["payroll_run"], "MCPR-LARGE")
+
     def test_company_with_all_rows_removed_is_deferred(self):
         run = frappe.get_doc({
             "doctype": "Multi Company Payroll Run",

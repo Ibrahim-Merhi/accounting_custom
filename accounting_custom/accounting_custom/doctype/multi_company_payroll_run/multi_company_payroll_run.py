@@ -44,8 +44,26 @@ class MultiCompanyPayrollRun(Document):
 		self.status = "Processing"
 		self.approval_status = "Direct Accounts Manager Approval"
 		self._create_payroll_entries()
+		queued = False
 		for company_row in self.companies:
-			self._process_company(company_row)
+			queued = self._process_company(company_row) or queued
+		if queued:
+			self.status = "Processing"
+			frappe.msgprint(_("Large payroll processing has been queued and will complete in the background."), indicator="blue")
+			return
+		self._complete_processing()
+
+	def on_submit(self):
+		if self.status == "Processing":
+			frappe.enqueue(
+				complete_queued_payroll_run,
+				queue="long",
+				timeout=3000,
+				enqueue_after_commit=True,
+				payroll_run=self.name,
+			)
+
+	def _complete_processing(self):
 		self._configure_payment_plans()
 		self._refresh_generated_documents()
 		self.status = "Completed"
@@ -270,8 +288,10 @@ class MultiCompanyPayrollRun(Document):
 			row.status = "Payment Release" if self._company_entry_names(row.company, row) else "Deferred"
 			return
 		entry=frappe.get_doc("Payroll Entry", row.payroll_entry)
-		if len(entry.employees)>30: frappe.throw(_("Company {0} has more than 30 employees. Split the run to ensure synchronous audited processing.").format(row.company))
 		if entry.docstatus==0: entry.submit()
+		if len(entry.employees) > 30:
+			row.status = "Queued"
+			return True
 		if not entry.salary_slips_submitted:
 			entry.flags.suppress_salary_slip_email = True
 			message_count = len(frappe.local.message_log)
@@ -287,6 +307,7 @@ class MultiCompanyPayrollRun(Document):
 			if not entry.salary_slips_submitted:
 				frappe.throw(_("Salary Slip submission failed for company {0}. Open Payroll Entry {1} for details.").format(row.company, entry.name))
 		row.status="Completed"
+		return False
 
 
 	def _configure_payment_plans(self):
@@ -339,3 +360,48 @@ class MultiCompanyPayrollRun(Document):
 				employee_row.status = "Payment Ready" if employee_row.pay_this_run else "Deferred"
 		for employee in {row.employee for row in self.employees}:
 			sync_consolidated_payslip(employee, self.start_date, self.end_date)
+
+
+def complete_queued_payroll_run(payroll_run):
+	"""Complete a large payroll safely in a long-running background worker."""
+	from hrms.payroll.doctype.payroll_entry.payroll_entry import (
+		create_salary_slips_for_employees,
+		submit_salary_slips_for_employees,
+	)
+
+	run = frappe.get_doc("Multi Company Payroll Run", payroll_run)
+	if run.docstatus != 1 or run.status == "Completed":
+		return
+	try:
+		for company_row in run.companies:
+			if company_row.status != "Queued" or not company_row.payroll_entry:
+				continue
+			entry = frappe.get_doc("Payroll Entry", company_row.payroll_entry)
+			if not entry.salary_slips_created:
+				args = frappe._dict({
+					"salary_slip_based_on_timesheet": entry.salary_slip_based_on_timesheet,
+					"payroll_frequency": entry.payroll_frequency,
+					"start_date": entry.start_date, "end_date": entry.end_date,
+					"company": entry.company, "posting_date": entry.posting_date,
+					"deduct_tax_for_unclaimed_employee_benefits": entry.deduct_tax_for_unclaimed_employee_benefits,
+					"deduct_tax_for_unsubmitted_tax_exemption_proof": entry.deduct_tax_for_unsubmitted_tax_exemption_proof,
+					"payroll_entry": entry.name, "exchange_rate": entry.exchange_rate,
+					"currency": entry.currency,
+				})
+				create_salary_slips_for_employees([row.employee for row in entry.employees], args, publish_progress=False)
+				entry.reload()
+			if not entry.salary_slips_submitted:
+				draft_slips = entry.get_sal_slip_list(ss_status=0)
+				if draft_slips:
+					submit_salary_slips_for_employees(entry, draft_slips, publish_progress=False)
+				entry.reload()
+			if not entry.salary_slips_submitted:
+				frappe.throw(_("Salary Slip submission failed for company {0}.").format(company_row.company))
+			company_row.status = "Completed"
+		run._complete_processing()
+		run.flags.ignore_validate_update_after_submit = True
+		run.save(ignore_permissions=True)
+	except Exception:
+		frappe.db.set_value("Multi Company Payroll Run", payroll_run, "status", "Failed", update_modified=False)
+		frappe.log_error(title=f"Large payroll processing failed: {payroll_run}")
+		raise

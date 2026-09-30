@@ -17,11 +17,18 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}
 		if (frm.doc.docstatus===1) {
-			frm.add_custom_button(__("1 per A4"), () => print_payslips(frm, "Payroll Payslips - 1 per A4"), __("Print Payslips"));
-			frm.add_custom_button(__("4 per A4"), () => print_payslips(frm, "Payroll Payslips - 4 per A4"), __("Print Payslips"));
-			frm.add_custom_button(__("6 per A4"), () => print_payslips(frm, "Payroll Payslips - 6 per A4"), __("Print Payslips"));
-			frm.dashboard.set_headline_alert(__("Payroll completed. Continue with each company Payroll Entry to review payment allocations and create the Bank Entry."), "green");
-			frm.add_custom_button(__("Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
+			if (frm.doc.status === "Processing") {
+				frm.dashboard.set_headline_alert(__("Large payroll is processing in the background. Refresh to see its progress."), "blue");
+				frm.add_custom_button(__("Refresh Status"), () => frm.reload_doc()).addClass("btn-primary");
+			} else if (frm.doc.status === "Failed") {
+				frm.dashboard.set_headline_alert(__("Payroll processing failed. Review the linked Payroll Entry and Error Log."), "red");
+			} else {
+				frm.add_custom_button(__("1 per A4"), () => print_payslips(frm, "Payroll Payslips - 1 per A4"), __("Print Payslips"));
+				frm.add_custom_button(__("4 per A4"), () => print_payslips(frm, "Payroll Payslips - 4 per A4"), __("Print Payslips"));
+				frm.add_custom_button(__("6 per A4"), () => print_payslips(frm, "Payroll Payslips - 6 per A4"), __("Print Payslips"));
+				frm.dashboard.set_headline_alert(__("Payroll completed. Continue with each company Payroll Entry to review payment allocations and create the Bank Entry."), "green");
+				frm.add_custom_button(__("Company Payments"), () => show_company_payroll_entries(frm)).addClass("btn-primary");
+			}
 		}
 	},
 	onload(frm) {
