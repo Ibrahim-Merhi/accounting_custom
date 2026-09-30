@@ -53,6 +53,18 @@ def create_structure_assignment(revision, employee, company, amounts):
 		structure.flags.ignore_permissions = True
 		structure.insert()
 		structure.submit()
+	# A same-date revision is a correction. Preserve the old revision for the
+	# audit trail, but replace its active HRMS assignment so payroll has one
+	# unambiguous structure for that date.
+	for assignment_name in frappe.get_all(
+		"Salary Structure Assignment",
+		filters={"employee": employee, "from_date": revision.effective_from, "docstatus": 1},
+		pluck="name",
+	):
+		assignment = frappe.get_doc("Salary Structure Assignment", assignment_name)
+		if assignment.salary_structure.startswith(f"Managed-{revision.employee}-"):
+			assignment.flags.ignore_permissions = True
+			assignment.cancel()
 	if frappe.db.exists("Salary Structure Assignment", {
 		"employee": employee, "salary_structure": structure_name, "from_date": revision.effective_from, "docstatus": 1,
 	}):

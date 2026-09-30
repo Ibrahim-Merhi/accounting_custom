@@ -51,10 +51,16 @@ class EmployeeSalaryProfile(Document):
 	def _validate_dates(self):
 		latest_effective = frappe.db.get_value(
 			"Employee Salary Revision", {"salary_profile": self.name}, "effective_from",
-			order_by="revision_number desc",
+			order_by="effective_from desc, revision_number desc",
 		)
-		if latest_effective and getdate(self.effective_date) <= getdate(latest_effective):
-			frappe.throw(_("Start Effective Date must be after the latest salary revision."))
+		if not latest_effective or getdate(self.effective_date) >= getdate(latest_effective):
+			return
+		if frappe.db.exists("Employee Salary Revision", {
+			"salary_profile": self.name,
+			"effective_from": self.effective_date,
+		}):
+			return
+		frappe.throw(_("Start Effective Date cannot be before the latest salary revision unless it corrects an existing revision date."))
 
 	def _get_employee_companies(self):
 		companies = {
@@ -135,11 +141,31 @@ class EmployeeSalaryProfile(Document):
 			"Employee Salary Revision", {"salary_profile": self.name},
 			["name", "revision_number", "effective_from"], order_by="revision_number desc", as_dict=True,
 		)
-		if latest:
+		effective_from = getdate(self.effective_date)
+		for superseded in frappe.get_all(
+			"Employee Salary Revision",
+			filters={"salary_profile": self.name, "effective_from": effective_from},
+			pluck="name",
+		):
 			frappe.db.set_value(
-				"Employee Salary Revision", latest.name, "effective_to",
-				add_days(self.effective_date, -1), update_modified=False,
+				"Employee Salary Revision", superseded, "effective_to",
+				add_days(effective_from, -1), update_modified=False,
 			)
+		previous = frappe.db.get_value(
+			"Employee Salary Revision",
+			{"salary_profile": self.name, "effective_from": ["<", effective_from]},
+			"name", order_by="effective_from desc, revision_number desc",
+		)
+		if previous:
+			frappe.db.set_value(
+				"Employee Salary Revision", previous, "effective_to",
+				add_days(effective_from, -1), update_modified=False,
+			)
+		next_effective = frappe.db.get_value(
+			"Employee Salary Revision",
+			{"salary_profile": self.name, "effective_from": [">", effective_from]},
+			"effective_from", order_by="effective_from asc, revision_number asc",
+		)
 		revision = frappe.get_doc({
 			"doctype": "Employee Salary Revision",
 			"employee": self.employee,
@@ -147,6 +173,7 @@ class EmployeeSalaryProfile(Document):
 			"salary_profile": self.name,
 			"revision_number": (latest.revision_number if latest else 0) + 1,
 			"effective_from": self.effective_date,
+			"effective_to": add_days(next_effective, -1) if next_effective else None,
 			"action_date": self.action_date,
 			"changed_by": frappe.session.user,
 			"basic_salary": self.basic_salary,

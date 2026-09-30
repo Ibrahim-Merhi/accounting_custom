@@ -85,6 +85,22 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		self.assertEqual(len(history[0].allocations), 3)
 		self.assertTrue(all(row.percentage == 100 for row in history[0].allocations))
 		self.assertTrue(frappe.db.exists("Salary Structure Assignment", {"employee": payroll_employee, "from_date": "2026-09-01", "docstatus": 1}))
+
+		# A correction may reuse the same effective date. It creates a new audit
+		# revision and supersedes the old HRMS assignment for that date.
+		profile.basic_allocations[0].amount = 1100
+		profile.effective_date = "2026-09-01"
+		profile.action_date = "2026-08-28"
+		profile.save(ignore_permissions=True)
+		corrected_revision = frappe.get_doc("Employee Salary Revision", profile.latest_revision)
+		self.assertEqual(str(corrected_revision.effective_from), "2026-09-01")
+		self.assertEqual(corrected_revision.total_salary, 1400)
+		revision.reload()
+		self.assertEqual(str(revision.effective_to), "2026-08-31")
+		self.assertEqual(frappe.db.count("Salary Structure Assignment", {
+			"employee": payroll_employee, "from_date": "2026-09-01", "docstatus": 1,
+		}), 1)
+
 		payable = frappe.db.get_value("Account", {"company": "Itihad", "is_group": 0, "disabled": 0, "root_type": "Liability", "account_type": ["!=", "Payable"]}, "name")
 		payroll = frappe.get_doc({
 			"doctype": "Payroll Entry", "posting_date": "2026-09-30", "company": "Itihad",
@@ -99,7 +115,7 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		}).insert(ignore_permissions=True)
 		slip.submit()
 		allocated = payroll.get_salary_component_total("earnings")
-		self.assertAlmostEqual(allocated[(account, cost_center)], 1300)
+		self.assertAlmostEqual(allocated[(account, cost_center)], 1400)
 		payroll.make_accrual_jv_entry([slip])
 		journal = frappe.get_doc("Journal Entry", slip.reload().journal_entry)
 		self.assertTrue(any(row.account == account and row.cost_center == cost_center for row in journal.accounts))

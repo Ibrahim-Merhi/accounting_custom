@@ -157,12 +157,12 @@ class MultiCompanyPayrollRun(Document):
 		self.set("allocation_summary", [])
 		groups, people = {}, {}
 		for profile in frappe.get_all("Employee Salary Profile", pluck="name"):
-			revs = frappe.get_all("Employee Salary Revision", filters={"salary_profile": profile, "effective_from": ["<=", self.end_date]}, fields=["name", "employee", "employee_name", "effective_from"], order_by="effective_from desc, revision_number desc", limit=1)
+			# Monthly payroll uses the salary that is effective on the first day of
+			# the period. A later revision naturally applies from the next month.
+			revs = frappe.get_all("Employee Salary Revision", filters={"salary_profile": profile, "effective_from": ["<=", self.start_date]}, fields=["name", "employee", "employee_name", "effective_from"], order_by="effective_from desc, revision_number desc", limit=1)
 			if not revs:
 				continue
 			rev = revs[0]
-			if getdate(rev.effective_from) > getdate(self.start_date):
-				frappe.throw(_("Salary revision {0} starts during this payroll month. Make it effective from the first day of the month.").format(rev.name))
 			for alloc in frappe.get_all("Employee Salary Revision Allocation", filters={"parent": rev.name, "parenttype": "Employee Salary Revision"}, fields=["component", "company", "account", "cost_center", "amount"], order_by="idx"):
 				payroll_employee = get_payroll_employee(rev.employee, alloc.company)
 				if not payroll_employee:
