@@ -43,6 +43,35 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         self.assertEqual(row.net_salary, 460)
         self.assertEqual(row.deferred_amount, 210)
 
+    def test_manual_deduction_caps_full_payment_to_new_net_salary(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "payroll_month": "September",
+            "payroll_year": 2026,
+            "employees": [{
+                "employee": "MASTER-1",
+                "employee_name": "Employee",
+                "company": "Itihad",
+                "payroll_employee": "PAY-1",
+                "gross_salary": 550,
+                "previously_paid": 0,
+                "pay_this_run": 550,
+            }],
+            "manual_deductions": [{
+                "employee": "MASTER-1",
+                "company": "Itihad",
+                "payroll_employee": "PAY-1",
+                "amount": 100,
+            }],
+        })
+        with patch.object(MultiCompanyPayrollRun, "_scheduled_advance_deductions", return_value=0):
+            run._refresh_employee_totals()
+        row = run.employees[0]
+        self.assertEqual(row.deductions, 100)
+        self.assertEqual(row.net_salary, 450)
+        self.assertEqual(row.pay_this_run, 450)
+        self.assertEqual(row.deferred_amount, 0)
+
     def test_company_with_all_rows_removed_is_deferred(self):
         run = frappe.get_doc({
             "doctype": "Multi Company Payroll Run",

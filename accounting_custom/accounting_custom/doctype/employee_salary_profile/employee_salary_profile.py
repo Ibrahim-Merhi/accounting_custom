@@ -55,12 +55,10 @@ class EmployeeSalaryProfile(Document):
 		)
 		if not latest_effective or getdate(self.effective_date) >= getdate(latest_effective):
 			return
-		if frappe.db.exists("Employee Salary Revision", {
-			"salary_profile": self.name,
-			"effective_from": self.effective_date,
-		}):
+		before = self.get_doc_before_save()
+		if before and getdate(before.effective_date) == getdate(latest_effective):
 			return
-		frappe.throw(_("Start Effective Date cannot be before the latest salary revision unless it corrects an existing revision date."))
+		frappe.throw(_("An earlier Effective Date can only be used to correct the current salary revision."))
 
 	def _get_employee_companies(self):
 		companies = {
@@ -144,7 +142,7 @@ class EmployeeSalaryProfile(Document):
 		effective_from = getdate(self.effective_date)
 		for superseded in frappe.get_all(
 			"Employee Salary Revision",
-			filters={"salary_profile": self.name, "effective_from": effective_from},
+			filters={"salary_profile": self.name, "effective_from": [">=", effective_from]},
 			pluck="name",
 		):
 			frappe.db.set_value(
@@ -161,11 +159,6 @@ class EmployeeSalaryProfile(Document):
 				"Employee Salary Revision", previous, "effective_to",
 				add_days(effective_from, -1), update_modified=False,
 			)
-		next_effective = frappe.db.get_value(
-			"Employee Salary Revision",
-			{"salary_profile": self.name, "effective_from": [">", effective_from]},
-			"effective_from", order_by="effective_from asc, revision_number asc",
-		)
 		revision = frappe.get_doc({
 			"doctype": "Employee Salary Revision",
 			"employee": self.employee,
@@ -173,7 +166,7 @@ class EmployeeSalaryProfile(Document):
 			"salary_profile": self.name,
 			"revision_number": (latest.revision_number if latest else 0) + 1,
 			"effective_from": self.effective_date,
-			"effective_to": add_days(next_effective, -1) if next_effective else None,
+			"effective_to": None,
 			"action_date": self.action_date,
 			"changed_by": frappe.session.user,
 			"basic_salary": self.basic_salary,

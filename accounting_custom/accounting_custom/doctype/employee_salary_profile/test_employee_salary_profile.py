@@ -68,7 +68,7 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		}).insert(ignore_permissions=True)
 		profile = frappe.get_doc({
 			"doctype": "Employee Salary Profile", "employee": employee.name,
-			"effective_date": "2026-09-01", "action_date": "2026-08-25",
+			"effective_date": "2026-09-02", "action_date": "2026-08-25",
 		})
 		for fieldname, amount in (("basic_allocations", 1000), ("transportation_allocations", 200), ("family_allowance_allocations", 100)):
 			profile.append(fieldname, {"company": "Itihad", "account": account, "cost_center": cost_center, "amount": amount, "percentage": 100})
@@ -84,10 +84,10 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		self.assertEqual(history[0].name, revision.name)
 		self.assertEqual(len(history[0].allocations), 3)
 		self.assertTrue(all(row.percentage == 100 for row in history[0].allocations))
-		self.assertTrue(frappe.db.exists("Salary Structure Assignment", {"employee": payroll_employee, "from_date": "2026-09-01", "docstatus": 1}))
+		self.assertTrue(frappe.db.exists("Salary Structure Assignment", {"employee": payroll_employee, "from_date": "2026-09-02", "docstatus": 1}))
 
-		# A correction may reuse the same effective date. It creates a new audit
-		# revision and supersedes the old HRMS assignment for that date.
+		# A correction may move the effective date backwards. It creates a new
+		# audit revision and supersedes later HRMS assignments.
 		profile.basic_allocations[0].amount = 1100
 		profile.effective_date = "2026-09-01"
 		profile.action_date = "2026-08-28"
@@ -98,8 +98,11 @@ class TestEmployeeSalarySecurity(FrappeTestCase):
 		revision.reload()
 		self.assertEqual(str(revision.effective_to), "2026-08-31")
 		self.assertEqual(frappe.db.count("Salary Structure Assignment", {
-			"employee": payroll_employee, "from_date": "2026-09-01", "docstatus": 1,
+			"employee": payroll_employee, "from_date": [">=", "2026-09-01"], "docstatus": 1,
 		}), 1)
+		self.assertFalse(frappe.db.exists("Salary Structure Assignment", {
+			"employee": payroll_employee, "from_date": "2026-09-02", "docstatus": 1,
+		}))
 
 		payable = frappe.db.get_value("Account", {"company": "Itihad", "is_group": 0, "disabled": 0, "root_type": "Liability", "account_type": ["!=", "Payable"]}, "name")
 		payroll = frappe.get_doc({

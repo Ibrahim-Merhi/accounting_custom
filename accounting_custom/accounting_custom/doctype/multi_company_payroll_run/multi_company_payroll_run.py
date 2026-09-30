@@ -133,8 +133,10 @@ class MultiCompanyPayrollRun(Document):
 			row.deductions = 0 if row.source_payroll_entry else deductions.get(row.payroll_employee, 0) + scheduled
 			row.net_salary = flt(row.gross_salary) - flt(row.deductions)
 			available = max(flt(row.net_salary) - flt(row.previously_paid), 0)
-			if flt(row.pay_this_run) < 0 or flt(row.pay_this_run) > available + 0.01:
-				frappe.throw(_("Pay This Run for {0} - {1} must be between 0 and {2}.").format(row.employee_name, row.company, available))
+			if flt(row.pay_this_run) < 0:
+				frappe.throw(_("Pay This Run for {0} - {1} cannot be negative.").format(row.employee_name, row.company))
+			if flt(row.pay_this_run) > available:
+				row.pay_this_run = available
 			row.deferred_amount = available - flt(row.pay_this_run)
 
 
@@ -159,7 +161,13 @@ class MultiCompanyPayrollRun(Document):
 		for profile in frappe.get_all("Employee Salary Profile", pluck="name"):
 			# Monthly payroll uses the salary that is effective on the first day of
 			# the period. A later revision naturally applies from the next month.
-			revs = frappe.get_all("Employee Salary Revision", filters={"salary_profile": profile, "effective_from": ["<=", self.start_date]}, fields=["name", "employee", "employee_name", "effective_from"], order_by="effective_from desc, revision_number desc", limit=1)
+			revs = frappe.db.sql("""
+				select name, employee, employee_name, effective_from
+				from `tabEmployee Salary Revision`
+				where salary_profile=%s and effective_from<=%s
+				and (effective_to is null or effective_to>=%s)
+				order by effective_from desc, revision_number desc limit 1
+			""", (profile, self.start_date, self.start_date), as_dict=True)
 			if not revs:
 				continue
 			rev = revs[0]
