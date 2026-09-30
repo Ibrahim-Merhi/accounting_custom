@@ -72,6 +72,40 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         self.assertEqual(row.pay_this_run, 450)
         self.assertEqual(row.deferred_amount, 0)
 
+        run.set("manual_deductions", [])
+        with patch.object(MultiCompanyPayrollRun, "_scheduled_advance_deductions", return_value=0):
+            run._refresh_employee_totals()
+        self.assertEqual(row.deductions, 0)
+        self.assertEqual(row.net_salary, 550)
+        self.assertEqual(row.pay_this_run, 550)
+        self.assertEqual(row.deferred_amount, 0)
+
+    def test_company_totals_follow_employee_changes(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "companies": [
+                {"company": "Company A", "payroll_payable_account": "Payable A", "currency": "USD", "status": "Ready"},
+                {"company": "Company B", "payroll_payable_account": "Payable B", "currency": "USD", "status": "Ready"},
+            ],
+            "employees": [
+                {"employee": "MASTER-1", "company": "Company A", "payroll_employee": "PAY-1", "pay_this_run": 200},
+                {"employee": "MASTER-2", "company": "Company A", "payroll_employee": "PAY-2", "pay_this_run": 450},
+                {"employee": "MASTER-3", "company": "Company B", "payroll_employee": "PAY-3", "pay_this_run": 300},
+            ],
+        })
+        run._refresh_company_totals()
+        self.assertEqual([(row.company, row.employee_count, row.gross_salary) for row in run.companies], [
+            ("Company A", 2, 650), ("Company B", 1, 300),
+        ])
+
+        run.set("employees", [row for row in run.employees if row.company == "Company A" and row.payroll_employee == "PAY-1"])
+        run._refresh_company_totals()
+        self.assertEqual(len(run.companies), 1)
+        self.assertEqual(run.companies[0].company, "Company A")
+        self.assertEqual(run.companies[0].employee_count, 1)
+        self.assertEqual(run.companies[0].gross_salary, 200)
+        self.assertEqual(run.companies[0].payroll_payable_account, "Payable A")
+
     def test_company_with_all_rows_removed_is_deferred(self):
         run = frappe.get_doc({
             "doctype": "Multi Company Payroll Run",

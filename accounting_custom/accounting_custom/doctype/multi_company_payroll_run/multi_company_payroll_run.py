@@ -17,6 +17,8 @@ class MultiCompanyPayrollRun(Document):
 			frappe.throw(_("Start Date cannot be after End Date."))
 		self._map_and_validate_deductions()
 		self._refresh_employee_totals()
+		if self.docstatus == 0:
+			self._refresh_company_totals()
 		self._validate_company_rows(require_accounts=self.docstatus == 1)
 		if self.docstatus == 1:
 			self._validate_payroll_prerequisites()
@@ -129,16 +131,43 @@ class MultiCompanyPayrollRun(Document):
 		for row in self.manual_deductions:
 			deductions[row.payroll_employee] = deductions.get(row.payroll_employee, 0) + flt(row.amount)
 		for row in self.employees:
+			previous_available = max(flt(row.net_salary) - flt(row.previously_paid), 0)
+			was_full_payment = abs(flt(row.pay_this_run) - previous_available) <= 0.01
 			scheduled = 0 if row.source_payroll_entry else self._scheduled_advance_deductions(row.payroll_employee)
 			row.deductions = 0 if row.source_payroll_entry else deductions.get(row.payroll_employee, 0) + scheduled
 			row.net_salary = flt(row.gross_salary) - flt(row.deductions)
 			available = max(flt(row.net_salary) - flt(row.previously_paid), 0)
 			if flt(row.pay_this_run) < 0:
 				frappe.throw(_("Pay This Run for {0} - {1} cannot be negative.").format(row.employee_name, row.company))
-			if flt(row.pay_this_run) > available:
+			if was_full_payment or flt(row.pay_this_run) > available:
 				row.pay_this_run = available
 			row.deferred_amount = available - flt(row.pay_this_run)
 
+	def _refresh_company_totals(self):
+		preserved_fields = (
+			"company", "payroll_payable_account", "currency", "payroll_entry",
+			"payroll_entry_count", "salary_slip_count", "journal_entry", "status", "error_message",
+		)
+		existing = {
+			row.company: {fieldname: row.get(fieldname) for fieldname in preserved_fields}
+			for row in self.companies
+		}
+		company_order = []
+		for row in self.employees:
+			if row.company and row.company not in company_order:
+				company_order.append(row.company)
+		self.set("companies", [])
+		for company in company_order:
+			rows = [row for row in self.employees if row.company == company]
+			values = existing.get(company, {})
+			if not values:
+				payable, currency = frappe.db.get_value(
+					"Company", company, ["default_payroll_payable_account", "default_currency"]
+				) or (None, None)
+				values = {"company": company, "payroll_payable_account": payable, "currency": currency, "status": "Ready"}
+			values["employee_count"] = len({row.payroll_employee for row in rows})
+			values["gross_salary"] = sum(flt(row.pay_this_run) for row in rows)
+			self.append("companies", values)
 
 	def _scheduled_advance_deductions(self, employee):
 		return flt(frappe.db.sql("""select sum(amount) from `tabAdditional Salary` where employee=%s and company in (select company from `tabEmployee` where name=%s) and docstatus=1 and disabled=0 and ref_doctype='Employee Advance' and ((is_recurring=1 and from_date<=%s and to_date>=%s) or (is_recurring=0 and payroll_date between %s and %s))""", (employee, employee, self.end_date, self.start_date, self.start_date, self.end_date))[0][0])
