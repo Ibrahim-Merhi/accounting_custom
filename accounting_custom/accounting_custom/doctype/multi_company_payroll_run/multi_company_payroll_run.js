@@ -1,5 +1,6 @@
 frappe.ui.form.on("Multi Company Payroll Run", {
 	setup(frm) {
+		enable_employee_grid_search(frm);
 		frm.set_query("payroll_payable_account", "companies", (_doc, cdt, cdn) => ({filters:{company:locals[cdt][cdn].company,is_group:0,disabled:0,account_type:"Payable"}}));
 		frm.set_query("employee", "manual_deductions", () => ({filters:{name:["in",(frm.doc.employees||[]).map(r=>r.employee)]}}));
 		frm.set_query("company", "manual_deductions", (_doc, cdt, cdn) => {
@@ -12,6 +13,7 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 		frm.set_query("source_cost_center", "manual_deductions", (_doc, cdt, cdn) => ({filters:{name:["in",get_source_allocations(frm, locals[cdt][cdn]).filter(r=>!locals[cdt][cdn].source_account || r.account===locals[cdt][cdn].source_account).map(r=>r.cost_center)]}}));
 	},
 	refresh(frm) {
+		enable_employee_grid_search(frm);
 		render_company_summary(frm);
 		if (!frm.is_new() && frm.doc.docstatus===0 && !frm.doc.companies?.some(r=>r.payroll_entry)) {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
@@ -40,6 +42,35 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 	manual_deductions_add(frm) { setTimeout(()=>frm.refresh_field("manual_deductions"),0); },
 });
 
+
+function enable_employee_grid_search(frm) {
+	["employees", "allocation_summary"].forEach((fieldname) => {
+		const grid = frm.fields_dict[fieldname]?.grid;
+		if (!grid || grid.__employee_name_search_enabled) return;
+
+		grid.__employee_name_search_enabled = true;
+		grid.get_filtered_data = function () {
+			let rows = this.frm ? this.frm.doc[this.df.fieldname] : this.df.data;
+			if (!rows) return rows;
+
+			for (const filter_field in this.filter) {
+				const {df, value} = this.filter[filter_field];
+				const search_value = String(value || "").toLocaleLowerCase();
+				rows = rows.filter((row) => {
+					if (filter_field !== "employee") {
+						return this.get_data_based_on_fieldtype(df, row, search_value);
+					}
+
+					return [row.employee, row.employee_name, row.payroll_employee].some((candidate) =>
+						String(candidate || "").toLocaleLowerCase().includes(search_value)
+					);
+				});
+			}
+
+			return rows;
+		};
+	});
+}
 
 function payroll_entries(frm) {
 	const entries = new Map();
