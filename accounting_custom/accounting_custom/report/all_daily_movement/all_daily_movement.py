@@ -245,6 +245,7 @@ def get_transactions(filters):
 					max(nullif(multi_donation.finance_notes, '')),
 					max(nullif(payment.finance_notes, '')),
 					max(nullif(receipt.finance_notes, '')),
+					max(nullif(currency_exchange.finance_notes, '')),
 					''
 				) finance_notes,
 				sum(gle.debit_in_account_currency) incoming,
@@ -257,6 +258,7 @@ def get_transactions(filters):
 			left join `tabMulti Donation` multi_donation on multi_donation.journal_entry = journal.name and multi_donation.docstatus < 2
 			left join `tabAccounting Payment Entry` payment on payment.journal_entry = journal.name and payment.docstatus < 2
 			left join `tabAccounting Receipt Entry` receipt on receipt.journal_entry = journal.name and receipt.docstatus < 2
+			left join `tabAccounting Currency Exchange` currency_exchange on currency_exchange.journal_entry = journal.name and currency_exchange.docstatus < 2
 			left join (
 				select parent, account, account_currency,
 					max(nullif(user_remark, '')) user_remark
@@ -286,6 +288,7 @@ def get_transactions(filters):
 					max(nullif(multi_donation.finance_notes, '')),
 					max(nullif(payment.finance_notes, '')),
 					max(nullif(receipt.finance_notes, '')),
+					max(nullif(currency_exchange.finance_notes, '')),
 					''
 				) finance_notes,
 				sum(line.debit_in_account_currency) incoming,
@@ -298,6 +301,7 @@ def get_transactions(filters):
 			left join `tabMulti Donation` multi_donation on multi_donation.journal_entry = journal.name and multi_donation.docstatus < 2
 			left join `tabAccounting Payment Entry` payment on payment.journal_entry = journal.name and payment.docstatus < 2
 			left join `tabAccounting Receipt Entry` receipt on receipt.journal_entry = journal.name and receipt.docstatus < 2
+			left join `tabAccounting Currency Exchange` currency_exchange on currency_exchange.journal_entry = journal.name and currency_exchange.docstatus < 2
 			where {company_condition('journal', filters)} and journal.posting_date = %(date)s
 				and journal.docstatus = 0
 				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''

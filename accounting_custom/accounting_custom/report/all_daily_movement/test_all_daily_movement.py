@@ -74,7 +74,11 @@ class TestAllDailyMovement(TestCase):
 		self.assertIn("'ملاحظة :', ''", query)
 		self.assertIn("trim(replace(max(nullif(journal.user_remark, '')), 'Note:', ''))", query)
 		for source_doctype in (
-			"Donation Entry", "Multi Donation", "Accounting Payment Entry", "Accounting Receipt Entry",
+			"Donation Entry",
+			"Multi Donation",
+			"Accounting Payment Entry",
+			"Accounting Receipt Entry",
+			"Accounting Currency Exchange",
 		):
 			self.assertEqual(query.count(f"`tab{source_doctype}`"), 2)
 		self.assertEqual(query.count(") finance_notes"), 2)
