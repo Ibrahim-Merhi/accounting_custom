@@ -174,6 +174,9 @@ doc_events = {
 	"Donation Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_donation_entry_series",
 	},
+	"Multi Donation": {
+		"before_naming": "accounting_custom.naming.company_series.set_multi_donation_series",
+	},
 	"Journal Entry": {
 		"before_naming": "accounting_custom.naming.company_series.set_journal_entry_series",
 		"before_validate": "accounting_custom.accounting.standard_exchange_rate.apply_journal_entry_exchange_rates",

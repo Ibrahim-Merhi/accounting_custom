@@ -15,6 +15,7 @@ ANALYTICAL_TRIAL_BALANCE = "Analytical Trial Balance"
 SECTIONS = [
 	("Donations and Collectors", [
 		("Donation Entry", "DocType"),
+		("Multi Donation", "DocType"),
 		("Collector Profile", "DocType"),
 		("Collector Handover", "DocType"),
 	]),
