@@ -79,7 +79,7 @@ function configure_salary_advance_actions(frm) {
 			["Journal Entry", "docstatus", "<", 2],
 		],
 		fields: ["name"],
-		order_by: "creation desc",
+		order_by: "`tabJournal Entry`.`creation` desc",
 		limit: 1,
 	}).then((rows) => {
 		if (!rows[0]?.name) return;
