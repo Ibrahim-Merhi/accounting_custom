@@ -8,6 +8,8 @@ PAYMENT_NAME = "سند صرف"
 ACCOUNTING_RECEIPT_NAME = "سند قبض محاسبي"
 MUNTADA_CONDITIONAL_START = "{# MUNTADA-COMPANY-CONDITIONAL-START #}"
 MUNTADA_CONDITIONAL_END = "{# MUNTADA-COMPANY-CONDITIONAL-END #}"
+DONOR_DISPLAY_START = "{# DONATION-DONOR-DISPLAY-START #}"
+DONOR_DISPLAY_END = "{# DONATION-DONOR-DISPLAY-END #}"
 
 
 def ensure_arabic_voucher_print_formats():
@@ -15,9 +17,9 @@ def ensure_arabic_voucher_print_formats():
 		return
 
 	receipt = frappe.get_doc("Print Format", RECEIPT_NAME)
-	standard_receipt_html = _add_organization_details(
+	standard_receipt_html = _donation_donor_display_html(_add_organization_details(
 		_add_voucher_number(_standard_company_html(receipt.html))
-	)
+	))
 	receipt_html = _company_conditional_html(
 		standard_receipt_html,
 		_muntada_voucher_html(payment=False, donation=True),
@@ -108,6 +110,24 @@ def _company_conditional_html(standard_html, muntada_html, islam_forum_html=None
 {MUNTADA_CONDITIONAL_END}"""
 
 
+def _donation_donor_display_html(html):
+	"""Show an anonymous label or the donor's professional title on donation receipts."""
+	if DONOR_DISPLAY_START in html:
+		return html
+	donor_expression = '{{ doc.donor_name or doc.donor or "" }}'
+	donor_display = f"""{DONOR_DISPLAY_START}
+{{% if doc.is_anonymous_male %}}
+فاعل خير
+{{% elif doc.is_anonymous_female %}}
+فاعلة خير
+{{% else %}}
+{{% set professional_title = frappe.db.get_value("Donor", doc.donor, "professional_title") if doc.donor else "" %}}
+{{{{ ((professional_title ~ " ") if professional_title else "") ~ (doc.donor_name or doc.donor or "") }}}}
+{{% endif %}}
+{DONOR_DISPLAY_END}"""
+	return html.replace(donor_expression, donor_display)
+
+
 def _islam_forum_html(html):
 	organization = """<div class="organization-name organization-layout-v2">
             <span class="organization-primary">جمعية الثقافة والتوجيه الاجتماعي</span>
@@ -157,7 +177,9 @@ def _muntada_voucher_html(payment, donation=False):
 {{% set payment_rows = doc.{payment_rows_field} or [] %}}
 {{% set usd_amount = amount_rows | selectattr("currency", "equalto", "USD") | sum(attribute="{amount_field}") %}}
 {{% set lbp_amount = amount_rows | selectattr("currency", "equalto", "LBP") | sum(attribute="{amount_field}") %}}
-{{% set parties = (doc.donor_name or doc.donor or "") if {str(donation).lower()} else (payment_rows | map(attribute="party_name") | select | unique | join("، ")) %}}
+{{% set donor_professional_title = frappe.db.get_value("Donor", doc.donor, "professional_title") if {str(donation).lower()} and doc.donor else "" %}}
+{{% set donor_display_name = "فاعل خير" if doc.is_anonymous_male else ("فاعلة خير" if doc.is_anonymous_female else (((donor_professional_title ~ " ") if donor_professional_title else "") ~ (doc.donor_name or doc.donor or ""))) %}}
+{{% set parties = donor_display_name if {str(donation).lower()} else (payment_rows | map(attribute="party_name") | select | unique | join("، ")) %}}
 {{% set payment_modes = payment_rows | map(attribute="mode_of_payment") | select | join(" ") %}}
 <style>
 @page {{ size: 230mm 113mm; margin: 0; }}

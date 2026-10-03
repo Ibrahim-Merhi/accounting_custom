@@ -9,12 +9,13 @@ class TestDonationEntryMetadata(FrappeTestCase):
 		meta = frappe.get_meta("Donation Entry")
 		self.assertEqual(meta.module, "Accounting Custom")
 		self.assertTrue(meta.is_submittable)
-		self.assertEqual(meta.autoname, "DON-.YYYY.-.#####")
+		self.assertEqual(meta.autoname, "naming_series:")
 		for fieldname in (
 			"donor", "company", "mode_of_payment", "base_donation_amount", "donor_account",
 			"cost_center", "currency", "custom_company_currency", "project", "donation_amount",
 			"exchange_rate", "received_in_account", "custom_hijri_date",
 			"custom_amount_in_words_arabic", "total_usd", "total_lbp", "payments",
+			"is_anonymous_male", "is_anonymous_female",
 		):
 			self.assertTrue(meta.has_field(fieldname), fieldname)
 
@@ -51,3 +52,12 @@ class TestDonationEntryMetadata(FrappeTestCase):
 		self.assertEqual(doc.donation_amount, 100)
 		self.assertEqual(doc.exchange_rate, 1)
 		self.assertEqual(doc.received_in_account, "Donation Income - ITHD")
+
+	def test_anonymous_donor_choices_are_mutually_exclusive(self):
+		doc = DonationEntry({
+			"doctype": "Donation Entry",
+			"is_anonymous_male": 1,
+			"is_anonymous_female": 1,
+		})
+		with self.assertRaises(frappe.ValidationError):
+			doc.validate_anonymous_donor_choice()

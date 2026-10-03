@@ -10,6 +10,8 @@
   "naming_series",
   "donor",
   "donor_name",
+  "is_anonymous_male",
+  "is_anonymous_female",
   "column_break_cxbv",
   "posting_date",
   "reference_no",
@@ -73,6 +75,18 @@
    "fieldtype": "Data",
    "label": "Donor Name",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_anonymous_male",
+   "fieldtype": "Check",
+   "label": "فاعل خير"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_anonymous_female",
+   "fieldtype": "Check",
+   "label": "فاعلة خير"
   },
   {
    "fieldname": "column_break_cxbv",

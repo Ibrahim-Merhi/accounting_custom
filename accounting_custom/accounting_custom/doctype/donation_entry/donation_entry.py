@@ -58,6 +58,7 @@ class DonationEntry(AccountsController):
 		# unchanged value such as 13.96625 into 13.966249999999999.
 		if getattr(self, "_action", None) == "update_after_submit":
 			return
+		self.validate_anonymous_donor_choice()
 		self.set_custom_company_currency()
 		validate_accounting_payment_branch(self)
 		self.validate_header()
@@ -66,6 +67,10 @@ class DonationEntry(AccountsController):
 		self.set_totals()
 		self.validate_linked_companies()
 		self.validate_collector()
+
+	def validate_anonymous_donor_choice(self):
+		if self.is_anonymous_male and self.is_anonymous_female:
+			frappe.throw(_("Select either فاعل خير or فاعلة خير, not both."))
 
 	def before_submit(self):
 		if self.approval_status != "Approved":

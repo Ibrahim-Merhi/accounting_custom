@@ -3,6 +3,7 @@ import frappe
 
 from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
+	_donation_donor_display_html,
 	_islam_forum_html,
 	_muntada_voucher_html,
 	_payment_html,
@@ -104,6 +105,22 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn("Test Donor", html)
 		self.assertIn("100.00", html)
+
+	def test_donation_receipt_supports_anonymous_labels_and_professional_title(self):
+		template = _donation_donor_display_html(
+			'<span>{{ doc.donor_name or doc.donor or "" }}</span>'
+		)
+		male = frappe.render_template(template, {
+			"doc": frappe._dict(is_anonymous_male=1, is_anonymous_female=0),
+		})
+		female = frappe.render_template(template, {
+			"doc": frappe._dict(is_anonymous_male=0, is_anonymous_female=1),
+		})
+
+		self.assertIn("فاعل خير", male)
+		self.assertIn("فاعلة خير", female)
+		self.assertNotIn("فاعلة خير", male)
+		self.assertIn("professional_title", template)
 
 
 	def test_professional_payslip_has_requested_fields_without_removed_ids(self):

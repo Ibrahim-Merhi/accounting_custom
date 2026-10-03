@@ -25,6 +25,18 @@ frappe.ui.form.on("Donation Entry", {
 		if (frm.doc.donor) load_donor_accounts(frm);
 	},
 
+	is_anonymous_male(frm) {
+		if (frm.doc.is_anonymous_male && frm.doc.is_anonymous_female) {
+			frm.set_value("is_anonymous_female", 0);
+		}
+	},
+
+	is_anonymous_female(frm) {
+		if (frm.doc.is_anonymous_female && frm.doc.is_anonymous_male) {
+			frm.set_value("is_anonymous_male", 0);
+		}
+	},
+
 	company(frm) {
 		frm.set_value("donor_account", null);
 		frm.set_value("custom_branch", null);
