@@ -73,9 +73,18 @@ class TestAllDailyMovement(TestCase):
 		self.assertEqual(query.count("max(nullif(journal.user_remark, ''))"), 2)
 		self.assertIn("'ملاحظة :', ''", query)
 		self.assertIn("trim(replace(max(nullif(journal.user_remark, '')), 'Note:', ''))", query)
-		self.assertNotIn("`tabDonation Entry`", query)
-		self.assertNotIn("`tabAccounting Payment Entry`", query)
-		self.assertNotIn("`tabAccounting Receipt Entry`", query)
+		for source_doctype in (
+			"Donation Entry", "Multi Donation", "Accounting Payment Entry", "Accounting Receipt Entry",
+		):
+			self.assertEqual(query.count(f"`tab{source_doctype}`"), 2)
+		self.assertEqual(query.count(") finance_notes"), 2)
+
+	def test_report_exposes_finance_notes_column(self):
+		from accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement import get_columns
+
+		columns = {column["fieldname"]: column for column in get_columns()}
+		self.assertIn("finance_notes", columns)
+		self.assertEqual(columns["finance_notes"]["label"], "Finance Notes")
 
 	@patch(
 		"accounting_custom.accounting_custom.report.all_daily_movement.all_daily_movement.get_transactions"

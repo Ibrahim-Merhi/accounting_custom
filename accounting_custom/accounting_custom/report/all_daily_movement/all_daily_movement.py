@@ -156,6 +156,7 @@ def get_columns():
 		{"fieldname": "voucher_no", "label": _("Document"), "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 180},
 		{"fieldname": "party", "label": _("Party"), "fieldtype": "Data", "width": 190},
 		{"fieldname": "description", "label": _("Description"), "fieldtype": "Data", "width": 260},
+		{"fieldname": "finance_notes", "label": _("Finance Notes"), "fieldtype": "Data", "width": 260},
 		{"fieldname": "incoming", "label": _("Incoming"), "fieldtype": "Currency", "options": "currency", "width": 130},
 		{"fieldname": "outgoing", "label": _("Outgoing"), "fieldtype": "Currency", "options": "currency", "width": 130},
 		{"fieldname": "previous_balance", "label": _("Previous Balance"), "fieldtype": "Currency", "options": "currency", "width": 145},
@@ -239,12 +240,23 @@ def get_transactions(filters):
 					trim(replace(replace(max(nullif(gle.remarks, '')), 'Note:', ''), 'ملاحظة :', '')),
 					''
 				) description,
+				coalesce(
+					max(nullif(donation.finance_notes, '')),
+					max(nullif(multi_donation.finance_notes, '')),
+					max(nullif(payment.finance_notes, '')),
+					max(nullif(receipt.finance_notes, '')),
+					''
+				) finance_notes,
 				sum(gle.debit_in_account_currency) incoming,
 				sum(gle.credit_in_account_currency) outgoing,
 				min(gle.creation) creation, 'Submitted' status
 			from `tabGL Entry` gle
 			inner join `tabAccount` account on account.name = gle.account
 			left join `tabJournal Entry` journal on journal.name = gle.voucher_no
+			left join `tabDonation Entry` donation on donation.journal_entry = journal.name and donation.docstatus < 2
+			left join `tabMulti Donation` multi_donation on multi_donation.journal_entry = journal.name and multi_donation.docstatus < 2
+			left join `tabAccounting Payment Entry` payment on payment.journal_entry = journal.name and payment.docstatus < 2
+			left join `tabAccounting Receipt Entry` receipt on receipt.journal_entry = journal.name and receipt.docstatus < 2
 			left join (
 				select parent, account, account_currency,
 					max(nullif(user_remark, '')) user_remark
@@ -269,12 +281,23 @@ def get_transactions(filters):
 					trim(replace(max(nullif(journal.user_remark, '')), 'Note:', '')),
 					''
 				) description,
+				coalesce(
+					max(nullif(donation.finance_notes, '')),
+					max(nullif(multi_donation.finance_notes, '')),
+					max(nullif(payment.finance_notes, '')),
+					max(nullif(receipt.finance_notes, '')),
+					''
+				) finance_notes,
 				sum(line.debit_in_account_currency) incoming,
 				sum(line.credit_in_account_currency) outgoing,
 				journal.creation, 'Draft' status
 			from `tabJournal Entry` journal
 			inner join `tabJournal Entry Account` line on line.parent = journal.name
 			inner join `tabAccount` account on account.name = line.account
+			left join `tabDonation Entry` donation on donation.journal_entry = journal.name and donation.docstatus < 2
+			left join `tabMulti Donation` multi_donation on multi_donation.journal_entry = journal.name and multi_donation.docstatus < 2
+			left join `tabAccounting Payment Entry` payment on payment.journal_entry = journal.name and payment.docstatus < 2
+			left join `tabAccounting Receipt Entry` receipt on receipt.journal_entry = journal.name and receipt.docstatus < 2
 			where {company_condition('journal', filters)} and journal.posting_date = %(date)s
 				and journal.docstatus = 0
 				and coalesce(line.party_type, '') = '' and coalesce(line.party, '') = ''

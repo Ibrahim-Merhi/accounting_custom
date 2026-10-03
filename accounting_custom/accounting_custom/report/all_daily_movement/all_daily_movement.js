@@ -73,11 +73,11 @@ const all_daily_movement_print_format = `
 					{% if filters.show_details && transactions.length %}
 					<table class="transactions">
 						<colgroup><col style="width:54%"><col style="width:23%"><col style="width:23%"></colgroup>
-						<thead><tr><th>الوصف</th><th>الوارد</th><th>الصادر</th></tr></thead>
+						<thead><tr><th>ملاحظات المالية</th><th>الوارد</th><th>الصادر</th></tr></thead>
 						<tbody>
 						{% if transactions.length %}
 							{% for row in transactions %}
-							<tr><td>{{ row.description || "" }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ display_amount(row.incoming) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ display_amount(row.outgoing) }}{% endif %}</td></tr>
+							<tr><td>{{ row.finance_notes || "" }}</td><td class="amount">{% if row.incoming %}{{ currency_symbol }} {{ display_amount(row.incoming) }}{% endif %}</td><td class="amount">{% if row.outgoing %}{{ currency_symbol }} {{ display_amount(row.outgoing) }}{% endif %}</td></tr>
 							{% endfor %}
 						{% else %}
 							<tr><td colspan="3" class="empty-row">لا توجد حركات لهذه العملة في التاريخ المحدد</td></tr>
