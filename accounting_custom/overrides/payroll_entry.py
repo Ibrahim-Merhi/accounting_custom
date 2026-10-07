@@ -180,6 +180,12 @@ class CustomPayrollEntry(PayrollEntry):
 		for deduction in self.get("custom_manual_deductions") or []:
 			key = (deduction.employee, deduction.source_cost_center)
 			deductions[key] = deductions.get(key, 0) + flt(deduction.amount)
+		advance_deductions = {}
+		for deduction in getattr(self, "_advance_deduction_entries", []):
+			employee = deduction.get("employee")
+			advance_deductions[employee] = advance_deductions.get(employee, 0) + flt(
+				deduction.get("amount")
+			)
 		slips = frappe.get_all("Salary Slip", filters={"payroll_entry": self.name, "docstatus": 1}, fields=["employee", "net_pay"], order_by="employee")
 		for slip in slips:
 			amounts = {}
@@ -189,6 +195,9 @@ class CustomPayrollEntry(PayrollEntry):
 			for (employee, cost_center), amount in deductions.items():
 				if employee == slip.employee:
 					amounts[cost_center] = amounts.get(cost_center, 0) - amount
+			self._deduct_from_basic_allocations(
+				amounts, slip.employee, advance_deductions.get(slip.employee, 0)
+			)
 			unallocated_deduction = max(sum(amounts.values()) - flt(slip.net_pay), 0)
 			positive_total = sum(max(amount, 0) for amount in amounts.values())
 			if unallocated_deduction and positive_total:
@@ -204,6 +213,26 @@ class CustomPayrollEntry(PayrollEntry):
 				if amount > 0.01:
 					rows.append(frappe._dict(employee=slip.employee, cost_center=cost_center, amount=round(flt(amount), int(precision))))
 		return rows
+
+	def _deduct_from_basic_allocations(self, amounts, employee, deduction_amount):
+		deduction_amount = flt(deduction_amount)
+		if deduction_amount <= 0:
+			return
+		basic_allocations = self._profile_allocations(employee, "Basic Salary")
+		basic_total = sum(flt(row.amount) for row in basic_allocations)
+		if basic_total + 0.01 < deduction_amount:
+			frappe.throw(_(
+				"Salary advance deduction {0} exceeds Basic Salary {1} for employee {2}."
+			).format(deduction_amount, basic_total, employee))
+		remaining = deduction_amount
+		for index, allocation in enumerate(basic_allocations):
+			share = (
+				remaining if index == len(basic_allocations) - 1
+				else deduction_amount * flt(allocation.amount) / basic_total
+			)
+			amounts[allocation.cost_center] = amounts.get(allocation.cost_center, 0) - share
+			remaining -= share
+
 	def make_journal_entry(self, accounts, *args, **kwargs):
 		if not self._is_managed_payroll():
 			return super().make_journal_entry(accounts, *args, **kwargs)
@@ -320,11 +349,16 @@ class CustomPayrollEntry(PayrollEntry):
 			allocations = self._profile_allocations(item.employee, item.salary_component) if component_type == "earnings" else [row for row in manual_rows if row.employee == item.employee and row.salary_component == item.salary_component]
 			employee_advance = self.get_advance_deduction(component_type, item)
 			if employee_advance:
-				for cost_center, percentage in self.get_payroll_cost_centers_for_employee(item.employee, item.salary_structure).items():
-					amount = flt(item.amount) * percentage / 100
-					self.add_advance_deduction_entry(item, amount, cost_center, employee_advance)
-					if employee_wise_accounting_enabled:
-						self.set_employee_based_payroll_payable_entries(component_type, item.employee, amount)
+				basic_allocations = self._profile_allocations(item.employee, "Basic Salary")
+				if not basic_allocations:
+					frappe.throw(_("No Basic Salary allocation exists for employee {0}.").format(item.employee))
+				self.add_advance_deduction_entry(
+					item, flt(item.amount), basic_allocations[0].cost_center, employee_advance
+				)
+				if employee_wise_accounting_enabled:
+					self.set_employee_based_payroll_payable_entries(
+						component_type, item.employee, flt(item.amount)
+					)
 				continue
 			if allocations:
 				allocation_total = sum(flt(row.amount) for row in allocations)
@@ -346,6 +380,7 @@ class CustomPayrollEntry(PayrollEntry):
 				amount = flt(item.amount) * percentage / 100
 				account_dict[(account, cost_center)] = account_dict.get((account, cost_center), 0) + amount
 		return account_dict
+
 	def _profile_allocations(self, payroll_employee, component):
 		if component not in PROFILE_COMPONENTS:
 			return []

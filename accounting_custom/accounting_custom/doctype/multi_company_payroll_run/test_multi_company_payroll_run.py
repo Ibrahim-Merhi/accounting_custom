@@ -262,6 +262,28 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
             ("421 - Salaries Payable", 40, "payable"),
         ])
 
+    def test_advance_deduction_reduces_only_basic_salary_allocations(self):
+        entry = CustomPayrollEntry({"doctype": "Payroll Entry", "name": "PE-1", "cost_center": "Default"})
+        entry._advance_deduction_entries = [{"employee": "EMP-1", "amount": 100}]
+        allocations = {
+            "Basic Salary": [frappe._dict(cost_center="Basic CC", amount=300)],
+            "Transportation": [frappe._dict(cost_center="Transport CC", amount=100)],
+            "Family Allowance": [frappe._dict(cost_center="Family CC", amount=200)],
+        }
+        with patch(
+            "accounting_custom.overrides.payroll_entry.frappe.get_all",
+            return_value=[frappe._dict(employee="EMP-1", net_pay=500)],
+        ), patch.object(
+            entry, "_profile_allocations",
+            side_effect=lambda _employee, component: allocations[component],
+        ):
+            rows = entry._get_managed_payable_rows(2)
+
+        self.assertEqual(
+            {(row.cost_center, row.amount) for row in rows},
+            {("Basic CC", 200), ("Transport CC", 100), ("Family CC", 200)},
+        )
+
     def test_accrual_rounding_is_reconciled_on_final_payable_row(self):
         entry = CustomPayrollEntry({
             "doctype": "Payroll Entry", "payroll_payable_account": "421 - Salaries Payable",
