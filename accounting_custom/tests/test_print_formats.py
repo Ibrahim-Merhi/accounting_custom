@@ -9,6 +9,7 @@ from accounting_custom.setup.print_formats import (
 	_muntada_voucher_html,
 	_payment_html,
 	_standard_company_html,
+	_white_voucher_title,
 	_individual_payslip_html,
 	_batch_payslip_html,
 )
@@ -55,6 +56,17 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn("/assets/accounting_custom/images/print_formats/treasurer_signature.jpg", html)
 		self.assertNotIn("i.imgur.com", html)
+
+	def test_voucher_titles_have_white_background_and_black_text(self):
+		standard = _white_voucher_title(
+			".receipt-title { background: #000; color: #fff; font-weight: 700; }"
+		)
+		muntada = _muntada_voucher_html(payment=True)
+
+		self.assertIn("background:#fff", standard)
+		self.assertIn("color:#111", standard)
+		self.assertIn("border:1.5px solid #111", standard)
+		self.assertIn("background:#fff; color:#111; border:1.5px solid #111", muntada)
 
 	def test_single_format_selects_design_by_company(self):
 		template = _company_conditional_html(

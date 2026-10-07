@@ -22,9 +22,13 @@ def ensure_arabic_voucher_print_formats():
 		return
 
 	receipt = frappe.get_doc("Print Format", RECEIPT_NAME)
-	standard_receipt_html = _add_treasurer_signature(_donation_donor_display_html(
-		_add_organization_details(_add_voucher_number(_standard_company_html(receipt.html)))
-	))
+	standard_receipt_html = _white_voucher_title(
+		_add_treasurer_signature(
+			_donation_donor_display_html(
+				_add_organization_details(_add_voucher_number(_standard_company_html(receipt.html)))
+			)
+		)
+	)
 	receipt_html = _company_conditional_html(
 		standard_receipt_html,
 		_muntada_voucher_html(payment=False, donation=True),
@@ -140,6 +144,20 @@ def _add_treasurer_signature(html):
 	return html
 
 
+def _white_voucher_title(html):
+	"""Keep the voucher title box white with readable black text."""
+	style_pattern = r"(\.receipt-title\s*\{.*?\})"
+
+	def update_style(match):
+		style = re.sub(r"background\s*:\s*#[0-9a-fA-F]{3,6}\s*;", "background:#fff;", match.group(1))
+		style = re.sub(r"color\s*:\s*#[0-9a-fA-F]{3,6}\s*;", "color:#111;", style)
+		if not re.search(r"\bborder\s*:", style):
+			style = style[:-1] + "\n    border:1.5px solid #111;\n}"
+		return style
+
+	return re.sub(style_pattern, update_style, html, count=1, flags=re.DOTALL)
+
+
 def _islam_forum_html(html):
 	organization = """<div class="organization-name organization-layout-v2">
             <span class="organization-primary">جمعية الثقافة والتوجيه الاجتماعي</span>
@@ -207,7 +225,7 @@ def _muntada_voucher_html(payment, donation=False):
 .muntada-basmala {{ font-size:10px; font-weight:700; line-height:1; margin-bottom:2mm; }}
 .muntada-verse {{ font-size:19px; font-weight:700; white-space:nowrap; line-height:1.2; }}
 .muntada-title {{ position:absolute; left:25%; top:34mm; width:61%; height:10mm; box-sizing:border-box;
-    background:#000; color:#fff; font-size:23px; line-height:10mm; text-align:center; font-weight:700; }}
+    background:#fff; color:#111; border:1.5px solid #111; font-size:23px; line-height:9mm; text-align:center; font-weight:700; }}
 .muntada-amounts {{ position:absolute; left:5%; right:auto!important; top:35mm; direction:ltr; height:9mm; white-space:nowrap; }}
 .amount-box {{ display:inline-block; border:1.5px solid #222; width:27mm; height:9mm; box-sizing:border-box;
     font-family:Arial,sans-serif; font-size:12px; line-height:8mm; font-weight:700; text-align:center; }}
