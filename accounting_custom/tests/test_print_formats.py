@@ -3,6 +3,7 @@ import frappe
 
 from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
+	_add_treasurer_signature,
 	_donation_donor_display_html,
 	_islam_forum_html,
 	_muntada_voucher_html,
@@ -44,6 +45,16 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertEqual(payment.count("فقط لا غير"), 1)
 		self.assertIn("1448/4/8", payment)
 		self.assertIn("2026-09-19", receipt)
+		self.assertIn("treasurer_signature.jpg", payment)
+		self.assertIn("treasurer_signature.jpg", receipt)
+
+	def test_standard_vouchers_replace_external_treasurer_signature(self):
+		html = _add_treasurer_signature(
+			'<img src="https://i.imgur.com/t8U9lax.png" alt="treasurer">'
+		)
+
+		self.assertIn("/assets/accounting_custom/images/print_formats/treasurer_signature.jpg", html)
+		self.assertNotIn("i.imgur.com", html)
 
 	def test_single_format_selects_design_by_company(self):
 		template = _company_conditional_html(

@@ -10,6 +10,11 @@ MUNTADA_CONDITIONAL_START = "{# MUNTADA-COMPANY-CONDITIONAL-START #}"
 MUNTADA_CONDITIONAL_END = "{# MUNTADA-COMPANY-CONDITIONAL-END #}"
 DONOR_DISPLAY_START = "{# DONATION-DONOR-DISPLAY-START #}"
 DONOR_DISPLAY_END = "{# DONATION-DONOR-DISPLAY-END #}"
+TREASURER_SIGNATURE = "/assets/accounting_custom/images/print_formats/treasurer_signature.jpg"
+LEGACY_TREASURER_SIGNATURES = (
+	"https://i.imgur.com/t8U9lax.png",
+	"https://imgur.com/t8U9lax.png",
+)
 
 
 def ensure_arabic_voucher_print_formats():
@@ -17,8 +22,8 @@ def ensure_arabic_voucher_print_formats():
 		return
 
 	receipt = frappe.get_doc("Print Format", RECEIPT_NAME)
-	standard_receipt_html = _donation_donor_display_html(_add_organization_details(
-		_add_voucher_number(_standard_company_html(receipt.html))
+	standard_receipt_html = _add_treasurer_signature(_donation_donor_display_html(
+		_add_organization_details(_add_voucher_number(_standard_company_html(receipt.html)))
 	))
 	receipt_html = _company_conditional_html(
 		standard_receipt_html,
@@ -128,6 +133,13 @@ def _donation_donor_display_html(html):
 	return html.replace(donor_expression, donor_display)
 
 
+def _add_treasurer_signature(html):
+	"""Use the bundled treasurer signature in every standard voucher format."""
+	for image_url in LEGACY_TREASURER_SIGNATURES:
+		html = html.replace(image_url, TREASURER_SIGNATURE)
+	return html
+
+
 def _islam_forum_html(html):
 	organization = """<div class="organization-name organization-layout-v2">
             <span class="organization-primary">جمعية الثقافة والتوجيه الاجتماعي</span>
@@ -155,11 +167,11 @@ def _muntada_voucher_html(payment, donation=False):
 	)
 	signatures = (
 		'<td>المسؤول:<div class="sign-line"></div></td>'
-		'<td>أمين الصندوق:<div class="sign-line"></div></td>'
+		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
 		'<td>المستلم:<div class="sign-line"></div></td>'
 		if payment else
 		'<td></td>'
-		'<td>أمين الصندوق:<div class="sign-line"></div></td>'
+		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
 		'<td>المستلم:<div class="sign-line"></div></td>'
 	)
 	date_line = (
@@ -210,6 +222,8 @@ def _muntada_voucher_html(payment, donation=False):
     border-top:2px solid #222; padding-top:1.5mm; table-layout:fixed; font-size:11px; font-weight:700; text-align:center; }}
 .muntada-signatures td {{ vertical-align:top; width:33.33%; }}
 .sign-line {{ border-bottom:1.4px dotted #333; height:5mm; margin:0 9mm; }}
+.treasurer-signature {{ height:12mm; margin-top:-1mm; display:flex; align-items:center; justify-content:center; }}
+.treasurer-signature img {{ display:block; max-width:25mm; max-height:12mm; width:auto; height:auto; object-fit:contain; }}
 .muntada-date {{ position:absolute; right:16%; top:96mm; font-size:9px; font-weight:700; white-space:nowrap; }}
 .date-separator {{ margin:0 4mm; color:#777; }}
 .muntada-footer {{ position:absolute; left:5%; right:12%; bottom:2mm; border:1.5px solid #222;
