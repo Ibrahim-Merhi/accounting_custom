@@ -10,6 +10,7 @@ OBSOLETE_WORKSPACE_TARGETS = {
 CUSTOM_REPORTS_SECTION = "Custom Reports"
 ACCOUNT_COST_CENTER_REPORT = "Account and Cost Center Report"
 ANALYTICAL_TRIAL_BALANCE = "Analytical Trial Balance"
+CUSTOM_REPORT_TARGETS = (ACCOUNT_COST_CENTER_REPORT, ANALYTICAL_TRIAL_BALANCE)
 
 
 SECTIONS = [
@@ -105,7 +106,7 @@ def ensure_accounting_workspace_sections():
 	custom_targets = {label for _section, links in SECTIONS for label, _link_type in links}
 	existing_links = []
 	for row in doc.links:
-		if row.type == "Link" and row.link_to == ACCOUNT_COST_CENTER_REPORT:
+		if row.type == "Link" and row.link_to in CUSTOM_REPORT_TARGETS:
 			continue
 		if row.type == "Card Break" and row.label in section_labels:
 			continue
@@ -115,39 +116,13 @@ def ensure_accounting_workspace_sections():
 			continue
 		existing_links.append(row.as_dict())
 
-	custom_reports_index = next(
-		(
-			index for index, row in enumerate(existing_links)
-			if row.get("type") == "Card Break" and row.get("label") == CUSTOM_REPORTS_SECTION
-		),
-		None,
-	)
-	if custom_reports_index is None:
-		existing_links.append({"type": "Card Break", "label": CUSTOM_REPORTS_SECTION})
-		custom_reports_index = len(existing_links) - 1
-
-	insert_at = custom_reports_index + 1
-	for index in range(custom_reports_index + 1, len(existing_links)):
-		row = existing_links[index]
-		if row.get("type") == "Card Break":
-			break
-		if row.get("type") == "Link" and row.get("link_to") == ANALYTICAL_TRIAL_BALANCE:
-			insert_at = index
-			break
-		insert_at = index + 1
-	existing_links.insert(insert_at, {
-		"type": "Link",
-		"label": ACCOUNT_COST_CENTER_REPORT,
-		"link_type": "Report",
-		"link_to": ACCOUNT_COST_CENTER_REPORT,
-		"is_query_report": 1,
-	})
+	existing_links = _insert_custom_report_links(existing_links)
 	doc.set("links", existing_links)
 
 	for section, links in SECTIONS:
 		doc.append("links", {"type": "Card Break", "label": section})
 		for label, link_type in links:
-				doc.append("links", {
+			doc.append("links", {
 				"type": "Link", "label": label, "link_type": link_type,
 				"link_to": label, "is_query_report": 1 if link_type == "Report" else 0,
 			})
@@ -164,6 +139,29 @@ def ensure_accounting_workspace_sections():
 	finally:
 		frappe.conf.developer_mode = developer_mode
 	frappe.clear_cache(doctype="Workspace")
+
+
+def _insert_custom_report_links(existing_links):
+	custom_reports_index = next(
+		(
+			index for index, row in enumerate(existing_links)
+			if row.get("type") == "Card Break" and row.get("label") == CUSTOM_REPORTS_SECTION
+		),
+		None,
+	)
+	if custom_reports_index is None:
+		existing_links.append({"type": "Card Break", "label": CUSTOM_REPORTS_SECTION})
+		custom_reports_index = len(existing_links) - 1
+
+	report_links = [
+		{
+			"type": "Link", "label": report, "link_type": "Report",
+			"link_to": report, "is_query_report": 1,
+		}
+		for report in CUSTOM_REPORT_TARGETS
+	]
+	existing_links[custom_reports_index + 1:custom_reports_index + 1] = report_links
+	return existing_links
 
 
 def remove_standalone_accounting_program_workspace():
