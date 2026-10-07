@@ -161,8 +161,10 @@ def _white_voucher_title(html):
 
 def _donation_receiver_signature(html):
 	"""Show Majida's receiver stamp alongside her name on donation receipts."""
-	receiver = f'''{{{{ user.full_name or doc.owner or "" }}}}
-{{% if doc.owner == "m.tazkarji" %}}
+	receiver = f'''{{% set receiver_name = user.full_name or doc.owner or "" %}}
+{{% set receiver_identifier = (doc.owner or "") | lower %}}
+{{{{ receiver_name }}}}
+{{% if "m.tazkarji" in receiver_identifier or (receiver_name | lower) == "majida tazkarji" %}}
 <div class="donation-receiver-stamp" style="height:45px; display:flex; align-items:center; justify-content:center;">
     <img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم" style="max-width:145px; max-height:43px; width:auto; height:auto; object-fit:contain;">
 </div>
@@ -195,16 +197,15 @@ def _muntada_voucher_html(payment, donation=False):
 		if payment else
 		"﴿وَمَا أَنفَقْتُم مِّن شَيْءٍ فَهُوَ يُخْلِفُهُ وَهُوَ خَيْرُ الرَّازِقِينَ﴾"
 	)
-	payment_receiver = f'<td>المستلم:<div class="receiver-name">{{{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" }}}}</div>{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
-	donation_receiver = f'<td>المستلم:<div class="receiver-name">{{{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" }}}}</div>{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
+	receiver_signature = f'{{% set receiver_name = frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" %}}{{% set receiver_identifier = (doc.owner or "") | lower %}}<td>المستلم:<div class="receiver-name">{{{{ receiver_name }}}}</div>{{% if "m.tazkarji" in receiver_identifier or (receiver_name | lower) == "majida tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
 	signatures = (
 		'<td>المسؤول:<div class="sign-line"></div></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		+ payment_receiver
+		+ receiver_signature
 		if payment else
 		'<td></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		+ (donation_receiver if donation else '<td>المستلم:<div class="sign-line"></div></td>')
+		+ (receiver_signature if donation else '<td>المستلم:<div class="sign-line"></div></td>')
 	)
 	date_line = (
 		'<div class="muntada-date">'
@@ -412,8 +413,10 @@ def _payment_html(html):
 		1,
 	)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
-	receiver_signature = f'''{{{{ user.full_name or doc.owner or "" }}}}
-{{% if doc.owner == "m.tazkarji" %}}
+	receiver_signature = f'''{{% set receiver_name = user.full_name or doc.owner or "" %}}
+{{% set receiver_identifier = (doc.owner or "") | lower %}}
+{{{{ receiver_name }}}}
+{{% if "m.tazkarji" in receiver_identifier or (receiver_name | lower) == "majida tazkarji" %}}
 <div class="payment-receiver-stamp" style="height:45px; display:flex; align-items:center; justify-content:center;">
     <img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم" style="max-width:145px; max-height:43px; width:auto; height:auto; object-fit:contain;">
 </div>

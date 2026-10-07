@@ -91,8 +91,16 @@ class TestMuntadaPrintFormats(TestCase):
 		html = _donation_receiver_signature('{{ user.full_name or "" }}')
 
 		self.assertIn('user.full_name or doc.owner or ""', html)
-		self.assertIn('doc.owner == "m.tazkarji"', html)
+		self.assertIn('"m.tazkarji" in receiver_identifier', html)
+		self.assertIn('(receiver_name | lower) == "majida tazkarji"', html)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", html)
+
+		rendered = frappe.render_template(html, {
+			"doc": frappe._dict(owner="majida@example.org"),
+			"user": frappe._dict(full_name="Majida Tazkarji"),
+		})
+		self.assertIn("Majida Tazkarji", rendered)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", rendered)
 
 	def test_voucher_titles_have_white_background_and_black_text(self):
 		standard = _white_voucher_title(
@@ -147,7 +155,7 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn("custom_branch_name_arabic", html)
 		self.assertIn("doc.custom_branch", html)
-		self.assertIn('doc.owner == "m.tazkarji"', html)
+		self.assertIn('"m.tazkarji" in receiver_identifier', html)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", html)
 		self.assertIn("payment_row.party_name or payment_row.party", html)
 		self.assertIn('user.full_name or doc.owner or ""', html)
@@ -156,7 +164,7 @@ class TestMuntadaPrintFormats(TestCase):
 		payment = _muntada_voucher_html(payment=True)
 		receipt = _muntada_voucher_html(payment=False)
 
-		self.assertIn('doc.owner == "m.tazkarji"', payment)
+		self.assertIn('"m.tazkarji" in receiver_identifier', payment)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", payment)
 		self.assertIn('get_value("User", doc.owner, "full_name")', payment)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", receipt)
@@ -165,7 +173,7 @@ class TestMuntadaPrintFormats(TestCase):
 		donation = _muntada_voucher_html(payment=False, donation=True)
 		accounting_receipt = _muntada_voucher_html(payment=False)
 
-		self.assertIn('doc.owner == "m.tazkarji"', donation)
+		self.assertIn('"m.tazkarji" in receiver_identifier', donation)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", donation)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", accounting_receipt)
 
