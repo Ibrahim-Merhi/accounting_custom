@@ -4,7 +4,7 @@
 	let retryTimer;
 
 	function isGeneralLedgerRoute() {
-		const route = frappe.get_route();
+		const route = frappe.get_route() || [];
 		return route[0] === "query-report" && route[1] === reportName;
 	}
 

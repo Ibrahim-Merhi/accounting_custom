@@ -1,4 +1,4 @@
-frappe.ready(() => {
+$(document).ready(() => {
 	if (frappe.boot.lang !== "ar") return;
 
 	const maps = {

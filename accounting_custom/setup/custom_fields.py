@@ -115,6 +115,11 @@ CUSTOM_FIELDS = {
 			"fieldname": "custom_secure_salary_profile", "label": "Salary Profile",
 			"fieldtype": "HTML", "insert_after": "custom_secure_salary_section",
 		},
+		{
+			# Keep legacy payroll columns out of the full-width salary workspace.
+			"fieldname": "custom_legacy_salary_section", "label": "Legacy Salary Details",
+			"fieldtype": "Section Break", "insert_after": "custom_secure_salary_profile", "hidden": 1,
+		},
 	],
 	"Employee Advance": [
 		{"fieldname": "custom_salary_installment_section", "label": "Salary Advance Repayment", "fieldtype": "Section Break", "insert_after": "repay_unclaimed_amount_from_salary"},
