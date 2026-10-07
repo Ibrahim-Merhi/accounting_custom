@@ -89,11 +89,28 @@ def ensure_arabic_voucher_print_formats():
 				"doctype": "Print Format", "name": ACCOUNTING_RECEIPT_NAME, **receipt_values,
 			}).insert(ignore_permissions=True)
 
+	_set_default_voucher_print_formats()
+
 	# Earlier app versions created separate company-specific formats. The
 	# conditional design now lives inside the existing format for each DocType.
 	for obsolete_name in ("سند صرف - المنتدى الطلابي", "سند قبض - المنتدى الطلابي"):
 		if frappe.db.exists("Print Format", obsolete_name):
 			frappe.delete_doc("Print Format", obsolete_name, ignore_permissions=True)
+
+
+def _set_default_voucher_print_formats():
+	"""Prevent one voucher DocType from reopening another voucher's template."""
+	formats = {
+		"Donation Entry": RECEIPT_NAME,
+		"Accounting Payment Entry": PAYMENT_NAME,
+		"Accounting Receipt Entry": ACCOUNTING_RECEIPT_NAME,
+	}
+	for doctype, print_format in formats.items():
+		if frappe.db.exists("DocType", doctype) and frappe.db.exists("Print Format", print_format):
+			frappe.db.set_value(
+				"DocType", doctype, "default_print_format", print_format, update_modified=False
+			)
+			frappe.clear_cache(doctype=doctype)
 
 
 def _standard_company_html(html):

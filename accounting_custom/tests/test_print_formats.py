@@ -11,6 +11,7 @@ from accounting_custom.setup.print_formats import (
 	_islam_forum_html,
 	_muntada_voucher_html,
 	_payment_html,
+	_set_default_voucher_print_formats,
 	_standard_company_html,
 	_white_voucher_title,
 	_individual_payslip_html,
@@ -19,6 +20,24 @@ from accounting_custom.setup.print_formats import (
 
 
 class TestMuntadaPrintFormats(TestCase):
+	@patch("accounting_custom.setup.print_formats.frappe.clear_cache")
+	@patch("accounting_custom.setup.print_formats.frappe.db.set_value")
+	@patch("accounting_custom.setup.print_formats.frappe.db.exists", return_value=True)
+	def test_each_voucher_doctype_gets_its_correct_default_format(
+		self, _exists, set_value, clear_cache,
+	):
+		_set_default_voucher_print_formats()
+
+		self.assertEqual(
+			[(call.args[1], call.args[3]) for call in set_value.call_args_list],
+			[
+				("Donation Entry", "سند قبض"),
+				("Accounting Payment Entry", "سند صرف"),
+				("Accounting Receipt Entry", "سند قبض محاسبي"),
+			],
+		)
+		self.assertEqual(clear_cache.call_count, 3)
+
 	def test_journal_voucher_supports_manual_remarks_and_requested_party_columns(self):
 		self.assertIn('doc.user_remark or doc.remark or ""', JOURNAL_VOUCHER_HTML)
 		self.assertIn("row.user_remark or journal_remarks", JOURNAL_VOUCHER_HTML)
