@@ -218,7 +218,7 @@ def _muntada_voucher_html(payment, donation=False):
 	signatures = (
 		'<td>المسؤول:<div class="sign-line"></div></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		+ receiver_signature
+		'<td>المستلم:<div class="sign-line"></div></td>'
 		if payment else
 		'<td></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
@@ -430,15 +430,7 @@ def _payment_html(html):
 		1,
 	)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
-	receiver_signature = f'''{{% set receiver_name = user.full_name or doc.owner or "" %}}
-{{% set receiver_identifier = (doc.owner or "") | lower %}}
-{{{{ receiver_name }}}}
-{{% if "m.tazkarji" in receiver_identifier or (receiver_name | lower) == "majida tazkarji" %}}
-<div class="payment-receiver-stamp" style="height:45px; display:flex; align-items:center; justify-content:center;">
-    <img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم" style="max-width:145px; max-height:43px; width:auto; height:auto; object-fit:contain;">
-</div>
-{{% endif %}}'''
-	html = html.replace('{{ user.full_name or "" }}', receiver_signature, 1)
+	html = html.replace('{{ user.full_name or "" }}', "", 1)
 	return html
 
 

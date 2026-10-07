@@ -174,18 +174,17 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn("custom_branch_name_arabic", html)
 		self.assertIn("doc.custom_branch", html)
-		self.assertIn('"m.tazkarji" in receiver_identifier', html)
-		self.assertIn("m_tazkarji_receiver_stamp.jpg", html)
 		self.assertIn("payment_row.party_name or payment_row.party", html)
-		self.assertIn('user.full_name or doc.owner or ""', html)
+		self.assertNotIn('user.full_name or ""', html)
+		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", html)
 
-	def test_muntada_payment_only_shows_receiver_stamp_for_m_tazkarji(self):
+	def test_muntada_payment_receiver_is_always_blank(self):
 		payment = _muntada_voucher_html(payment=True)
 		receipt = _muntada_voucher_html(payment=False)
 
-		self.assertIn('"m.tazkarji" in receiver_identifier', payment)
-		self.assertIn("m_tazkarji_receiver_stamp.jpg", payment)
-		self.assertIn('get_value("User", doc.owner, "full_name")', payment)
+		self.assertIn('المستلم:<div class="sign-line"></div>', payment)
+		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", payment)
+		self.assertNotIn('get_value("User", doc.owner, "full_name")', payment)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", receipt)
 
 	def test_muntada_donation_shows_receiver_stamp_for_m_tazkarji(self):
@@ -210,7 +209,7 @@ class TestMuntadaPrintFormats(TestCase):
 		html = frappe.render_template(_muntada_voucher_html(payment=True), {"doc": doc})
 
 		self.assertIn("SUP-0001", html)
-		self.assertIn("another.user", html)
+		self.assertNotIn("another.user", html)
 
 	def test_donation_muntada_template_uses_donation_fields(self):
 		doc = frappe._dict(
