@@ -104,10 +104,20 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("STANDARD BODY", html)
 
 	def test_payment_format_uses_arabic_branch_name(self):
-		html = _payment_html("{{ donor_phone }}")
+		html = _payment_html('{{ donor_phone }} {{ user.full_name or "" }}')
 
 		self.assertIn("custom_branch_name_arabic", html)
 		self.assertIn("doc.custom_branch", html)
+		self.assertIn('doc.owner == "m.tazkarji"', html)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", html)
+
+	def test_muntada_payment_only_shows_receiver_stamp_for_m_tazkarji(self):
+		payment = _muntada_voucher_html(payment=True)
+		receipt = _muntada_voucher_html(payment=False)
+
+		self.assertIn('doc.owner == "m.tazkarji"', payment)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", payment)
+		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", receipt)
 
 	def test_donation_muntada_template_uses_donation_fields(self):
 		doc = frappe._dict(
