@@ -20,8 +20,13 @@ def sync_consolidated_payslip(master_employee, start_date, end_date):
 	doc = frappe.get_doc("Employee Consolidated Payslip", name) if frappe.db.exists("Employee Consolidated Payslip", name) else frappe.new_doc("Employee Consolidated Payslip")
 	doc.payslip_id = name
 	doc.employee = master_employee
-	doc.employee_name = frappe.db.get_value("Employee", master_employee, "employee_name")
-	doc.designation = frappe.db.get_value("Employee", master_employee, "designation")
+	employee_fields = ["employee_name", "designation"]
+	if frappe.get_meta("Employee").has_field("custom_employee_name_ar"):
+		employee_fields.append("custom_employee_name_ar")
+	employee = frappe.db.get_value("Employee", master_employee, employee_fields, as_dict=True)
+	doc.employee_name = employee.employee_name
+	doc.employee_name_arabic = employee.get("custom_employee_name_ar") or employee.employee_name
+	doc.designation = employee.designation
 	doc.start_date = start_date
 	doc.end_date = end_date
 	doc.currency = slips[0].currency
@@ -30,6 +35,7 @@ def sync_consolidated_payslip(master_employee, start_date, end_date):
 	doc.net_pay = sum(flt(row.net_pay) for row in slips)
 	for fieldname, amount in _component_totals([row.name for row in slips]).items():
 		doc.set(fieldname, amount)
+	doc.deduction_reasons = _deduction_reasons([row.name for row in slips], doc.currency)
 	doc.company_count = len(slips)
 	doc.status = "Submitted" if all(row.docstatus == 1 for row in slips) else "Partial"
 	doc.set("companies", [])
@@ -69,6 +75,55 @@ def _component_totals(salary_slips):
 			elif is_employee_advance or any(token in component for token in ("advance", "loan", "سلف")): totals["advance_deduction"] += amount
 			else: totals["other_deduction"] += amount
 	return totals
+
+
+def _deduction_reasons(salary_slips, currency):
+	if not salary_slips:
+		return ""
+	rows = frappe.get_all(
+		"Salary Detail",
+		filters={"parent": ["in", salary_slips], "parenttype": "Salary Slip", "parentfield": "deductions"},
+		fields=["salary_component", "amount", "additional_salary"],
+	)
+	additional_names = list({row.additional_salary for row in rows if row.additional_salary})
+	reasons_by_additional = _additional_salary_reasons(additional_names)
+	totals = {}
+	for row in rows:
+		reason = reasons_by_additional.get(row.additional_salary) or row.salary_component
+		if reason:
+			totals[reason] = totals.get(reason, 0) + flt(row.amount)
+	return "\n".join(f"{reason}: {amount:,.0f} {currency}" for reason, amount in totals.items())
+
+
+def _additional_salary_reasons(additional_names):
+	if not additional_names:
+		return {}
+	additional_rows = frappe.get_all(
+		"Additional Salary",
+		filters={"name": ["in", additional_names]},
+		fields=["name", "ref_doctype", "ref_docname"],
+	)
+	reasons = {
+		row.additional_salary: row.note
+		for row in frappe.get_all(
+			"Payroll Manual Deduction",
+			filters={"additional_salary": ["in", additional_names]},
+			fields=["additional_salary", "note"],
+		)
+		if row.note
+	}
+	for source in additional_rows:
+		if source.name in reasons or not source.ref_doctype or not source.ref_docname:
+			continue
+		if source.ref_doctype == "Employee Advance":
+			reasons[source.name] = frappe.db.get_value("Employee Advance", source.ref_docname, "purpose")
+		elif source.ref_doctype == "Employee Monthly Adjustment":
+			adjustment = frappe.get_doc("Employee Monthly Adjustment", source.ref_docname)
+			created = (adjustment.additional_salary_documents or "").splitlines()
+			for additional_name, detail in zip(created, adjustment.deductions):
+				if detail.note:
+					reasons[additional_name] = detail.note
+	return reasons
 
 
 def sync_employee_payslips(master_employee):

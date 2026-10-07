@@ -125,15 +125,20 @@ class TestMuntadaPrintFormats(TestCase):
 
 	def test_professional_payslip_has_requested_fields_without_removed_ids(self):
 		doc = frappe._dict(
-			name="CPS-TEST", employee_name="موظف تجريبي", designation="Accountant",
+			name="CPS-TEST", employee_name="Test Employee",
+			employee_name_arabic="محمد أحمد علي", designation="Accountant",
 			start_date="2027-03-01", end_date="2027-03-31", currency="USD",
 			basic_salary=500, transportation=100, family_allowance=50,
 			other_earnings=0, gross_pay=650, tax_deduction=10,
 			advance_deduction=40, other_deduction=0, total_deduction=50, net_pay=600,
+			deduction_reasons="تأخير: 10 USD\nسلفة راتب: 40 USD",
 		)
 		html = frappe.render_template(_individual_payslip_html(), {"doc": doc})
 		self.assertIn("وثيقة استلام راتب", html)
-		self.assertIn("موظف تجريبي", html)
+		self.assertIn("محمد أحمد علي", html)
+		self.assertNotIn("Test Employee", html)
+		self.assertIn("أسباب الخصومات", html)
+		self.assertIn("تأخير: 10 USD", html)
 		self.assertIn("600 USD", html)
 		self.assertNotIn("MOF #", html)
 		self.assertNotIn("NSSF", html)
