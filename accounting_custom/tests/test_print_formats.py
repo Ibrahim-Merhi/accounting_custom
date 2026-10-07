@@ -6,6 +6,7 @@ from accounting_custom.setup.journal_voucher import JOURNAL_VOUCHER_HTML
 from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
 	_add_treasurer_signature,
+	_donation_receiver_signature,
 	_donation_donor_display_html,
 	_islam_forum_html,
 	_muntada_voucher_html,
@@ -86,6 +87,13 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("/assets/accounting_custom/images/print_formats/treasurer_signature.jpg", html)
 		self.assertNotIn("i.imgur.com", html)
 
+	def test_donation_receipt_shows_receiver_name_and_stamp_for_m_tazkarji(self):
+		html = _donation_receiver_signature('{{ user.full_name or "" }}')
+
+		self.assertIn('user.full_name or doc.owner or ""', html)
+		self.assertIn('doc.owner == "m.tazkarji"', html)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", html)
+
 	def test_voucher_titles_have_white_background_and_black_text(self):
 		standard = _white_voucher_title(
 			".receipt-title { background: #000; color: #fff; font-weight: 700; }"
@@ -152,6 +160,14 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", payment)
 		self.assertIn('get_value("User", doc.owner, "full_name")', payment)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", receipt)
+
+	def test_muntada_donation_shows_receiver_stamp_for_m_tazkarji(self):
+		donation = _muntada_voucher_html(payment=False, donation=True)
+		accounting_receipt = _muntada_voucher_html(payment=False)
+
+		self.assertIn('doc.owner == "m.tazkarji"', donation)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", donation)
+		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", accounting_receipt)
 
 	def test_muntada_payment_uses_party_when_party_name_is_empty(self):
 		doc = frappe._dict(

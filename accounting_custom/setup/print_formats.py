@@ -31,9 +31,9 @@ def ensure_arabic_voucher_print_formats():
 		)
 	)
 	receipt_html = _company_conditional_html(
-		standard_receipt_html,
+		_donation_receiver_signature(standard_receipt_html),
 		_muntada_voucher_html(payment=False, donation=True),
-		_islam_forum_html(standard_receipt_html),
+		_islam_forum_html(_donation_receiver_signature(standard_receipt_html)),
 	)
 	if receipt_html != receipt.html:
 		receipt.db_set("html", receipt_html, update_modified=False)
@@ -159,6 +159,17 @@ def _white_voucher_title(html):
 	return re.sub(style_pattern, update_style, html, count=1, flags=re.DOTALL)
 
 
+def _donation_receiver_signature(html):
+	"""Show Majida's receiver stamp alongside her name on donation receipts."""
+	receiver = f'''{{{{ user.full_name or doc.owner or "" }}}}
+{{% if doc.owner == "m.tazkarji" %}}
+<div class="donation-receiver-stamp" style="height:45px; display:flex; align-items:center; justify-content:center;">
+    <img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم" style="max-width:145px; max-height:43px; width:auto; height:auto; object-fit:contain;">
+</div>
+{{% endif %}}'''
+	return html.replace('{{ user.full_name or "" }}', receiver, 1)
+
+
 def _islam_forum_html(html):
 	organization = """<div class="organization-name organization-layout-v2">
             <span class="organization-primary">جمعية الثقافة والتوجيه الاجتماعي</span>
@@ -184,14 +195,16 @@ def _muntada_voucher_html(payment, donation=False):
 		if payment else
 		"﴿وَمَا أَنفَقْتُم مِّن شَيْءٍ فَهُوَ يُخْلِفُهُ وَهُوَ خَيْرُ الرَّازِقِينَ﴾"
 	)
+	payment_receiver = f'<td>المستلم:<div class="receiver-name">{{{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" }}}}</div>{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
+	donation_receiver = f'<td>المستلم:<div class="receiver-name">{{{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" }}}}</div>{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
 	signatures = (
 		'<td>المسؤول:<div class="sign-line"></div></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		f'<td>المستلم:<div class="receiver-name">{{{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" }}}}</div>{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
+		+ payment_receiver
 		if payment else
 		'<td></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		'<td>المستلم:<div class="sign-line"></div></td>'
+		+ (donation_receiver if donation else '<td>المستلم:<div class="sign-line"></div></td>')
 	)
 	date_line = (
 		'<div class="muntada-date">'
