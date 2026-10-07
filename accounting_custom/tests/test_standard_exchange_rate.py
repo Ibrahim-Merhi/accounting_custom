@@ -67,6 +67,7 @@ class TestStandardExchangeRate(TestCase):
 
 		self.assertEqual(doc.accounts[0].exchange_rate, 1)
 		self.assertAlmostEqual(doc.accounts[1].exchange_rate, 1 / 89500)
+		self.assertEqual(doc.multi_currency, 1)
 
 	@patch("accounting_custom.accounting.standard_exchange_rate.get_company_exchange_rate")
 	def test_journal_keeps_transaction_specific_rates(self, get_rate):

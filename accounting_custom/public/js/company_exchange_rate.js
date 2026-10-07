@@ -306,8 +306,13 @@ async function set_all_journal_exchange_rates(frm, mandatory = false) {
 	frm.company_exchange_rate_loading = true;
 	let changed = false;
 	try {
+		const company_currency = await get_company_currency(frm);
 		for (const row of frm.doc.accounts || []) {
 			if (!row.account_currency) continue;
+			if (row.account_currency !== company_currency && !frm.doc.multi_currency) {
+				await frm.set_value("multi_currency", 1);
+				changed = true;
+			}
 			const rate = await fetch_company_rate(frm, row.account_currency, frm.doc.posting_date, mandatory);
 			if (Math.abs(flt(row.exchange_rate) - rate) > 0.0000001) {
 				await frappe.model.set_value(row.doctype, row.name, "exchange_rate", rate);
@@ -332,6 +337,10 @@ async function set_journal_row_exchange_rate(frm, cdt, cdn) {
 	if (!frm.is_new() && !frm.is_dirty()) return;
 	const row = locals[cdt][cdn];
 	if (!row?.account_currency || !frm.doc.company || !frm.doc.posting_date) return;
+	const company_currency = await get_company_currency(frm);
+	if (row.account_currency !== company_currency && !frm.doc.multi_currency) {
+		await frm.set_value("multi_currency", 1);
+	}
 	const rate = await fetch_company_rate(frm, row.account_currency, frm.doc.posting_date, false);
 	if (Math.abs(flt(row.exchange_rate) - rate) > 0.0000001) {
 		await frappe.model.set_value(cdt, cdn, "exchange_rate", rate);

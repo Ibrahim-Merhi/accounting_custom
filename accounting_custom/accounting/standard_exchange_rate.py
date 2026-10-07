@@ -13,6 +13,7 @@ def apply_journal_entry_exchange_rates(doc, method=None):
 
 	company_currency = _get_company_currency(doc.company)
 	transaction_date = doc.posting_date
+	has_foreign_currency_account = False
 
 	for row in doc.accounts or []:
 		account_currency = row.account_currency or frappe.get_cached_value(
@@ -22,9 +23,13 @@ def apply_journal_entry_exchange_rates(doc, method=None):
 			continue
 
 		row.account_currency = account_currency
+		has_foreign_currency_account = has_foreign_currency_account or account_currency != company_currency
 		row.exchange_rate = _get_rate(
 			doc.company, account_currency, company_currency, transaction_date
 		)
+
+	if has_foreign_currency_account:
+		doc.multi_currency = 1
 
 
 def apply_payment_entry_exchange_rates(doc, method=None):

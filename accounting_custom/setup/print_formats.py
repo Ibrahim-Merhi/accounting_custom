@@ -187,7 +187,7 @@ def _muntada_voucher_html(payment, donation=False):
 	signatures = (
 		'<td>المسؤول:<div class="sign-line"></div></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		f'<td>المستلم:{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
+		f'<td>المستلم:<div class="receiver-name">{{{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" }}}}</div>{{% if doc.owner == "m.tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
 		if payment else
 		'<td></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
@@ -210,7 +210,14 @@ def _muntada_voucher_html(payment, donation=False):
 {{% set lbp_amount = amount_rows | selectattr("currency", "equalto", "LBP") | sum(attribute="{amount_field}") %}}
 {{% set donor_professional_title = frappe.db.get_value("Donor", doc.donor, "professional_title") if {str(donation).lower()} and doc.donor else "" %}}
 {{% set donor_display_name = "فاعل خير" if doc.is_anonymous_male else ("فاعلة خير" if doc.is_anonymous_female else (((donor_professional_title ~ " ") if donor_professional_title else "") ~ (doc.donor_name or doc.donor or ""))) %}}
-{{% set parties = donor_display_name if {str(donation).lower()} else (payment_rows | map(attribute="party_name") | select | unique | join("، ")) %}}
+{{% set party_names = namespace(values=[]) %}}
+{{% for payment_row in payment_rows %}}
+  {{% set party_display = payment_row.party_name or payment_row.party or "" %}}
+  {{% if party_display and party_display not in party_names.values %}}
+    {{% set party_names.values = party_names.values + [party_display] %}}
+  {{% endif %}}
+{{% endfor %}}
+{{% set parties = donor_display_name if {str(donation).lower()} else (party_names.values | join("، ")) %}}
 {{% set payment_modes = payment_rows | map(attribute="mode_of_payment") | select | join(" ") %}}
 <style>
 @page {{ size: 230mm 113mm; margin: 0; }}
@@ -245,6 +252,7 @@ def _muntada_voucher_html(payment, donation=False):
 .treasurer-signature img {{ display:block; max-width:25mm; max-height:12mm; width:auto; height:auto; object-fit:contain; }}
 .receiver-stamp {{ height:12mm; margin-top:-1mm; display:flex; align-items:center; justify-content:center; }}
 .receiver-stamp img {{ display:block; max-width:34mm; max-height:11mm; width:auto; height:auto; object-fit:contain; }}
+.receiver-name {{ height:4mm; line-height:4mm; font-size:9px; font-weight:600; overflow:hidden; }}
 .muntada-date {{ position:absolute; right:16%; top:96mm; font-size:9px; font-weight:700; white-space:nowrap; }}
 .date-separator {{ margin:0 4mm; color:#777; }}
 .muntada-footer {{ position:absolute; left:5%; right:12%; bottom:2mm; border:1.5px solid #222;
@@ -374,7 +382,15 @@ def _payment_html(html):
 	html = html.replace(old_amounts, new_amounts, 1)
 	html = html.replace("سند قبض", "سند صرف")
 	html = html.replace("وصلنا من:", "يُصرف إلى:", 1)
-	html = html.replace('{{ doc.donor_name or doc.donor or "" }}', '{{ doc.custom_accounting_rows_copy | map(attribute="party_name") | select | unique | join("، ") }}', 1)
+	payment_party_names = '''{% set payment_party_names = namespace(values=[]) %}
+{% for payment_row in doc.custom_accounting_rows_copy or [] %}
+    {% set party_display = payment_row.party_name or payment_row.party or "" %}
+    {% if party_display and party_display not in payment_party_names.values %}
+        {% set payment_party_names.values = payment_party_names.values + [party_display] %}
+    {% endif %}
+{% endfor %}
+{{ payment_party_names.values | join("، ") }}'''
+	html = html.replace('{{ doc.donor_name or doc.donor or "" }}', payment_party_names, 1)
 	html = html.replace("DONOR NAME + PHONE", "PAYEE + REFERENCE")
 	html = html.replace("رقم الهاتف:", "الفرع:", 1)
 	html = html.replace(
@@ -383,12 +399,11 @@ def _payment_html(html):
 		1,
 	)
 	html = html.replace("وذلك لحساب:", "وذلك عن:", 1)
-	receiver_signature = f'''{{% if doc.owner == "m.tazkarji" %}}
+	receiver_signature = f'''{{{{ user.full_name or doc.owner or "" }}}}
+{{% if doc.owner == "m.tazkarji" %}}
 <div class="payment-receiver-stamp" style="height:45px; display:flex; align-items:center; justify-content:center;">
     <img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم" style="max-width:145px; max-height:43px; width:auto; height:auto; object-fit:contain;">
 </div>
-{{% else %}}
-{{{{ user.full_name or "" }}}}
 {{% endif %}}'''
 	html = html.replace('{{ user.full_name or "" }}', receiver_signature, 1)
 	return html

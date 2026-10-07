@@ -133,12 +133,16 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("STANDARD BODY", html)
 
 	def test_payment_format_uses_arabic_branch_name(self):
-		html = _payment_html('{{ donor_phone }} {{ user.full_name or "" }}')
+		html = _payment_html(
+			'{{ doc.donor_name or doc.donor or "" }} {{ donor_phone }} {{ user.full_name or "" }}'
+		)
 
 		self.assertIn("custom_branch_name_arabic", html)
 		self.assertIn("doc.custom_branch", html)
 		self.assertIn('doc.owner == "m.tazkarji"', html)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", html)
+		self.assertIn("payment_row.party_name or payment_row.party", html)
+		self.assertIn('user.full_name or doc.owner or ""', html)
 
 	def test_muntada_payment_only_shows_receiver_stamp_for_m_tazkarji(self):
 		payment = _muntada_voucher_html(payment=True)
@@ -146,7 +150,24 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn('doc.owner == "m.tazkarji"', payment)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", payment)
+		self.assertIn('get_value("User", doc.owner, "full_name")', payment)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", receipt)
+
+	def test_muntada_payment_uses_party_when_party_name_is_empty(self):
+		doc = frappe._dict(
+			company="Al Muntada Al Tullabi", owner="another.user",
+			posting_date="2026-10-07", custom_hijri_date="1448/4/25", remarks="Payment",
+			custom_amount_in_words_arabic="مائة دولار فقط لا غير",
+			currency_totals=[frappe._dict(currency="USD", total_debit=100)],
+			custom_accounting_rows_copy=[frappe._dict(
+				party_name=None, party="SUP-0001", mode_of_payment="CASH USD",
+			)],
+		)
+
+		html = frappe.render_template(_muntada_voucher_html(payment=True), {"doc": doc})
+
+		self.assertIn("SUP-0001", html)
+		self.assertIn("another.user", html)
 
 	def test_donation_muntada_template_uses_donation_fields(self):
 		doc = frappe._dict(
