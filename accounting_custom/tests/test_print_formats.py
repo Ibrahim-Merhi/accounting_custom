@@ -1,6 +1,8 @@
 from unittest import TestCase
+from unittest.mock import patch
 import frappe
 
+from accounting_custom.setup.journal_voucher import JOURNAL_VOUCHER_HTML
 from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
 	_add_treasurer_signature,
@@ -16,6 +18,33 @@ from accounting_custom.setup.print_formats import (
 
 
 class TestMuntadaPrintFormats(TestCase):
+	def test_journal_voucher_supports_manual_remarks_and_requested_party_columns(self):
+		self.assertIn('doc.user_remark or doc.remark or ""', JOURNAL_VOUCHER_HTML)
+		self.assertIn("row.user_remark or journal_remarks", JOURNAL_VOUCHER_HTML)
+		self.assertIn("<th>Party Type</th><th>Party</th>", JOURNAL_VOUCHER_HTML)
+		self.assertIn('{{ row.party_type or "" }}', JOURNAL_VOUCHER_HTML)
+		self.assertIn('{{ row.party or "" }}', JOURNAL_VOUCHER_HTML)
+		self.assertNotIn("Foreign Currency", JOURNAL_VOUCHER_HTML)
+
+	@patch("accounting_custom.setup.journal_voucher.frappe.db.get_value", return_value=None)
+	def test_manual_journal_voucher_renders_header_remark_and_party(self, _get_value):
+		doc = frappe._dict(
+			name="JV-TEST", company="Itihad", posting_date="2026-10-07",
+			cheque_no=None, user_remark="Manual journal remarks", remark=None,
+			accounts=[frappe._dict(
+				account="1000 - Cash", account_currency="USD", debit_in_account_currency=100,
+				credit_in_account_currency=0, user_remark=None, party_type="Supplier",
+				party="SUP-0001", project=None, cost_center="Main - ITHD", reference_no=None,
+			)],
+		)
+
+		html = frappe.render_template(JOURNAL_VOUCHER_HTML, {"doc": doc})
+
+		self.assertIn("Manual journal remarks", html)
+		self.assertIn("Supplier", html)
+		self.assertIn("SUP-0001", html)
+		self.assertNotIn("Foreign Currency", html)
+
 	def test_payment_and_receipt_templates_render(self):
 		doc = frappe._dict(
 			company="Al Muntada Al Tullabi",

@@ -7,6 +7,7 @@ JOURNAL_VOUCHER_HTML = r"""
 {% set company_arabic = frappe.db.get_value("Company", doc.company, "custom_company_name_arabic") or doc.company %}
 {% set posting_year = (doc.posting_date|string).split("-")[0] if doc.posting_date else "" %}
 {% set totals = namespace(lbp_debit=0, lbp_credit=0, usd_debit=0, usd_credit=0) %}
+{% set journal_remarks = doc.user_remark or doc.remark or "" %}
 
 <style>
 @page { size: A4 landscape; margin: 9mm; }
@@ -42,14 +43,14 @@ JOURNAL_VOUCHER_HTML = r"""
 
   <table class="jv-table">
     <colgroup>
-      <col style="width:8%"><col style="width:25%"><col style="width:8%"><col style="width:9%">
-      <col style="width:9%"><col style="width:9%"><col style="width:8%"><col style="width:8%">
-      <col style="width:8%"><col style="width:8%">
+      <col style="width:8%"><col style="width:20%"><col style="width:8%"><col style="width:11%">
+      <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:7.5%">
+      <col style="width:7.5%"><col style="width:7.5%"><col style="width:7.5%">
     </colgroup>
     <thead>
       <tr>
-        <th>Account</th><th>Name / Narration</th><th>V. Date</th><th>Job</th>
-        <th>Ref.</th><th>Foreign Currency</th>
+        <th>Account</th><th>Name / Narration</th><th>Party Type</th><th>Party</th>
+        <th>V. Date</th><th>Job</th><th>Ref.</th>
         <th>LBP Debit</th><th>LBP Credit</th><th>USD Debit</th><th>USD Credit</th>
       </tr>
     </thead>
@@ -71,12 +72,13 @@ JOURNAL_VOUCHER_HTML = r"""
         <td class="narration">
           {% if account_arabic %}<div class="arabic">{{ account_arabic }}</div>{% endif %}
           <div>{{ account_name }}</div>
-          {% if row.user_remark %}<div>{{ row.user_remark }}</div>{% endif %}
+          {% if row.user_remark or journal_remarks %}<div>{{ row.user_remark or journal_remarks }}</div>{% endif %}
         </td>
+        <td>{{ row.party_type or "" }}</td>
+        <td>{{ row.party or "" }}</td>
         <td class="center">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yyyy") }}</td>
         <td>{{ row.project or row.cost_center or "" }}</td>
         <td>{{ row.reference_no or "" }}</td>
-        <td class="number">{% if row.account_currency not in ("LBP", "USD") %}{{ row.debit_in_account_currency or row.credit_in_account_currency or 0 }} {{ row.account_currency }}{% endif %}</td>
         <td class="number">{% if lbp_debit %}{{ frappe.utils.fmt_money(lbp_debit, currency="") }}{% endif %}</td>
         <td class="number">{% if lbp_credit %}{{ frappe.utils.fmt_money(lbp_credit, currency="") }}{% endif %}</td>
         <td class="number">{% if usd_debit %}{{ frappe.utils.fmt_money(usd_debit, currency="") }}{% endif %}</td>
@@ -84,7 +86,7 @@ JOURNAL_VOUCHER_HTML = r"""
       </tr>
     {% endfor %}
       <tr>
-        <td colspan="6" class="jv-total-label">Total :</td>
+        <td colspan="7" class="jv-total-label">Total :</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.lbp_debit, currency="") }}</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.lbp_credit, currency="") }}</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.usd_debit, currency="") }}</td>
