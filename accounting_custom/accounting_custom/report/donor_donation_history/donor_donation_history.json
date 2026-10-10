@@ -4,7 +4,7 @@
  "module": "Accounting Custom",
  "name": "Donor Donation History",
  "prepared_report": 0,
- "ref_doctype": "Donation Entry",
+ "ref_doctype": "Donor",
  "report_name": "Donor Donation History",
  "report_type": "Script Report",
  "roles": [

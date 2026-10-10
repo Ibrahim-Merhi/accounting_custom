@@ -58,22 +58,40 @@ def collector_collections(filters):
 def donor_history(filters):
 	columns = [
 		{"fieldname":"posting_date","label":_("Date"),"fieldtype":"Date","width":100},
-		{"fieldname":"donation_entry","label":_("Donation Entry"),"fieldtype":"Link","options":"Donation Entry","width":180},
+		{"fieldname":"voucher_type","label":_("Document Type"),"fieldtype":"Data","width":160},
+		{"fieldname":"voucher_no","label":_("Document"),"fieldtype":"Dynamic Link","options":"voucher_type","width":180},
 		{"fieldname":"donor","label":_("Donor"),"fieldtype":"Link","options":"Donor","width":180},
 		{"fieldname":"donor_name","label":_("Donor Name"),"fieldtype":"Data","width":180},
+		{"fieldname":"account","label":_("Account"),"fieldtype":"Link","options":"Account","width":210},
 		{"fieldname":"project","label":_("Project"),"fieldtype":"Link","options":"Project","width":160},
 		{"fieldname":"currency","label":_("Currency"),"fieldtype":"Link","options":"Currency","width":90},
 		{"fieldname":"amount","label":_("Amount"),"fieldtype":"Currency","options":"currency","width":120},
 	]
-	conditions = " and donation.donor=%(donor)s" if filters.get("donor") else ""
+	conditions = " and gle.party=%(donor)s" if filters.get("donor") else ""
 	data = frappe.db.sql(
-		f"""select donation.posting_date, donation.name donation_entry, donation.donor,
-		donation.donor_name, donation.project, payment.currency, payment.donation_amount amount
-		from `tabDonation Entry` donation
-		inner join `tabDonation Payment Detail` payment on payment.parent=donation.name
-		where donation.docstatus=1 and donation.company=%(company)s
-		and donation.posting_date between %(from_date)s and %(to_date)s {conditions}
-		order by donation.posting_date desc""", filters, as_dict=True,
+		f"""select gle.posting_date, gle.voucher_type, gle.voucher_no,
+		gle.party donor, donor.donor_name, gle.account, gle.project,
+		gle.account_currency currency,
+		case when gle.debit_in_account_currency > 0 then gle.debit_in_account_currency
+		else gle.credit_in_account_currency end amount
+		from `tabGL Entry` gle
+		left join `tabDonor` donor on donor.name=gle.party
+		where gle.company=%(company)s and gle.is_cancelled=0
+		and gle.party_type='Donor'
+		and (gle.debit_in_account_currency > 0 or (
+			gle.credit_in_account_currency > 0 and not exists (
+				select 1 from `tabGL Entry` donor_debit
+				where donor_debit.is_cancelled=0
+				and donor_debit.voucher_type=gle.voucher_type
+				and donor_debit.voucher_no=gle.voucher_no
+				and donor_debit.party_type=gle.party_type and donor_debit.party=gle.party
+				and donor_debit.account=gle.account
+				and donor_debit.account_currency=gle.account_currency
+				and donor_debit.debit_in_account_currency=gle.credit_in_account_currency
+			)
+		))
+		and gle.posting_date between %(from_date)s and %(to_date)s {conditions}
+		order by gle.posting_date desc, gle.voucher_no""", filters, as_dict=True,
 	)
 	return columns, data
 

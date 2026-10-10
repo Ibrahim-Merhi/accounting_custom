@@ -93,6 +93,19 @@ class TestLinkedJournalPosting(TestCase):
 		source.db_set.assert_not_called()
 
 	@patch("accounting_custom.accounting.journal_posting.frappe.get_doc")
+	def test_repeated_submit_reuses_submitted_journal_without_duplication(self, get_doc):
+		journal = MagicMock(docstatus=1)
+		journal.name = "JV-0001"
+		get_doc.return_value = journal
+		source = MagicMock(journal_entry="JV-0001")
+
+		name = submit_linked_journal_entry(source, [])
+
+		self.assertEqual(name, "JV-0001")
+		journal.save.assert_not_called()
+		journal.submit.assert_not_called()
+
+	@patch("accounting_custom.accounting.journal_posting.frappe.get_doc")
 	def test_delete_draft_source_deletes_draft_journal(self, get_doc):
 		journal = MagicMock(docstatus=0)
 		get_doc.return_value = journal

@@ -6,11 +6,14 @@ from accounting_custom.setup.journal_voucher import JOURNAL_VOUCHER_HTML
 from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
 	_add_treasurer_signature,
+	_add_other_currency_amounts,
+	_accounting_receipt_html,
 	_donation_receiver_signature,
 	_donation_donor_display_html,
 	_islam_forum_html,
 	_muntada_voucher_html,
 	_payment_html,
+	_receipt_receiver_signature,
 	_set_default_voucher_print_formats,
 	_standard_company_html,
 	_white_voucher_title,
@@ -40,11 +43,14 @@ class TestMuntadaPrintFormats(TestCase):
 
 	def test_journal_voucher_supports_manual_remarks_and_requested_party_columns(self):
 		self.assertIn('doc.user_remark or doc.remark or ""', JOURNAL_VOUCHER_HTML)
-		self.assertIn("row.user_remark or journal_remarks", JOURNAL_VOUCHER_HTML)
+		self.assertIn("Financial Remarks:", JOURNAL_VOUCHER_HTML)
+		self.assertIn("{{ journal_remarks }}", JOURNAL_VOUCHER_HTML)
 		self.assertIn("<th>Party Type</th><th>Party</th>", JOURNAL_VOUCHER_HTML)
 		self.assertIn('{{ row.party_type or "" }}', JOURNAL_VOUCHER_HTML)
 		self.assertIn('{{ row.party or "" }}', JOURNAL_VOUCHER_HTML)
-		self.assertNotIn("Foreign Currency", JOURNAL_VOUCHER_HTML)
+		self.assertIn("Foreign Currency", JOURNAL_VOUCHER_HTML)
+		self.assertNotIn("<th>V. Date</th>", JOURNAL_VOUCHER_HTML)
+		self.assertNotIn("<th>Ref.</th>", JOURNAL_VOUCHER_HTML)
 
 	@patch("accounting_custom.setup.journal_voucher.frappe.db.get_value", return_value=None)
 	def test_manual_journal_voucher_renders_header_remark_and_party(self, _get_value):
@@ -61,9 +67,24 @@ class TestMuntadaPrintFormats(TestCase):
 		html = frappe.render_template(JOURNAL_VOUCHER_HTML, {"doc": doc})
 
 		self.assertIn("Manual journal remarks", html)
+		self.assertIn("Financial Remarks:", html)
 		self.assertIn("Supplier", html)
 		self.assertIn("SUP-0001", html)
-		self.assertNotIn("Foreign Currency", html)
+		self.assertIn("Foreign Currency", html)
+
+	def test_manual_journal_voucher_prints_non_usd_lbp_currency(self):
+		doc = frappe._dict(
+			name="JV-EUR", company="Itihad", posting_date="2026-10-07",
+			cheque_no=None, user_remark="EUR adjustment", remark=None,
+			accounts=[frappe._dict(
+				account="EUR Cash", account_currency="EUR", debit_in_account_currency=125,
+				credit_in_account_currency=0, user_remark=None, party_type=None,
+				party=None, project=None, cost_center=None,
+			)],
+		)
+		with patch("accounting_custom.setup.journal_voucher.frappe.db.get_value", return_value=None):
+			html = frappe.render_template(JOURNAL_VOUCHER_HTML, {"doc": doc})
+		self.assertIn("125.00 EUR", html)
 
 	def test_payment_and_receipt_templates_render(self):
 		doc = frappe._dict(
@@ -97,6 +118,9 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("2026-09-19", receipt)
 		self.assertIn("treasurer_signature.jpg", payment)
 		self.assertIn("treasurer_signature.jpg", receipt)
+		self.assertIn("A5 portrait", payment)
+		self.assertNotIn("﴿", payment)
+		self.assertNotIn("background:#000", receipt)
 
 	def test_standard_vouchers_replace_external_treasurer_signature(self):
 		html = _add_treasurer_signature(
@@ -130,7 +154,7 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("background:#fff", standard)
 		self.assertIn("color:#111", standard)
 		self.assertIn("border:1.5px solid #111", standard)
-		self.assertIn("background:#fff; color:#111; border:1.5px solid #111", muntada)
+		self.assertIn("background:#fff; color:#111; border:1.5px solid #101957", muntada)
 
 	def test_single_format_selects_design_by_company(self):
 		template = _company_conditional_html(
@@ -185,7 +209,7 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn('المستلم:<div class="sign-line"></div>', payment)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", payment)
 		self.assertNotIn('get_value("User", doc.owner, "full_name")', payment)
-		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", receipt)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", receipt)
 
 	def test_muntada_donation_shows_receiver_stamp_for_m_tazkarji(self):
 		donation = _muntada_voucher_html(payment=False, donation=True)
@@ -193,7 +217,21 @@ class TestMuntadaPrintFormats(TestCase):
 
 		self.assertIn('"m.tazkarji" in receiver_identifier', donation)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", donation)
-		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", accounting_receipt)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", accounting_receipt)
+
+	def test_accounting_receipt_uses_party_fallback_and_majida_signature(self):
+		template = _accounting_receipt_html('{{ doc.donor_name or doc.donor or "" }} {{ user.full_name or "" }}')
+		template = _receipt_receiver_signature(template)
+		self.assertIn("receipt_row.party_name or receipt_row.party", template)
+		self.assertIn("m_tazkarji_receiver_stamp.jpg", template)
+
+	def test_standard_receipt_prints_other_currency_totals(self):
+		template = _add_other_currency_amounts(
+			"<!-- DONOR NAME + PHONE -->", "currency_totals", "total_debit",
+		)
+		doc = frappe._dict(currency_totals=[frappe._dict(currency="EUR", total_debit=250)])
+		html = frappe.render_template(template, {"doc": doc})
+		self.assertIn("EUR 250.00", html)
 
 	def test_muntada_payment_uses_party_when_party_name_is_empty(self):
 		doc = frappe._dict(

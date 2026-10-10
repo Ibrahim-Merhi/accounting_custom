@@ -17,6 +17,9 @@ JOURNAL_VOUCHER_HTML = r"""
 .jv-title { margin:0 0 24px; text-align:center; font-size:21px; font-weight:700; }
 .jv-meta { display:flex; flex-wrap:wrap; gap:34px; margin:0 5px 7px; font-size:14px; font-weight:700; }
 .jv-meta span { white-space:nowrap; }
+.jv-financial-remarks { margin:0 5px 10px; padding:7px 9px; border:1px solid #aaa;
+  font-size:13px; line-height:1.4; white-space:pre-wrap; }
+.jv-financial-remarks strong { margin-right:6px; }
 .jv-table { width:100%; table-layout:fixed; border-collapse:collapse; }
 .jv-table th,.jv-table td { border:1px solid #aaa; padding:5px 4px; vertical-align:top; }
 .jv-table th { text-align:center; font-weight:700; }
@@ -40,17 +43,20 @@ JOURNAL_VOUCHER_HTML = r"""
     <span>Entered in : {{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yyyy") }}</span>
     <span>JV Ref : {{ doc.cheque_no or "" }}</span>
   </div>
+  {% if journal_remarks %}
+  <div class="jv-financial-remarks"><strong>Financial Remarks:</strong>{{ journal_remarks }}</div>
+  {% endif %}
 
   <table class="jv-table">
     <colgroup>
-      <col style="width:8%"><col style="width:20%"><col style="width:8%"><col style="width:11%">
-      <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:7.5%">
-      <col style="width:7.5%"><col style="width:7.5%"><col style="width:7.5%">
+      <col style="width:9%"><col style="width:22%"><col style="width:9%"><col style="width:12%">
+      <col style="width:10%"><col style="width:10%"><col style="width:7%"><col style="width:7%">
+      <col style="width:7%"><col style="width:7%">
     </colgroup>
     <thead>
       <tr>
         <th>Account</th><th>Name / Narration</th><th>Party Type</th><th>Party</th>
-        <th>V. Date</th><th>Job</th><th>Ref.</th>
+        <th>Job</th><th>Foreign Currency</th>
         <th>LBP Debit</th><th>LBP Credit</th><th>USD Debit</th><th>USD Credit</th>
       </tr>
     </thead>
@@ -72,13 +78,12 @@ JOURNAL_VOUCHER_HTML = r"""
         <td class="narration">
           {% if account_arabic %}<div class="arabic">{{ account_arabic }}</div>{% endif %}
           <div>{{ account_name }}</div>
-          {% if row.user_remark or journal_remarks %}<div>{{ row.user_remark or journal_remarks }}</div>{% endif %}
+          {% if row.user_remark %}<div>{{ row.user_remark }}</div>{% endif %}
         </td>
         <td>{{ row.party_type or "" }}</td>
         <td>{{ row.party or "" }}</td>
-        <td class="center">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yyyy") }}</td>
         <td>{{ row.project or row.cost_center or "" }}</td>
-        <td>{{ row.reference_no or "" }}</td>
+        <td class="number">{% if row.account_currency not in ("USD", "LBP") %}{{ frappe.utils.fmt_money(row.debit_in_account_currency or row.credit_in_account_currency, currency="") }} {{ row.account_currency }}{% endif %}</td>
         <td class="number">{% if lbp_debit %}{{ frappe.utils.fmt_money(lbp_debit, currency="") }}{% endif %}</td>
         <td class="number">{% if lbp_credit %}{{ frappe.utils.fmt_money(lbp_credit, currency="") }}{% endif %}</td>
         <td class="number">{% if usd_debit %}{{ frappe.utils.fmt_money(usd_debit, currency="") }}{% endif %}</td>
@@ -86,7 +91,7 @@ JOURNAL_VOUCHER_HTML = r"""
       </tr>
     {% endfor %}
       <tr>
-        <td colspan="7" class="jv-total-label">Total :</td>
+        <td colspan="6" class="jv-total-label">Total :</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.lbp_debit, currency="") }}</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.lbp_credit, currency="") }}</td>
         <td class="number">{{ frappe.utils.fmt_money(totals.usd_debit, currency="") }}</td>

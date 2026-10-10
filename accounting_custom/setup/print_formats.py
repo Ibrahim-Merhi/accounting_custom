@@ -31,9 +31,9 @@ def ensure_arabic_voucher_print_formats():
 		)
 	)
 	receipt_html = _company_conditional_html(
-		_donation_receiver_signature(standard_receipt_html),
+		_donation_receiver_signature(_add_other_currency_amounts(standard_receipt_html, "payments", "donation_amount")),
 		_muntada_voucher_html(payment=False, donation=True),
-		_islam_forum_html(_donation_receiver_signature(standard_receipt_html)),
+		_islam_forum_html(_donation_receiver_signature(_add_other_currency_amounts(standard_receipt_html, "payments", "donation_amount"))),
 	)
 	if receipt_html != receipt.html:
 		receipt.db_set("html", receipt_html, update_modified=False)
@@ -42,9 +42,9 @@ def ensure_arabic_voucher_print_formats():
 		return
 
 	payment_html = _company_conditional_html(
-		_payment_html(standard_receipt_html),
+		_add_other_currency_amounts(_payment_html(standard_receipt_html), "currency_totals", "total_debit"),
 		_muntada_voucher_html(payment=True),
-		_islam_forum_html(_payment_html(standard_receipt_html)),
+		_islam_forum_html(_add_other_currency_amounts(_payment_html(standard_receipt_html), "currency_totals", "total_debit")),
 	)
 	values = {
 		"doc_type": "Accounting Payment Entry",
@@ -75,9 +75,9 @@ def ensure_arabic_voucher_print_formats():
 			**values,
 			"doc_type": "Accounting Receipt Entry",
 			"html": _company_conditional_html(
-				_accounting_receipt_html(standard_receipt_html),
+				_receipt_receiver_signature(_add_other_currency_amounts(_accounting_receipt_html(standard_receipt_html), "currency_totals", "total_debit")),
 				_muntada_voucher_html(payment=False),
-				_islam_forum_html(_accounting_receipt_html(standard_receipt_html)),
+				_islam_forum_html(_receipt_receiver_signature(_add_other_currency_amounts(_accounting_receipt_html(standard_receipt_html), "currency_totals", "total_debit"))),
 			),
 		}
 		if frappe.db.exists("Print Format", ACCOUNTING_RECEIPT_NAME):
@@ -189,6 +189,36 @@ def _donation_receiver_signature(html):
 	return html.replace('{{ user.full_name or "" }}', receiver, 1)
 
 
+def _receipt_receiver_signature(html):
+	"""Show the document creator and Majida's stamp on accounting receipts."""
+	receiver = f'''{{% set receiver_name = frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" %}}
+{{% set receiver_identifier = (doc.owner or "") | lower %}}
+{{{{ receiver_name }}}}
+{{% if "m.tazkarji" in receiver_identifier or (receiver_name | lower) == "majida tazkarji" %}}
+<div class="receipt-receiver-stamp" style="height:45px; display:flex; align-items:center; justify-content:center;">
+    <img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم" style="max-width:145px; max-height:43px; width:auto; height:auto; object-fit:contain;">
+</div>
+{{% endif %}}'''
+	return html.replace('{{ user.full_name or "" }}', receiver, 1)
+
+
+def _add_other_currency_amounts(html, rows_field, amount_field):
+	"""Add printable totals for currencies beyond the legacy USD/LBP boxes."""
+	marker = "<!-- DONOR NAME + PHONE -->"
+	if marker not in html or "OTHER-CURRENCY-AMOUNTS" in html:
+		return html
+	block = f'''<!-- OTHER-CURRENCY-AMOUNTS -->
+{{% for currency_group in (doc.{rows_field} or []) | groupby("currency") %}}
+{{% if currency_group.grouper not in ("USD", "LBP") %}}
+<div class="other-currency-amount" dir="ltr" style="display:inline-block; border:1.5px solid #222; padding:3px 10px; margin:3px; font-weight:700;">
+  {{{{ currency_group.grouper }}}} {{{{ "{{:,.2f}}".format(currency_group.list | sum(attribute="{amount_field}")) }}}}
+</div>
+{{% endif %}}
+{{% endfor %}}
+'''
+	return html.replace(marker, block + marker, 1)
+
+
 def _islam_forum_html(html):
 	organization = """<div class="organization-name organization-layout-v2">
             <span class="organization-primary">جمعية الثقافة والتوجيه الاجتماعي</span>
@@ -209,11 +239,6 @@ def _islam_forum_html(html):
 def _muntada_voucher_html(payment, donation=False):
 	title = "سند صرف" if payment else "سند قبض"
 	party_label = "يُصرف إلى:" if payment else "وصلنا من:"
-	verse = (
-		"﴿وَمَا تُنفِقُوا مِنْ شَيْءٍ فَإِنَّ اللَّهَ بِهِ عَلِيمٌ﴾"
-		if payment else
-		"﴿وَمَا أَنفَقْتُم مِّن شَيْءٍ فَهُوَ يُخْلِفُهُ وَهُوَ خَيْرُ الرَّازِقِينَ﴾"
-	)
 	receiver_signature = f'{{% set receiver_name = frappe.db.get_value("User", doc.owner, "full_name") or doc.owner or "" %}}{{% set receiver_identifier = (doc.owner or "") | lower %}}<td>المستلم:<div class="receiver-name">{{{{ receiver_name }}}}</div>{{% if "m.tazkarji" in receiver_identifier or (receiver_name | lower) == "majida tazkarji" %}}<div class="receiver-stamp"><img src="{PAYMENT_RECEIVER_STAMP}" alt="توقيع المستلم"></div>{{% else %}}<div class="sign-line"></div>{{% endif %}}</td>'
 	signatures = (
 		'<td>المسؤول:<div class="sign-line"></div></td>'
@@ -222,7 +247,7 @@ def _muntada_voucher_html(payment, donation=False):
 		if payment else
 		'<td></td>'
 		f'<td>أمين الصندوق:<div class="treasurer-signature"><img src="{TREASURER_SIGNATURE}" alt="توقيع أمين الصندوق"></div></td>'
-		+ (receiver_signature if donation else '<td>المستلم:<div class="sign-line"></div></td>')
+		+ receiver_signature
 	)
 	date_line = (
 		'<div class="muntada-date">'
@@ -237,8 +262,6 @@ def _muntada_voucher_html(payment, donation=False):
 	return f"""
 {{% set amount_rows = doc.{amount_rows_field} or [] %}}
 {{% set payment_rows = doc.{payment_rows_field} or [] %}}
-{{% set usd_amount = amount_rows | selectattr("currency", "equalto", "USD") | sum(attribute="{amount_field}") %}}
-{{% set lbp_amount = amount_rows | selectattr("currency", "equalto", "LBP") | sum(attribute="{amount_field}") %}}
 {{% set donor_professional_title = frappe.db.get_value("Donor", doc.donor, "professional_title") if {str(donation).lower()} and doc.donor else "" %}}
 {{% set donor_display_name = "فاعل خير" if doc.is_anonymous_male else ("فاعلة خير" if doc.is_anonymous_female else (((donor_professional_title ~ " ") if donor_professional_title else "") ~ (doc.donor_name or doc.donor or ""))) %}}
 {{% set party_names = namespace(values=[]) %}}
@@ -251,32 +274,25 @@ def _muntada_voucher_html(payment, donation=False):
 {{% set parties = donor_display_name if {str(donation).lower()} else (party_names.values | join("، ")) %}}
 {{% set payment_modes = payment_rows | map(attribute="mode_of_payment") | select | join(" ") %}}
 <style>
-@page {{ size: 230mm 113mm; margin: 0; }}
+@page {{ size: A5 portrait; margin: 7mm; }}
 .print-format {{ margin:0!important; padding:0!important; }}
 .muntada-voucher {{ direction:rtl; font-family:"Traditional Arabic","Arial",sans-serif; color:#211f20;
-    width:100%; height:110mm; position:relative; overflow:hidden; box-sizing:border-box; background:#fff; }}
-.muntada-sidebar {{ position:absolute; top:0; right:0; bottom:0; width:12%; background:#000; color:#fff;
-    display:flex; align-items:center; justify-content:center; writing-mode:vertical-rl; transform:rotate(180deg);
-    font-size:19px; font-weight:800; text-align:center; padding:5mm 0; box-sizing:border-box; }}
-.muntada-sidebar small {{ font-size:10px; font-weight:700; margin-top:7mm; }}
-.muntada-logo {{ position:absolute; left:5%; right:auto!important; top:5mm; width:14%; height:28mm; object-fit:contain; }}
-.muntada-heading {{ position:absolute; left:25%; top:6mm; width:58%; direction:rtl; text-align:center; }}
-.muntada-basmala {{ font-size:10px; font-weight:700; line-height:1; margin-bottom:2mm; }}
-.muntada-verse {{ font-size:19px; font-weight:700; white-space:nowrap; line-height:1.2; }}
-.muntada-title {{ position:absolute; left:25%; top:34mm; width:61%; height:10mm; box-sizing:border-box;
-    background:#fff; color:#111; border:1.5px solid #111; font-size:23px; line-height:9mm; text-align:center; font-weight:700; }}
-.muntada-amounts {{ position:absolute; left:5%; right:auto!important; top:35mm; direction:ltr; height:9mm; white-space:nowrap; }}
-.amount-box {{ display:inline-block; border:1.5px solid #222; width:27mm; height:9mm; box-sizing:border-box;
-    font-family:Arial,sans-serif; font-size:12px; line-height:8mm; font-weight:700; text-align:center; }}
-.muntada-body {{ position:absolute; left:5%; right:16%; top:47mm; }}
-.voucher-row {{ font-size:14px; font-weight:700; height:10mm; line-height:9mm; white-space:nowrap; }}
+    width:100%; min-height:190mm; box-sizing:border-box; background:#fff; border:2px solid #101957; padding:8mm; }}
+.muntada-header {{ display:flex; align-items:center; gap:7mm; border-bottom:2px solid #101957; padding-bottom:5mm; }}
+.muntada-logo {{ width:29mm; height:29mm; object-fit:contain; }}
+.muntada-org {{ flex:1; text-align:center; color:#101957; font-size:20px; font-weight:800; }}
+.muntada-org small {{ display:block; color:#333; font-size:10px; margin-top:2mm; }}
+.muntada-title {{ margin:7mm auto 5mm; width:70%; background:#fff; color:#111; border:1.5px solid #101957; font-size:23px; line-height:11mm; text-align:center; font-weight:700; }}
+.muntada-amounts {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3mm; direction:ltr; margin:0 auto 7mm; }}
+.amount-box {{ border:1.5px solid #101957; min-height:11mm; box-sizing:border-box; padding:2mm; font-family:Arial,sans-serif; font-size:12px; font-weight:700; text-align:center; }}
+.muntada-body {{ margin-top:3mm; }}
+.voucher-row {{ font-size:14px; font-weight:700; min-height:13mm; line-height:11mm; }}
 .dots {{ display:inline-block; border-bottom:1.4px dotted #333; min-width:57%; height:7mm;
     padding:0 1mm; font-size:13px; font-weight:500; line-height:7mm; vertical-align:bottom; overflow:hidden; }}
 .phone-dots {{ min-width:20%; }} .short-dots {{ min-width:17%; }} .bank-dots {{ min-width:25%; }}
 .check {{ display:inline-block; width:5mm; height:5mm; border:1.5px solid #222; margin:0 2mm;
     text-align:center; line-height:4mm; font-family:Arial; font-size:14px; vertical-align:middle; }}
-.muntada-signatures {{ position:absolute; left:5%; right:16%; top:84mm; width:79%;
-    border-top:2px solid #222; padding-top:1.5mm; table-layout:fixed; font-size:11px; font-weight:700; text-align:center; }}
+.muntada-signatures {{ width:100%; margin-top:9mm; border-top:2px solid #101957; padding-top:3mm; table-layout:fixed; font-size:11px; font-weight:700; text-align:center; }}
 .muntada-signatures td {{ vertical-align:top; width:33.33%; }}
 .sign-line {{ border-bottom:1.4px dotted #333; height:5mm; margin:0 9mm; }}
 .treasurer-signature {{ height:12mm; margin-top:-1mm; display:flex; align-items:center; justify-content:center; }}
@@ -284,17 +300,14 @@ def _muntada_voucher_html(payment, donation=False):
 .receiver-stamp {{ height:12mm; margin-top:-1mm; display:flex; align-items:center; justify-content:center; }}
 .receiver-stamp img {{ display:block; max-width:34mm; max-height:11mm; width:auto; height:auto; object-fit:contain; }}
 .receiver-name {{ height:4mm; line-height:4mm; font-size:9px; font-weight:600; overflow:hidden; }}
-.muntada-date {{ position:absolute; right:16%; top:96mm; font-size:9px; font-weight:700; white-space:nowrap; }}
+.muntada-date {{ margin-top:7mm; font-size:10px; font-weight:700; text-align:center; white-space:nowrap; }}
 .date-separator {{ margin:0 4mm; color:#777; }}
-.muntada-footer {{ position:absolute; left:5%; right:12%; bottom:2mm; border:1.5px solid #222;
-    height:7mm; box-sizing:border-box; line-height:6mm; text-align:center; font-size:9px; font-weight:700; white-space:nowrap; }}
+.muntada-footer {{ margin-top:7mm; border-top:1px solid #101957; padding-top:3mm; text-align:center; font-size:8px; font-weight:700; }}
 </style>
 <div class="muntada-voucher">
-  <div class="muntada-sidebar">جمعية المنتدى الطلابي<small>لبنان - علم وخبر ١٤٢٤/أ د</small></div>
-  <img class="muntada-logo" src="/assets/accounting_custom/images/print_formats/al_muntada_tullabi_logo.png">
-  <div class="muntada-heading"><div class="muntada-basmala">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ</div><div class="muntada-verse">{verse}</div></div>
-  <div class="muntada-amounts"><span class="amount-box">$ {{{{ "{{:,.2f}}".format(usd_amount or 0) }}}}</span><span class="amount-box">{{{{ "{{:,.0f}}".format(lbp_amount or 0) }}}} ل.ل</span></div>
+  <div class="muntada-header"><img class="muntada-logo" src="/assets/accounting_custom/images/print_formats/al_muntada_tullabi_logo.png"><div class="muntada-org">جمعية المنتدى الطلابي<small>لبنان - علم وخبر ١٤٢٤/أ د</small></div></div>
   <div class="muntada-title">{title}</div>
+  <div class="muntada-amounts">{{% for currency_group in amount_rows | groupby("currency") %}}<span class="amount-box">{{{{ currency_group.grouper }}}} {{{{ "{{:,.2f}}".format(currency_group.list | sum(attribute="{amount_field}")) }}}}</span>{{% endfor %}}</div>
   <div class="muntada-body">
     <div class="voucher-row">{party_label} <span class="dots">{{{{ parties }}}}</span> رقم الجوال: <span class="dots phone-dots"></span></div>
     <div class="voucher-row">مبلغ وقدره: <span class="dots">{{{{ doc.custom_amount_in_words_arabic or "" }}}}</span></div>
@@ -458,7 +471,14 @@ def _accounting_receipt_html(html):
 	html = html.replace(old_amounts, new_amounts, 1)
 	html = html.replace(
 		'{{ doc.donor_name or doc.donor or "" }}',
-		'{{ doc.custom_accounting_rows_copy | map(attribute="party_name") | select | unique | join("، ") }}',
+		'''{% set receipt_party_names = namespace(values=[]) %}
+{% for receipt_row in doc.custom_accounting_rows_copy or [] %}
+    {% set party_display = receipt_row.party_name or receipt_row.party or "" %}
+    {% if party_display and party_display not in receipt_party_names.values %}
+        {% set receipt_party_names.values = receipt_party_names.values + [party_display] %}
+    {% endif %}
+{% endfor %}
+{{ receipt_party_names.values | join("، ") }}''',
 		1,
 	)
 	html = html.replace("DONOR NAME + PHONE", "RECEIPT PARTY + REFERENCE")

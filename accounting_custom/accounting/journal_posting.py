@@ -74,6 +74,9 @@ def submit_linked_journal_entry(source_doc, gl_rows):
 	if not source_doc.journal_entry:
 		return create_linked_journal_entry(source_doc, gl_rows)
 	journal = frappe.get_doc("Journal Entry", source_doc.journal_entry)
+	if journal.docstatus == 1:
+		# A repeated submit request is idempotent: reuse the linked entry.
+		return journal.name
 	if journal.docstatus != 0:
 		frappe.throw(_("Linked Journal Entry {0} must be Draft.").format(journal.name))
 	_set_journal_values(journal, source_doc, gl_rows)
