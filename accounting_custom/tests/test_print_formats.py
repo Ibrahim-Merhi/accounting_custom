@@ -300,6 +300,23 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("QAR 240.00", html)
 		self.assertNotIn("ل.ل.", html)
 
+	def test_single_currency_keeps_second_amount_box_empty(self):
+		template = _dynamic_currency_boxes(
+			'''<!-- =====================================
+                         CURRENCY BOXES
+                    ====================================== -->
+<table><tr><td>legacy</td></tr></table>''',
+			"currency_totals", "total_debit",
+		)
+		doc = frappe._dict(currency_totals=[
+			frappe._dict(currency="QAR", total_debit=240),
+		])
+		html = frappe.render_template(template, {"doc": doc})
+
+		self.assertIn("QAR 240.00", html)
+		self.assertEqual(html.count('<td class="dynamic-currency-box'), 2)
+		self.assertIn("empty-currency-box", html)
+
 	def test_muntada_payment_uses_party_when_party_name_is_empty(self):
 		doc = frappe._dict(
 			company="Al Muntada Al Tullabi", owner="another.user",

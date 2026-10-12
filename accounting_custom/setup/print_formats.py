@@ -243,13 +243,20 @@ def _dynamic_currency_boxes(html, rows_field, amount_field):
                     ====================================== -->
 <table class="dynamic-currency-boxes" style="width:73%; margin:5px auto 0 auto; border-collapse:separate; border-spacing:4px 0; table-layout:fixed; direction:ltr;">
   <tr>
-  {{% for currency_group in (doc.{rows_field} or []) | groupby("currency") %}}
+  {{% set currency_groups = (doc.{rows_field} or []) | groupby("currency") %}}
+  {{% for currency_group in currency_groups %}}
     {{% if loop.index <= 2 %}}
-    <td style="width:50%; height:40px; border:1.5px solid #222; text-align:center; vertical-align:middle; font-family:Arial,sans-serif!important; font-size:18px; font-weight:700;">
+    <td class="dynamic-currency-box" style="width:50%; height:40px; border:1.5px solid #222; text-align:center; vertical-align:middle; font-family:Arial,sans-serif!important; font-size:18px; font-weight:700;">
       {{{{ currency_group.grouper }}}} {{{{ "{{:,.2f}}".format(currency_group.list | sum(attribute="{amount_field}")) }}}}
     </td>
     {{% endif %}}
   {{% endfor %}}
+  {{% if currency_groups | length < 2 %}}
+    <td class="dynamic-currency-box empty-currency-box" style="width:50%; height:40px; border:1.5px solid #222;">&nbsp;</td>
+  {{% endif %}}
+  {{% if currency_groups | length == 0 %}}
+    <td class="dynamic-currency-box empty-currency-box" style="width:50%; height:40px; border:1.5px solid #222;">&nbsp;</td>
+  {{% endif %}}
   </tr>
 </table>'''
 	return re.sub(marker_pattern, boxes, html, count=1, flags=re.DOTALL)
