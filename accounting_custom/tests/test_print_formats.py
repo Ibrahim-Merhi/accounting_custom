@@ -118,7 +118,7 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("2026-09-19", receipt)
 		self.assertIn("treasurer_signature.jpg", payment)
 		self.assertIn("treasurer_signature.jpg", receipt)
-		self.assertIn("A5 portrait", payment)
+		self.assertIn("A4 portrait", payment)
 		self.assertNotIn("﴿", payment)
 		self.assertNotIn("background:#000", receipt)
 
@@ -202,6 +202,22 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertNotIn('user.full_name or ""', html)
 		self.assertNotIn("m_tazkarji_receiver_stamp.jpg", html)
 
+	def test_payment_replaces_already_transformed_donor_block(self):
+		donation_template = _donation_donor_display_html(
+			'<span>{{ doc.donor_name or doc.donor or "" }}</span>'
+		)
+		payment_template = _payment_html(donation_template)
+		rendered = frappe.render_template(payment_template, {
+			"doc": frappe._dict(custom_accounting_rows_copy=[
+				frappe._dict(party_name="اسم المستفيد", party="SUP-0010"),
+			]),
+		})
+
+		self.assertIn("ACCOUNTING-PAYMENT-PARTY-START", payment_template)
+		self.assertIn("payment_row.party_name or payment_row.party", payment_template)
+		self.assertNotIn("DONATION-DONOR-DISPLAY-START", payment_template)
+		self.assertIn("اسم المستفيد", rendered)
+
 	def test_muntada_payment_receiver_is_always_blank(self):
 		payment = _muntada_voucher_html(payment=True)
 		receipt = _muntada_voucher_html(payment=False)
@@ -224,6 +240,22 @@ class TestMuntadaPrintFormats(TestCase):
 		template = _receipt_receiver_signature(template)
 		self.assertIn("receipt_row.party_name or receipt_row.party", template)
 		self.assertIn("m_tazkarji_receiver_stamp.jpg", template)
+
+	def test_accounting_receipt_replaces_already_transformed_donor_block(self):
+		donation_template = _donation_donor_display_html(
+			'<span>{{ doc.donor_name or doc.donor or "" }}</span>'
+		)
+		receipt_template = _accounting_receipt_html(donation_template)
+		rendered = frappe.render_template(receipt_template, {
+			"doc": frappe._dict(custom_accounting_rows_copy=[
+				frappe._dict(party_name=None, party="SUP-0009"),
+			]),
+		})
+
+		self.assertIn("ACCOUNTING-RECEIPT-PARTY-START", receipt_template)
+		self.assertIn("receipt_row.party_name or receipt_row.party", receipt_template)
+		self.assertNotIn("DONATION-DONOR-DISPLAY-START", receipt_template)
+		self.assertIn("SUP-0009", rendered)
 
 	def test_standard_receipt_prints_other_currency_totals(self):
 		template = _add_other_currency_amounts(

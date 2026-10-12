@@ -10,6 +10,10 @@ MUNTADA_CONDITIONAL_START = "{# MUNTADA-COMPANY-CONDITIONAL-START #}"
 MUNTADA_CONDITIONAL_END = "{# MUNTADA-COMPANY-CONDITIONAL-END #}"
 DONOR_DISPLAY_START = "{# DONATION-DONOR-DISPLAY-START #}"
 DONOR_DISPLAY_END = "{# DONATION-DONOR-DISPLAY-END #}"
+RECEIPT_PARTY_START = "{# ACCOUNTING-RECEIPT-PARTY-START #}"
+RECEIPT_PARTY_END = "{# ACCOUNTING-RECEIPT-PARTY-END #}"
+PAYMENT_PARTY_START = "{# ACCOUNTING-PAYMENT-PARTY-START #}"
+PAYMENT_PARTY_END = "{# ACCOUNTING-PAYMENT-PARTY-END #}"
 TREASURER_SIGNATURE = "/assets/accounting_custom/images/print_formats/treasurer_signature.jpg"
 PAYMENT_RECEIVER_STAMP = "/assets/accounting_custom/images/print_formats/m_tazkarji_receiver_stamp.jpg"
 LEGACY_TREASURER_SIGNATURES = (
@@ -274,16 +278,16 @@ def _muntada_voucher_html(payment, donation=False):
 {{% set parties = donor_display_name if {str(donation).lower()} else (party_names.values | join("، ")) %}}
 {{% set payment_modes = payment_rows | map(attribute="mode_of_payment") | select | join(" ") %}}
 <style>
-@page {{ size: A5 portrait; margin: 7mm; }}
+@page {{ size: A4 portrait; margin: 12mm; }}
 .print-format {{ margin:0!important; padding:0!important; }}
 .muntada-voucher {{ direction:rtl; font-family:"Traditional Arabic","Arial",sans-serif; color:#211f20;
-    width:100%; min-height:190mm; box-sizing:border-box; background:#fff; border:2px solid #101957; padding:8mm; }}
+    width:180mm; min-height:132mm; margin:0 auto; box-sizing:border-box; background:#fff; padding:6mm 8mm; }}
 .muntada-header {{ display:flex; align-items:center; gap:7mm; border-bottom:2px solid #101957; padding-bottom:5mm; }}
-.muntada-logo {{ width:29mm; height:29mm; object-fit:contain; }}
+.muntada-logo {{ width:25mm; height:25mm; object-fit:contain; }}
 .muntada-org {{ flex:1; text-align:center; color:#101957; font-size:20px; font-weight:800; }}
 .muntada-org small {{ display:block; color:#333; font-size:10px; margin-top:2mm; }}
-.muntada-title {{ margin:7mm auto 5mm; width:70%; background:#fff; color:#111; border:1.5px solid #101957; font-size:23px; line-height:11mm; text-align:center; font-weight:700; }}
-.muntada-amounts {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3mm; direction:ltr; margin:0 auto 7mm; }}
+.muntada-title {{ margin:6mm auto 4mm; width:70%; background:#fff; color:#111; border:1.5px solid #101957; font-size:23px; line-height:11mm; text-align:center; font-weight:700; }}
+.muntada-amounts {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3mm; direction:ltr; width:52%; margin:0 0 6mm auto; }}
 .amount-box {{ border:1.5px solid #101957; min-height:11mm; box-sizing:border-box; padding:2mm; font-family:Arial,sans-serif; font-size:12px; font-weight:700; text-align:center; }}
 .muntada-body {{ margin-top:3mm; }}
 .voucher-row {{ font-size:14px; font-weight:700; min-height:13mm; line-height:11mm; }}
@@ -292,7 +296,7 @@ def _muntada_voucher_html(payment, donation=False):
 .phone-dots {{ min-width:20%; }} .short-dots {{ min-width:17%; }} .bank-dots {{ min-width:25%; }}
 .check {{ display:inline-block; width:5mm; height:5mm; border:1.5px solid #222; margin:0 2mm;
     text-align:center; line-height:4mm; font-family:Arial; font-size:14px; vertical-align:middle; }}
-.muntada-signatures {{ width:100%; margin-top:9mm; border-top:2px solid #101957; padding-top:3mm; table-layout:fixed; font-size:11px; font-weight:700; text-align:center; }}
+.muntada-signatures {{ width:100%; margin-top:6mm; border-top:2px solid #101957; padding-top:3mm; table-layout:fixed; font-size:11px; font-weight:700; text-align:center; }}
 .muntada-signatures td {{ vertical-align:top; width:33.33%; }}
 .sign-line {{ border-bottom:1.4px dotted #333; height:5mm; margin:0 9mm; }}
 .treasurer-signature {{ height:12mm; margin-top:-1mm; display:flex; align-items:center; justify-content:center; }}
@@ -300,9 +304,9 @@ def _muntada_voucher_html(payment, donation=False):
 .receiver-stamp {{ height:12mm; margin-top:-1mm; display:flex; align-items:center; justify-content:center; }}
 .receiver-stamp img {{ display:block; max-width:34mm; max-height:11mm; width:auto; height:auto; object-fit:contain; }}
 .receiver-name {{ height:4mm; line-height:4mm; font-size:9px; font-weight:600; overflow:hidden; }}
-.muntada-date {{ margin-top:7mm; font-size:10px; font-weight:700; text-align:center; white-space:nowrap; }}
+.muntada-date {{ margin-top:5mm; font-size:10px; font-weight:700; text-align:center; white-space:nowrap; }}
 .date-separator {{ margin:0 4mm; color:#777; }}
-.muntada-footer {{ margin-top:7mm; border-top:1px solid #101957; padding-top:3mm; text-align:center; font-size:8px; font-weight:700; }}
+.muntada-footer {{ margin-top:5mm; border-top:1px solid #101957; padding-top:3mm; text-align:center; font-size:8px; font-weight:700; }}
 </style>
 <div class="muntada-voucher">
   <div class="muntada-header"><img class="muntada-logo" src="/assets/accounting_custom/images/print_formats/al_muntada_tullabi_logo.png"><div class="muntada-org">جمعية المنتدى الطلابي<small>لبنان - علم وخبر ١٤٢٤/أ د</small></div></div>
@@ -426,15 +430,34 @@ def _payment_html(html):
 	html = html.replace(old_amounts, new_amounts, 1)
 	html = html.replace("سند قبض", "سند صرف")
 	html = html.replace("وصلنا من:", "يُصرف إلى:", 1)
-	payment_party_names = '''{% set payment_party_names = namespace(values=[]) %}
-{% for payment_row in doc.custom_accounting_rows_copy or [] %}
-    {% set party_display = payment_row.party_name or payment_row.party or "" %}
-    {% if party_display and party_display not in payment_party_names.values %}
-        {% set payment_party_names.values = payment_party_names.values + [party_display] %}
-    {% endif %}
-{% endfor %}
-{{ payment_party_names.values | join("، ") }}'''
-	html = html.replace('{{ doc.donor_name or doc.donor or "" }}', payment_party_names, 1)
+	payment_party_names = f'''{PAYMENT_PARTY_START}
+{{% set payment_party_names = namespace(values=[]) %}}
+{{% for payment_row in doc.custom_accounting_rows_copy or [] %}}
+    {{% set party_display = payment_row.party_name or payment_row.party or "" %}}
+    {{% if party_display and party_display not in payment_party_names.values %}}
+        {{% set payment_party_names.values = payment_party_names.values + [party_display] %}}
+    {{% endif %}}
+{{% endfor %}}
+{{{{ payment_party_names.values | join("، ") }}}}
+{PAYMENT_PARTY_END}'''
+	if PAYMENT_PARTY_START in html:
+		html = re.sub(
+			re.escape(PAYMENT_PARTY_START) + r".*?" + re.escape(PAYMENT_PARTY_END),
+			payment_party_names,
+			html,
+			count=1,
+			flags=re.DOTALL,
+		)
+	elif DONOR_DISPLAY_START in html:
+		html = re.sub(
+			re.escape(DONOR_DISPLAY_START) + r".*?" + re.escape(DONOR_DISPLAY_END),
+			payment_party_names,
+			html,
+			count=1,
+			flags=re.DOTALL,
+		)
+	else:
+		html = html.replace('{{ doc.donor_name or doc.donor or "" }}', payment_party_names, 1)
 	html = html.replace("DONOR NAME + PHONE", "PAYEE + REFERENCE")
 	html = html.replace("رقم الهاتف:", "الفرع:", 1)
 	html = html.replace(
@@ -469,18 +492,34 @@ def _accounting_receipt_html(html):
 	html = html.replace("ITIHAD - DONATION ENTRY RECEIPT", "ITIHAD - ACCOUNTING RECEIPT ENTRY")
 	html = html.replace('"Donation Entry",\n    doc.name,', '"Accounting Receipt Entry",\n    doc.name,', 1)
 	html = html.replace(old_amounts, new_amounts, 1)
-	html = html.replace(
-		'{{ doc.donor_name or doc.donor or "" }}',
-		'''{% set receipt_party_names = namespace(values=[]) %}
-{% for receipt_row in doc.custom_accounting_rows_copy or [] %}
-    {% set party_display = receipt_row.party_name or receipt_row.party or "" %}
-    {% if party_display and party_display not in receipt_party_names.values %}
-        {% set receipt_party_names.values = receipt_party_names.values + [party_display] %}
-    {% endif %}
-{% endfor %}
-{{ receipt_party_names.values | join("، ") }}''',
-		1,
-	)
+	receipt_parties = f'''{RECEIPT_PARTY_START}
+{{% set receipt_party_names = namespace(values=[]) %}}
+{{% for receipt_row in doc.custom_accounting_rows_copy or [] %}}
+    {{% set party_display = receipt_row.party_name or receipt_row.party or "" %}}
+    {{% if party_display and party_display not in receipt_party_names.values %}}
+        {{% set receipt_party_names.values = receipt_party_names.values + [party_display] %}}
+    {{% endif %}}
+{{% endfor %}}
+{{{{ receipt_party_names.values | join("، ") }}}}
+{RECEIPT_PARTY_END}'''
+	if RECEIPT_PARTY_START in html:
+		html = re.sub(
+			re.escape(RECEIPT_PARTY_START) + r".*?" + re.escape(RECEIPT_PARTY_END),
+			receipt_parties,
+			html,
+			count=1,
+			flags=re.DOTALL,
+		)
+	elif DONOR_DISPLAY_START in html:
+		html = re.sub(
+			re.escape(DONOR_DISPLAY_START) + r".*?" + re.escape(DONOR_DISPLAY_END),
+			receipt_parties,
+			html,
+			count=1,
+			flags=re.DOTALL,
+		)
+	else:
+		html = html.replace('{{ doc.donor_name or doc.donor or "" }}', receipt_parties, 1)
 	html = html.replace("DONOR NAME + PHONE", "RECEIPT PARTY + REFERENCE")
 	html = html.replace("رقم الهاتف:", "الفرع:", 1)
 	html = html.replace(
