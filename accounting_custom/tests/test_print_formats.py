@@ -11,6 +11,7 @@ from accounting_custom.setup.print_formats import (
 	_donation_receiver_signature,
 	_donation_donor_display_html,
 	_islam_forum_html,
+	_tullabi_html,
 	_muntada_voucher_html,
 	_payment_html,
 	_receipt_receiver_signature,
@@ -190,6 +191,21 @@ class TestMuntadaPrintFormats(TestCase):
 		self.assertIn("علم وخبر ٣٢٥ أ٫د", html)
 		self.assertIn("al_muntada_islam_forum_grayscale.png", html)
 		self.assertIn("STANDARD BODY", html)
+
+	def test_tullabi_uses_standard_voucher_layout_with_its_branding(self):
+		standard = """<div class="receipt-main">STANDARD BODY</div>
+		<div class="organization-name organization-layout-v2">
+		<span class="organization-primary">Old Name</span></div>
+		<img src="/old-logo.png">"""
+
+		html = _tullabi_html(standard)
+
+		self.assertIn('class="receipt-main"', html)
+		self.assertIn("STANDARD BODY", html)
+		self.assertIn("جمعية المنتدى الطلابي", html)
+		self.assertIn("علم وخبر ١٤٢٤/أ د", html)
+		self.assertIn("al_muntada_tullabi_logo.png", html)
+		self.assertNotIn("muntada-voucher", html)
 
 	def test_payment_format_uses_arabic_branch_name(self):
 		html = _payment_html(

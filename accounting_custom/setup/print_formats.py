@@ -34,10 +34,13 @@ def ensure_arabic_voucher_print_formats():
 			)
 		)
 	)
+	donation_standard_html = _donation_receiver_signature(
+		_add_other_currency_amounts(standard_receipt_html, "payments", "donation_amount")
+	)
 	receipt_html = _company_conditional_html(
-		_donation_receiver_signature(_add_other_currency_amounts(standard_receipt_html, "payments", "donation_amount")),
-		_muntada_voucher_html(payment=False, donation=True),
-		_islam_forum_html(_donation_receiver_signature(_add_other_currency_amounts(standard_receipt_html, "payments", "donation_amount"))),
+		donation_standard_html,
+		_tullabi_html(donation_standard_html),
+		_islam_forum_html(donation_standard_html),
 	)
 	if receipt_html != receipt.html:
 		receipt.db_set("html", receipt_html, update_modified=False)
@@ -45,10 +48,13 @@ def ensure_arabic_voucher_print_formats():
 	if not frappe.db.exists("DocType", "Accounting Payment Entry"):
 		return
 
+	payment_standard_html = _add_other_currency_amounts(
+		_payment_html(standard_receipt_html), "currency_totals", "total_debit"
+	)
 	payment_html = _company_conditional_html(
-		_add_other_currency_amounts(_payment_html(standard_receipt_html), "currency_totals", "total_debit"),
-		_muntada_voucher_html(payment=True),
-		_islam_forum_html(_add_other_currency_amounts(_payment_html(standard_receipt_html), "currency_totals", "total_debit")),
+		payment_standard_html,
+		_tullabi_html(payment_standard_html),
+		_islam_forum_html(payment_standard_html),
 	)
 	values = {
 		"doc_type": "Accounting Payment Entry",
@@ -75,13 +81,19 @@ def ensure_arabic_voucher_print_formats():
 		)
 
 	if frappe.db.exists("DocType", "Accounting Receipt Entry"):
+		accounting_receipt_standard_html = _receipt_receiver_signature(
+			_add_other_currency_amounts(
+				_accounting_receipt_html(standard_receipt_html),
+				"currency_totals", "total_debit",
+			)
+		)
 		receipt_values = {
 			**values,
 			"doc_type": "Accounting Receipt Entry",
 			"html": _company_conditional_html(
-				_receipt_receiver_signature(_add_other_currency_amounts(_accounting_receipt_html(standard_receipt_html), "currency_totals", "total_debit")),
-				_muntada_voucher_html(payment=False),
-				_islam_forum_html(_receipt_receiver_signature(_add_other_currency_amounts(_accounting_receipt_html(standard_receipt_html), "currency_totals", "total_debit"))),
+				accounting_receipt_standard_html,
+				_tullabi_html(accounting_receipt_standard_html),
+				_islam_forum_html(accounting_receipt_standard_html),
 			),
 		}
 		if frappe.db.exists("Print Format", ACCOUNTING_RECEIPT_NAME):
@@ -238,6 +250,23 @@ def _islam_forum_html(html):
 	logo = "/assets/accounting_custom/images/print_formats/al_muntada_islam_forum_grayscale.png"
 	html = re.sub(r'(<img\s+[^>]*?src=")[^"]+("[^>]*>)', rf'\g<1>{logo}\g<2>', html, count=1)
 	return html
+
+
+def _tullabi_html(html):
+	"""Use the standard Itihad voucher layout with Tullabi branding only."""
+	organization = """<div class="organization-name organization-layout-v2">
+            <span class="organization-primary">جمعية المنتدى الطلابي</span>
+            <span class="organization-registration">لبنان - علم وخبر ١٤٢٤/أ د</span>
+        </div>"""
+	html = re.sub(
+		r'<div class="organization-name(?: organization-layout-v2)?">.*?</div>',
+		organization,
+		html,
+		count=1,
+		flags=re.DOTALL,
+	)
+	logo = "/assets/accounting_custom/images/print_formats/al_muntada_tullabi_logo.png"
+	return re.sub(r'(<img\s+[^>]*?src=")[^"]+("[^>]*>)', rf'\g<1>{logo}\g<2>', html, count=1)
 
 
 def _muntada_voucher_html(payment, donation=False):
