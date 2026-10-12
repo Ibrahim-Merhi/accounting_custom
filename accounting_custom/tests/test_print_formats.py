@@ -7,6 +7,7 @@ from accounting_custom.setup.print_formats import (
 	_company_conditional_html,
 	_add_treasurer_signature,
 	_add_other_currency_amounts,
+	_dynamic_currency_boxes,
 	_accounting_receipt_html,
 	_donation_receiver_signature,
 	_donation_donor_display_html,
@@ -280,6 +281,24 @@ class TestMuntadaPrintFormats(TestCase):
 		doc = frappe._dict(currency_totals=[frappe._dict(currency="EUR", total_debit=250)])
 		html = frappe.render_template(template, {"doc": doc})
 		self.assertIn("EUR 250.00", html)
+
+	def test_standard_receipt_uses_actual_two_currencies_in_amount_boxes(self):
+		template = _dynamic_currency_boxes(
+			'''<!-- =====================================
+                         CURRENCY BOXES
+                    ====================================== -->
+<table><tr><td>{{ usd_amount }}</td><td>{{ lbp_amount }}</td></tr></table>''',
+			"currency_totals", "total_debit",
+		)
+		doc = frappe._dict(currency_totals=[
+			frappe._dict(currency="USD", total_debit=35),
+			frappe._dict(currency="QAR", total_debit=240),
+		])
+		html = frappe.render_template(template, {"doc": doc})
+
+		self.assertIn("USD 35.00", html)
+		self.assertIn("QAR 240.00", html)
+		self.assertNotIn("ل.ل.", html)
 
 	def test_muntada_payment_uses_party_when_party_name_is_empty(self):
 		doc = frappe._dict(

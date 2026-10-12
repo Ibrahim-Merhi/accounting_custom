@@ -35,7 +35,7 @@ def ensure_arabic_voucher_print_formats():
 		)
 	)
 	donation_standard_html = _donation_receiver_signature(
-		_add_other_currency_amounts(standard_receipt_html, "payments", "donation_amount")
+		_dynamic_currency_boxes(standard_receipt_html, "payments", "donation_amount")
 	)
 	receipt_html = _company_conditional_html(
 		donation_standard_html,
@@ -48,7 +48,7 @@ def ensure_arabic_voucher_print_formats():
 	if not frappe.db.exists("DocType", "Accounting Payment Entry"):
 		return
 
-	payment_standard_html = _add_other_currency_amounts(
+	payment_standard_html = _dynamic_currency_boxes(
 		_payment_html(standard_receipt_html), "currency_totals", "total_debit"
 	)
 	payment_html = _company_conditional_html(
@@ -82,7 +82,7 @@ def ensure_arabic_voucher_print_formats():
 
 	if frappe.db.exists("DocType", "Accounting Receipt Entry"):
 		accounting_receipt_standard_html = _receipt_receiver_signature(
-			_add_other_currency_amounts(
+			_dynamic_currency_boxes(
 				_accounting_receipt_html(standard_receipt_html),
 				"currency_totals", "total_debit",
 			)
@@ -233,6 +233,26 @@ def _add_other_currency_amounts(html, rows_field, amount_field):
 {{% endfor %}}
 '''
 	return html.replace(marker, block + marker, 1)
+
+
+def _dynamic_currency_boxes(html, rows_field, amount_field):
+	"""Replace the legacy fixed USD/LBP boxes with the document's two currencies."""
+	marker_pattern = r"(<!--\s*=+\s*\n\s*CURRENCY BOXES\s*\n\s*=+\s*-->)\s*<table.*?</table>"
+	boxes = f'''<!-- =====================================
+                         CURRENCY BOXES
+                    ====================================== -->
+<table class="dynamic-currency-boxes" style="width:73%; margin:5px auto 0 auto; border-collapse:separate; border-spacing:4px 0; table-layout:fixed; direction:ltr;">
+  <tr>
+  {{% for currency_group in (doc.{rows_field} or []) | groupby("currency") %}}
+    {{% if loop.index <= 2 %}}
+    <td style="width:50%; height:40px; border:1.5px solid #222; text-align:center; vertical-align:middle; font-family:Arial,sans-serif!important; font-size:18px; font-weight:700;">
+      {{{{ currency_group.grouper }}}} {{{{ "{{:,.2f}}".format(currency_group.list | sum(attribute="{amount_field}")) }}}}
+    </td>
+    {{% endif %}}
+  {{% endfor %}}
+  </tr>
+</table>'''
+	return re.sub(marker_pattern, boxes, html, count=1, flags=re.DOTALL)
 
 
 def _islam_forum_html(html):
