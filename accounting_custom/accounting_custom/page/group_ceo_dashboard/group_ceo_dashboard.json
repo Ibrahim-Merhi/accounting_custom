@@ -1,0 +1,11 @@
+{
+ "doctype": "Page",
+ "module": "Accounting Custom",
+ "name": "group-ceo-dashboard",
+ "owner": "Administrator",
+ "page_name": "group-ceo-dashboard",
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Group CEO Dashboard",
+ "roles": [{"role": "Group CEO"}, {"role": "System Manager"}]
+}

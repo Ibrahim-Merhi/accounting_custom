@@ -17,6 +17,7 @@ from accounting_custom.setup.workspace import (
 	ensure_accounting_workspace_sections,
 	remove_standalone_accounting_program_workspace,
 )
+from accounting_custom.setup.executive import ensure_group_ceo_experience
 
 
 PARTY_TYPES = {
@@ -58,6 +59,7 @@ def setup_accounting_customizations():
 	backfill_journal_entry_transaction_currency()
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
+	ensure_group_ceo_experience()
 
 
 def ensure_employee_advance_layout():
@@ -264,7 +266,7 @@ def ensure_party_type_permissions():
 def ensure_accounting_roles():
 	for role in (
 		"Collector", "Treasurer", "Finance Officer", "Association President",
-		"HR Coordinator", "Responsible Manager", "Volunteer", "Public Relations", "CEO",
+		"HR Coordinator", "Responsible Manager", "Volunteer", "Public Relations", "CEO", "Group CEO",
 	):
 		if not frappe.db.exists("Role", role):
 			frappe.get_doc({"doctype": "Role", "role_name": role}).insert(ignore_permissions=True)

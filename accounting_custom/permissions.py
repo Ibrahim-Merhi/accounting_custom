@@ -3,7 +3,7 @@ import frappe
 
 PRIVILEGED = {
 	"System Manager", "Accounts Manager", "Finance Officer", "Treasurer",
-	"Association President", "CEO",
+	"Association President", "CEO", "Group CEO",
 }
 
 
@@ -68,7 +68,7 @@ def payment_memo_permission(doc, user=None, permission_type=None):
 	return doc.requested_by == user
 
 
-SALARY_ROLES = {"Accounts Manager"}
+SALARY_ROLES = {"Accounts Manager", "Group CEO"}
 
 
 def salary_query(user=None):
@@ -84,7 +84,7 @@ def salary_permission(doc, user=None, permission_type=None):
 def employee_query(user=None):
 	"""Hide internal company payroll identities from every non-system user."""
 	user = user or frappe.session.user
-	if user == "Administrator" or "System Manager" in _roles(user):
+	if user == "Administrator" or _roles(user) & {"System Manager", "Group CEO"}:
 		return None
 	return "coalesce(`tabEmployee`.`custom_is_payroll_identity`, 0) = 0"
 
@@ -92,7 +92,7 @@ def employee_query(user=None):
 def employee_permission(doc, user=None, permission_type=None):
 	"""Prevent direct access when an internal Employee name is known."""
 	user = user or frappe.session.user
-	if user == "Administrator" or "System Manager" in _roles(user):
+	if user == "Administrator" or _roles(user) & {"System Manager", "Group CEO"}:
 		return None
 	if doc and doc.get("custom_is_payroll_identity"):
 		return False
