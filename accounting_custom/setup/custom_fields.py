@@ -118,8 +118,22 @@ CUSTOM_FIELDS = {
 			"in_standard_filter": 1,
 		},
 		{
+			"fieldname": "custom_admin_department", "label": "الادارة",
+			"fieldtype": "Select", "insert_after": "custom_payroll_category",
+			"options": "\nتنفيذية\nمالية\nإعلام\nعلاقات\nمعاملات ضمان\nإعلان\nمعلوماتية",
+			"depends_on": "eval:doc.custom_payroll_category == 'اداريين'",
+			"mandatory_depends_on": "eval:doc.custom_payroll_category == 'اداريين'",
+		},
+		{
+			"fieldname": "custom_forum_institution", "label": "المؤسسة",
+			"fieldtype": "Select", "insert_after": "custom_admin_department",
+			"options": "\nعالم الفرقان\nالمنتدى الشبابي\nمنتدى التعريف",
+			"depends_on": "eval:doc.custom_payroll_category == 'منتديات'",
+			"mandatory_depends_on": "eval:doc.custom_payroll_category == 'منتديات'",
+		},
+		{
 			"fieldname": "custom_secure_salary_profile", "label": "Salary Profile",
-			"fieldtype": "HTML", "insert_after": "custom_payroll_category",
+			"fieldtype": "HTML", "insert_after": "custom_forum_institution",
 		},
 		{
 			# Keep legacy payroll columns out of the full-width salary workspace.

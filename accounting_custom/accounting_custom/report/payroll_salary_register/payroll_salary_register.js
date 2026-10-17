@@ -16,6 +16,7 @@ frappe.query_reports["Payroll Salary Register"] = {
 		add_report_styles();
 	},
 	formatter(value, row, column, data, default_formatter) {
+		if (["Currency", "Float", "Int"].includes(column.fieldtype) && Number(value) === 0) return "";
 		const formatted = default_formatter(value, row, column, data);
 		return column.fieldname === "employee_name" ? `<strong>${formatted}</strong>` : formatted;
 	},
@@ -113,6 +114,7 @@ function numeric_column(column) {
 
 function format_cell(value, column) {
 	if (value === null || value === undefined || value === "") return "";
+	if (numeric_column(column) && Number(value) === 0) return "";
 	if (numeric_column(column)) return frappe.utils.escape_html(format_number(Number(value), null, column.precision ?? 0));
 	return frappe.utils.escape_html(String(value));
 }
@@ -146,7 +148,7 @@ function print_all_registers(content) {
 }
 
 function print_styles() {
-	return `@page { size: A4 landscape; margin: 8mm; } * { box-sizing: border-box; } body { margin: 0; color: #111; font-family: Arial, "Noto Naskh Arabic", sans-serif; } .payroll-print-section { page-break-after: always; padding: 4mm; min-height: 185mm; } .payroll-print-section:last-child { page-break-after: auto; } .payroll-print-category { display: inline-block; border: 1px solid #222; padding: 4px 14px; margin-bottom: 8px; font-weight: 700; border-radius: 12px; } .payroll-print-section > div[style] { margin: 3mm 0 6mm; } table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 10px; } th, td { border: 1px solid #222; padding: 6px 4px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; } th { background: #f1f3f5; font-weight: 700; } td.number { direction: ltr; font-variant-numeric: tabular-nums; } .total-row td { border-top: 2px solid #111; font-weight: 700; background: #f8f9fa; } .empty { padding: 24px; color: #777; } .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; margin-top: 9mm; padding-top: 5mm; border-top: 1px solid #555; }`;
+	return `@page { size: A4 landscape; margin: 8mm; } * { box-sizing: border-box; } body { margin: 0; color: #111; font-family: Arial, "Noto Naskh Arabic", sans-serif; } .payroll-print-section { page-break-after: always; padding: 4mm; min-height: 185mm; } .payroll-print-section:last-child { page-break-after: auto; } .payroll-print-category { display: inline-block; border: 1px solid #222; padding: 5px 16px; margin-bottom: 10px; font-size: 15px; font-weight: 700; border-radius: 12px; } .payroll-print-section > div[style] { margin: 3mm 0 6mm; } table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 13px; } th, td { border: 1px solid #222; padding: 8px 5px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; } th { background: #f1f3f5; font-size: 13px; font-weight: 700; } td.number { direction: ltr; font-variant-numeric: tabular-nums; } .total-row td { border-top: 2px solid #111; font-weight: 700; background: #f8f9fa; } .empty { padding: 24px; color: #777; } .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 14px; margin-top: 9mm; padding-top: 5mm; border-top: 1px solid #555; }`;
 }
 
 function add_report_styles() {

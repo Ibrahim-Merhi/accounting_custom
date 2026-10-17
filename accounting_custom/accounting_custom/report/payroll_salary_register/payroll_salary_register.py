@@ -69,13 +69,18 @@ def execute(filters=None):
 	if category in STATIC_REGISTERS:
 		return _static_register(run, category)
 
-	employee_categories = _get_employee_categories(run)
+	employee_profiles = _get_employee_profiles(run)
 	employees = list(run.employees)
 	if category:
 		employees = [
 			row for row in employees
-			if (employee_categories.get(row.employee) or "غير مصنف") == category
+			if (employee_profiles.get(row.employee, {}).get("category") or "غير مصنف") == category
 		]
+	if category in ("اداريين", "منتديات"):
+		employees.sort(key=lambda row: (
+			_employee_subcategory(employee_profiles.get(row.employee), category),
+			(employee_profiles.get(row.employee) or {}).get("arabic_name") or row.employee_name or "",
+		))
 
 	allocations = [
 		row for row in run.allocation_summary
@@ -83,7 +88,7 @@ def execute(filters=None):
 	]
 	cost_centers = _ordered_cost_centers(allocations)
 	labels = _cost_center_labels(cost_centers)
-	columns = _columns(cost_centers, labels)
+	columns = _columns(cost_centers, labels, category)
 	manual = _manual_deduction_totals(run)
 	data = []
 
@@ -95,24 +100,26 @@ def execute(filters=None):
 		family = sum(flt(row.amount) for row in rows if row.component == "Family Allowance")
 		manual_deduction = manual.get(key, 0)
 		advance = max(flt(employee.deductions) - manual_deduction, 0)
+		profile = employee_profiles.get(employee.employee) or {}
 		result = {
 			"company": employee.company,
-			"row_number": index,
+			"row_number": str(index),
 			"employee": employee.employee,
-			"employee_name": employee.employee_name,
-			"payroll_category": employee_categories.get(employee.employee) or "غير مصنف",
-			"basic_total": sum(flt(row.amount) for row in basic),
-			"transportation": transportation,
-			"family_allowance": family,
-			"deduction": manual_deduction,
-			"advance": advance,
-			"net_salary": flt(employee.pay_this_run),
+			"employee_name": profile.get("arabic_name") or employee.employee_name,
+			"payroll_category": profile.get("category") or "غير مصنف",
+			"sub_category": _employee_subcategory(profile, category),
+			"basic_total": _blank_zero(sum(flt(row.amount) for row in basic)),
+			"transportation": _blank_zero(transportation),
+			"family_allowance": _blank_zero(family),
+			"deduction": _blank_zero(manual_deduction),
+			"advance": _blank_zero(advance),
+			"net_salary": _blank_zero(flt(employee.pay_this_run)),
 			"notes": "",
 		}
 		for cost_center in cost_centers:
-			result[_cost_center_field(cost_center)] = sum(
+			result[_cost_center_field(cost_center)] = _blank_zero(sum(
 				flt(row.amount) for row in basic if row.cost_center == cost_center
-			)
+			))
 		data.append(result)
 
 	month = ARABIC_MONTHS.get(run.payroll_month, run.payroll_month)
@@ -127,18 +134,35 @@ def execute(filters=None):
 	return columns, data, message, None, _summary(data)
 
 
-def _get_employee_categories(run):
+def _get_employee_profiles(run):
 	names = list({row.employee for row in run.employees if row.employee})
 	if not names:
 		return {}
+	fields = ["name", "custom_payroll_category", "custom_admin_department", "custom_forum_institution"]
+	if frappe.get_meta("Employee").has_field("custom_employee_name_ar"):
+		fields.append("custom_employee_name_ar")
 	return {
-		row.name: row.custom_payroll_category
+		row.name: {
+			"category": row.custom_payroll_category,
+			"admin_department": row.custom_admin_department,
+			"forum_institution": row.custom_forum_institution,
+			"arabic_name": row.get("custom_employee_name_ar"),
+		}
 		for row in frappe.get_all(
 			"Employee",
 			filters={"name": ["in", names]},
-			fields=["name", "custom_payroll_category"],
+			fields=fields,
 		)
 	}
+
+
+def _employee_subcategory(profile, category):
+	profile = profile or {}
+	if category == "اداريين":
+		return profile.get("admin_department") or "غير محدد"
+	if category == "منتديات":
+		return profile.get("forum_institution") or "غير محدد"
+	return ""
 
 
 def _ordered_cost_centers(allocations):
@@ -166,12 +190,19 @@ def _cost_center_field(cost_center):
 	return "cost_center_" + hashlib.sha1(cost_center.encode()).hexdigest()[:10]
 
 
-def _columns(cost_centers, labels):
+def _columns(cost_centers, labels, category=None):
 	columns = [
 		{"fieldname": "company", "label": _label("المؤسسة", "Company"), "fieldtype": "Link", "options": "Company", "width": 150},
 		{"fieldname": "row_number", "label": "#", "fieldtype": "Data", "width": 45},
 		{"fieldname": "employee_name", "label": _label("اسم الموظف", "Employee Name"), "fieldtype": "Data", "width": 180},
 	]
+	if category in ("اداريين", "منتديات"):
+		columns.append({
+			"fieldname": "sub_category",
+			"label": "الادارة" if category == "اداريين" else "المؤسسة",
+			"fieldtype": "Data",
+			"width": 145,
+		})
 	columns.extend(
 		{"fieldname": _cost_center_field(cost_center), "label": labels.get(cost_center, cost_center), "fieldtype": "Currency", "width": 115}
 		for cost_center in cost_centers
@@ -203,6 +234,11 @@ def _summary(data):
 	]
 
 
+def _blank_zero(value):
+	value = flt(value)
+	return None if abs(value) < 0.000001 else value
+
+
 def _static_register(run, register_name):
 	register = STATIC_REGISTERS[register_name]
 	rows = []
@@ -211,13 +247,13 @@ def _static_register(run, register_name):
 			"row_number": str(index),
 			"employee_name": source["employee_name"],
 			"position": source.get("position", ""),
-			"basic_lbp": source.get("basic_lbp", 0),
-			"basic_usd": source.get("basic_usd", 0),
-			"additional_usd": source.get("additional_usd", 0),
-			"transportation": source.get("transportation", 0),
-			"family_allowance": source.get("family_allowance", 0),
-			"deduction": source.get("deduction", 0),
-			"total": source.get("total", 0),
+			"basic_lbp": _blank_zero(source.get("basic_lbp")),
+			"basic_usd": _blank_zero(source.get("basic_usd")),
+			"additional_usd": _blank_zero(source.get("additional_usd")),
+			"transportation": _blank_zero(source.get("transportation")),
+			"family_allowance": _blank_zero(source.get("family_allowance")),
+			"deduction": _blank_zero(source.get("deduction")),
+			"total": _blank_zero(source.get("total")),
 			"notes": source.get("notes", ""),
 		}
 		rows.append(row)

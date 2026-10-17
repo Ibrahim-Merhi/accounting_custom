@@ -6,6 +6,8 @@ from frappe.tests.utils import FrappeTestCase
 from accounting_custom.accounting_custom.report.payroll_salary_register.payroll_salary_register import (
 	_cost_center_field,
 	_columns,
+	_blank_zero,
+	_employee_subcategory,
 	_manual_deduction_totals,
 	_summary,
 	_is_arabic,
@@ -30,6 +32,18 @@ class TestPayrollSalaryRegister(FrappeTestCase):
 		self.assertNotEqual(first, second)
 		columns = _columns(["100 - General - ITHD"], {"100 - General - ITHD": "عام"})
 		self.assertTrue(any(column["fieldname"] == first and column["label"] == "عام" for column in columns))
+
+	def test_administrator_and_forum_reports_include_group_column(self):
+		admin_columns = _columns([], {}, "اداريين")
+		forum_columns = _columns([], {}, "منتديات")
+		self.assertTrue(any(column["fieldname"] == "sub_category" and column["label"] == "الادارة" for column in admin_columns))
+		self.assertTrue(any(column["fieldname"] == "sub_category" and column["label"] == "المؤسسة" for column in forum_columns))
+		self.assertEqual(_employee_subcategory({"admin_department": "مالية"}, "اداريين"), "مالية")
+		self.assertEqual(_employee_subcategory({"forum_institution": "عالم الفرقان"}, "منتديات"), "عالم الفرقان")
+
+	def test_zero_amounts_are_blank(self):
+		self.assertIsNone(_blank_zero(0))
+		self.assertEqual(_blank_zero(25), 25)
 
 	def test_manual_deductions_are_summed_per_employee_and_company(self):
 		run = frappe._dict(manual_deductions=[
