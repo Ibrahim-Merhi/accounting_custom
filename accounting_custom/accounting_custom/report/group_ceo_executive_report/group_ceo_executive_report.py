@@ -6,6 +6,7 @@ from frappe.utils import flt, getdate, nowdate
 
 from accounting_custom.executive import (
 	_active_employee_names,
+	_current_user_employee_names,
 	_employees_on_leave,
 	_present_employee_names,
 	_require_access,
@@ -26,11 +27,11 @@ def _get_data(category, filters):
 		return _employee_columns(), _employee_rows(_active_employee_names(filters.get("date")), filters)
 	if category in ("Clocked In Today", "No Clock-in Today"):
 		return _attendance(category, filters)
-	if category == "Pending Leaves":
-		return _pending_leaves(filters)
-	if category == "Payroll YTD":
+	if category in ("Pending Leaves", "My Pending Leave Approvals"):
+		return _pending_leaves(filters, mine=category == "My Pending Leave Approvals")
+	if category == "Payroll Since January 1":
 		return _payroll(filters)
-	if category == "Donations YTD":
+	if category == "Donations Since January 1":
 		return _donations(filters)
 	masters = {
 		"Donors": ("Donor", {}),
@@ -96,9 +97,18 @@ def _attendance(category, filters):
 	return _employee_columns(), rows
 
 
-def _pending_leaves(filters):
+def _pending_leaves(filters, mine=False):
 	conditions = ["la.docstatus=0", "coalesce(e.custom_is_payroll_identity,0)=0"]
 	values = {}
+	if mine:
+		employees = _current_user_employee_names()
+		if not employees:
+			return _leave_columns(mine), []
+		conditions.extend([
+			"la.custom_approval_stage='Pending Approver Approval'",
+			"la.custom_current_approver in %(approvers)s",
+		])
+		values["approvers"] = tuple(employees)
 	if filters.get("company"):
 		conditions.append("la.company=%(company)s")
 		values["company"] = filters.company
@@ -106,7 +116,19 @@ def _pending_leaves(filters):
 		la.status, concat(la.leave_type, ' · ', la.from_date, ' → ', la.to_date) details
 		from `tabLeave Application` la join `tabEmployee` e on e.name=la.employee
 		where {' and '.join(conditions)} order by la.from_date, e.employee_name""", values, as_dict=True)
-	return _employee_columns(), rows
+	return _leave_columns(mine), rows
+
+
+def _leave_columns(mine=False):
+	columns = _employee_columns()
+	columns[0] = {
+		"fieldname": "reference",
+		"label": _("Leave Request"),
+		"fieldtype": "Link" if mine else "Data",
+		"options": "Leave Application" if mine else None,
+		"width": 175,
+	}
+	return columns
 
 
 def _payroll(filters):

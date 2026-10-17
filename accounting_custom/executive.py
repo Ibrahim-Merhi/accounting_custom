@@ -116,6 +116,29 @@ def _pending_real_employee_leaves():
 	)[0][0] or 0
 
 
+def _current_user_employee_names():
+	"""Return real Employee profiles linked to the current Desk user."""
+	if frappe.session.user in ("Guest", "Administrator"):
+		return []
+	return frappe.get_all(
+		"Employee",
+		filters={"user_id": frappe.session.user, "custom_is_payroll_identity": 0},
+		pluck="name",
+		limit_page_length=0,
+	)
+
+
+def _my_pending_leave_approvals():
+	employees = _current_user_employee_names()
+	if not employees:
+		return 0
+	return frappe.db.count("Leave Application", {
+		"docstatus": 0,
+		"custom_approval_stage": "Pending Approver Approval",
+		"custom_current_approver": ["in", employees],
+	})
+
+
 def _metrics():
 	today = nowdate()
 	year_start = f"{date.today().year}-01-01"
@@ -128,6 +151,7 @@ def _metrics():
 		"employees": _count("Employee", {"custom_is_payroll_identity": 0}),
 		"active_employees": len(active),
 		"pending_leaves": _pending_real_employee_leaves(),
+		"my_leave_approvals": _my_pending_leave_approvals(),
 		"attendance_today": len(present),
 		"absent_today": len(scheduled - present - on_leave),
 		"on_leave_today": len(on_leave),
@@ -199,9 +223,10 @@ def _metric_routes():
 	return {
 		"active_employees": report("Active Employees", date=today),
 		"pending_leaves": report("Pending Leaves"),
+		"my_leave_approvals": report("My Pending Leave Approvals"),
 		"attendance_today": report("Clocked In Today", date=today),
 		"absent_today": report("No Clock-in Today", date=today),
-		"payroll_ytd": report("Payroll YTD", from_date=year_start, to_date=today),
+		"payroll_ytd": report("Payroll Since January 1", from_date=year_start, to_date=today),
 		"donors": report("Donors"),
 		"beneficiaries": report("Beneficiaries"),
 		"orphans": report("Orphans"),
@@ -209,7 +234,7 @@ def _metric_routes():
 		"relief_orders": report("Relief Orders"),
 		"relief_statements": report("Relief Statements"),
 		"activities": report("Beneficiary Activities"),
-		"donations": report("Donations YTD", from_date=year_start, to_date=today),
+		"donations": report("Donations Since January 1", from_date=year_start, to_date=today),
 	}
 
 
