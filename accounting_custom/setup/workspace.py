@@ -60,6 +60,7 @@ SECTIONS = [
 		("Weekly Cash Bank Comparison", "Report"),
 	]),
 	("Monthly and Cost Center Reports", [
+		("Liquidity Position Report", "Report"),
 		("Monthly Cost Center Movement", "Report"),
 		("Monthly Cash Bank Balance", "Report"),
 		("Balance Sheet by Cost Center", "Report"),

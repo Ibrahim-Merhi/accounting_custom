@@ -18,6 +18,15 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Data", "insert_after": "parent_account",
 			"fetch_from": "parent_account.custom_account_name_arabic",
 		},
+		{
+			"fieldname": "custom_liquidity_report_classification",
+			"label": "Liquidity Report Classification",
+			"fieldtype": "Select",
+			"insert_after": "custom_parent_account_arabic",
+			"options": "\nOpening Balance\nCash Revenue\nCash Expense\nNon-cash\nFixed Asset Transfer\nOperating Advance\nInternal Cash\nExternal Cash\nGold\nReceivable\nPayable\nLong-term Advances and Loans\nFixed Asset\nAccumulated Depreciation\nFrozen\nExcluded",
+			"in_standard_filter": 1,
+			"description": "Controls how this account is included in the Liquidity Position Report.",
+		},
 	],
 	"Company": [
 		{
@@ -244,6 +253,43 @@ def ensure_custom_fields():
 	migrate_employee_positions()
 	remove_obsolete_employee_assignment_fields()
 	backfill_arabic_branch_names()
+	backfill_liquidity_account_classifications()
+
+
+def backfill_liquidity_account_classifications():
+	"""Apply the finance specification's unambiguous account-number mappings once."""
+	if not frappe.get_meta("Account").has_field("custom_liquidity_report_classification"):
+		return
+	for account in frappe.get_all(
+		"Account",
+		filters={"custom_liquidity_report_classification": ["is", "not set"]},
+		fields=["name", "account_number", "account_type"],
+	):
+		classification = liquidity_classification_for_account(account.account_number, account.account_type)
+		if classification:
+			frappe.db.set_value(
+				"Account", account.name, "custom_liquidity_report_classification",
+				classification, update_modified=False,
+			)
+
+
+def liquidity_classification_for_account(account_number, account_type=None):
+	number = str(account_number or "").replace(" ", "")
+	# Specific exclusions must be evaluated before their shorter parent prefixes.
+	for prefix in ("13801", "1381", "1382", "1386", "29"):
+		if number.startswith(prefix): return "Excluded"
+	for prefix, classification in (
+		("1385", "Fixed Asset Transfer"), ("1380", "Opening Balance"),
+		("469", "Operating Advance"), ("5300", "Internal Cash"),
+		("5301", "External Cash"), ("2530", "Gold"),
+		("465", "Long-term Advances and Loans"), ("1650", "Long-term Advances and Loans"),
+		("512", "Frozen"), ("28", "Accumulated Depreciation"), ("22", "Fixed Asset"),
+		("7", "Cash Revenue"), ("6", "Cash Expense"),
+	):
+		if number.startswith(prefix): return classification
+	if account_type == "Receivable": return "Receivable"
+	if account_type == "Payable": return "Payable"
+	return None
 
 
 def migrate_employee_positions():
