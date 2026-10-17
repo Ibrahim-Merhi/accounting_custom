@@ -5,7 +5,8 @@ from frappe.permissions import add_permission, update_permission_property
 
 
 ROLE = "Group CEO"
-WORKSPACE = "Group CEO Dashboard"
+WORKSPACE = "Group CEO Workspace"
+LEGACY_WORKSPACE = "Group CEO Dashboard"
 PAGE = "group-ceo-dashboard"
 
 READ_ONLY_DOCTYPES = (
@@ -88,6 +89,15 @@ def _ensure_report_access():
 
 
 def _ensure_workspace():
+	# A Workspace and a Page cannot share the same Desk route. Remove the old
+	# wrapper name so /app/group-ceo-dashboard resolves to the interactive Page.
+	if LEGACY_WORKSPACE != WORKSPACE and frappe.db.exists("Workspace", LEGACY_WORKSPACE):
+		developer_mode = frappe.conf.developer_mode
+		try:
+			frappe.conf.developer_mode = 0
+			frappe.delete_doc("Workspace", LEGACY_WORKSPACE, ignore_permissions=True, force=True)
+		finally:
+			frappe.conf.developer_mode = developer_mode
 	content = [{"id": "group_ceo_title", "type": "header", "data": {"text": '<span class="h4"><b>Group Executive Overview</b></span>', "col": 12}}]
 	content.extend([
 		{"id": "group_ceo_insights_header", "type": "header", "data": {"text": '<span class="h4"><b>Executive Analytics</b></span>', "col": 12}},
