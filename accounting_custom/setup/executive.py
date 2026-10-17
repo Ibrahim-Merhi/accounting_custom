@@ -43,7 +43,6 @@ def ensure_group_ceo_experience():
 	_ensure_role()
 	_ensure_permissions()
 	_ensure_report_access()
-	_ensure_number_cards()
 	_ensure_workspace()
 	_sync_existing_users()
 
@@ -88,23 +87,8 @@ def _ensure_report_access():
 			}).insert(ignore_permissions=True)
 
 
-def _ensure_number_cards():
-	for name, label, metric, color, document_type in NUMBER_CARDS:
-		values = {
-			"label": label, "type": "Custom", "method": "accounting_custom.executive.number_card",
-			"filters_json": json.dumps({"metric": metric}), "is_public": 0,
-			"show_percentage_stats": 0, "color": color, "document_type": document_type,
-		}
-		if frappe.db.exists("Number Card", name):
-			frappe.db.set_value("Number Card", name, values, update_modified=False)
-		else:
-			frappe.get_doc({"doctype": "Number Card", "name": name, **values}).insert(ignore_permissions=True)
-
-
 def _ensure_workspace():
 	content = [{"id": "group_ceo_title", "type": "header", "data": {"text": '<span class="h4"><b>Group Executive Overview</b></span>', "col": 12}}]
-	for index, (name, _label, _metric, _color, _document_type) in enumerate(NUMBER_CARDS, 1):
-		content.append({"id": f"group_ceo_metric_{index}", "type": "number_card", "data": {"number_card_name": name, "col": 3}})
 	content.extend([
 		{"id": "group_ceo_insights_header", "type": "header", "data": {"text": '<span class="h4"><b>Executive Analytics</b></span>', "col": 12}},
 		{"id": "group_ceo_insights", "type": "shortcut", "data": {"shortcut_name": "Open Executive Dashboard", "col": 4}},
@@ -116,10 +100,11 @@ def _ensure_workspace():
 	for key, value in values.items():
 		setattr(doc, key, value)
 	doc.set("roles", [{"role": ROLE}])
-	doc.set("number_cards", [{"number_card_name": item[0], "label": item[1]} for item in NUMBER_CARDS])
+	doc.set("number_cards", [])
 	doc.set("shortcuts", [{"label": "Open Executive Dashboard", "type": "Page", "link_to": PAGE, "color": "Blue"}])
 	doc.set("links", _report_links())
 	doc.flags.ignore_permissions = True
+	doc.flags.ignore_links = True
 	developer_mode = frappe.conf.developer_mode
 	try:
 		frappe.conf.developer_mode = 0

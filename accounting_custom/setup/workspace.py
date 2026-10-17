@@ -130,6 +130,9 @@ def ensure_accounting_workspace_sections():
 		row.idx = index
 
 	doc.flags.ignore_permissions = True
+	# Standard workspaces can retain links to DocTypes removed by another app.
+	# Those unrelated legacy links must not block this additive workspace overlay.
+	doc.flags.ignore_links = True
 	developer_mode = frappe.conf.developer_mode
 	try:
 		# This is a database overlay owned by accounting_custom. Do not export the
