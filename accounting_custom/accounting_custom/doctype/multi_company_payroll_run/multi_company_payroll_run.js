@@ -15,6 +15,13 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 	refresh(frm) {
 		enable_employee_grid_search(frm);
 		render_company_summary(frm);
+		if (!frm.is_new() && frm.doc.employees?.length) {
+			frm.add_custom_button(__("كشف الرواتب"), () => {
+				frappe.set_route("query-report", "Payroll Salary Register", {
+					payroll_run: frm.doc.name,
+				});
+			}).addClass("btn-primary");
+		}
 		if (!frm.is_new() && frm.doc.docstatus===0 && !frm.doc.companies?.some(r=>r.payroll_entry)) {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}

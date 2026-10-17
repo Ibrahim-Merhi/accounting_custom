@@ -1,0 +1,18 @@
+{
+ "add_total_row": 1,
+ "columns": [],
+ "disabled": 0,
+ "doctype": "Report",
+ "idx": 0,
+ "is_standard": "Yes",
+ "module": "Accounting Custom",
+ "name": "Payroll Salary Register",
+ "prepared_report": 0,
+ "ref_doctype": "Multi Company Payroll Run",
+ "report_name": "Payroll Salary Register",
+ "report_type": "Script Report",
+ "roles": [
+  {"role": "Accounts Manager"},
+  {"role": "System Manager"}
+ ]
+}

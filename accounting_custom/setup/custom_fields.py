@@ -112,8 +112,14 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Section Break", "insert_after": "salary_information",
 		},
 		{
+			"fieldname": "custom_payroll_category", "label": "فئة كشف الرواتب",
+			"fieldtype": "Select", "insert_after": "custom_secure_salary_section",
+			"options": "\nدعاة\nخدمات\nمنتديات\nنماء\nاداريين\nدور القران -اداريين\nدور-الشيوخ المدرسين",
+			"in_standard_filter": 1,
+		},
+		{
 			"fieldname": "custom_secure_salary_profile", "label": "Salary Profile",
-			"fieldtype": "HTML", "insert_after": "custom_secure_salary_section",
+			"fieldtype": "HTML", "insert_after": "custom_payroll_category",
 		},
 		{
 			# Keep legacy payroll columns out of the full-width salary workspace.
