@@ -68,19 +68,24 @@ def _ensure_permissions():
 
 
 def _ensure_report_access():
-	developer_mode = frappe.conf.developer_mode
-	try:
-		frappe.conf.developer_mode = 0
-		for row in frappe.get_all("Report", filters={"module": ["in", list(REPORT_MODULES)]}, fields=["name"]):
-			doc = frappe.get_doc("Report", row.name)
-			# An empty roles table means the report is already available to every
-			# permitted user. Do not turn an unrestricted report into a CEO-only one.
-			if doc.roles and ROLE not in {item.role for item in doc.roles}:
-				doc.append("roles", {"role": ROLE})
-				doc.flags.ignore_permissions = True
-				doc.save()
-	finally:
-		frappe.conf.developer_mode = developer_mode
+	for row in frappe.get_all("Report", filters={"module": ["in", list(REPORT_MODULES)]}, fields=["name"]):
+		roles = frappe.get_all(
+			"Has Role",
+			filters={"parent": row.name, "parenttype": "Report", "parentfield": "roles"},
+			pluck="role",
+		)
+		# An empty roles table means the report is already available to every
+		# permitted user. Do not turn an unrestricted report into a CEO-only one.
+		if roles and ROLE not in roles:
+			# Insert only the child permission row. Resaving a legacy Report can
+			# fail on unrelated stale links (for example, a deleted Letter Head).
+			frappe.get_doc({
+				"doctype": "Has Role",
+				"parent": row.name,
+				"parenttype": "Report",
+				"parentfield": "roles",
+				"role": ROLE,
+			}).insert(ignore_permissions=True)
 
 
 def _ensure_number_cards():
