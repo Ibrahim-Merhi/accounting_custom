@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from urllib.parse import quote
 
 import frappe
@@ -28,27 +28,119 @@ def _sum(doctype, field, filters=None):
 	return flt(frappe.db.get_value(doctype, filters or {}, f"sum({field})") or 0)
 
 
+def _active_employee_names(today=None):
+	"""Active people only; company-specific payroll identity rows are excluded."""
+	today = frappe.utils.getdate(today or nowdate())
+	rows = frappe.get_all(
+		"Employee",
+		filters={
+			"status": "Active",
+			"date_of_joining": ["<=", today],
+			"custom_is_payroll_identity": 0,
+		},
+		fields=["name", "relieving_date"],
+		limit_page_length=0,
+	)
+	return {
+		row.name for row in rows
+		if not row.relieving_date or frappe.utils.getdate(row.relieving_date) >= today
+	}
+
+
+def _present_employee_names(today=None, employees=None):
+	"""A single IN punch is enough to be present; OUT is not required."""
+	today = frappe.utils.getdate(today or nowdate())
+	employees = employees if employees is not None else _active_employee_names(today)
+	if not employees or not _exists("Employee Checkin"):
+		return set()
+	return set(frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["employee", "in", list(employees)],
+			["log_type", "=", "IN"],
+			["time", ">=", f"{today} 00:00:00"],
+			["time", "<", f"{today + timedelta(days=1)} 00:00:00"],
+		],
+		pluck="employee",
+		distinct=True,
+		limit_page_length=0,
+	))
+
+
+def _scheduled_employee_names(today=None, employees=None):
+	"""Employees expected to work today, excluding holidays and rest days."""
+	today = frappe.utils.getdate(today or nowdate())
+	employees = employees if employees is not None else _active_employee_names(today)
+	try:
+		from hr_custom.services.work_schedule import get_holiday_status, get_scheduled_period
+	except ImportError:
+		return set(employees)
+	scheduled = set()
+	for employee in employees:
+		try:
+			period = get_scheduled_period(employee, today)
+			if flt(period.get("working_hours")) > 0 and not get_holiday_status(employee, today):
+				scheduled.add(employee)
+		except Exception:
+			# Legacy employees without a schedule remain visible rather than being
+			# silently omitted from attendance oversight.
+			scheduled.add(employee)
+	return scheduled
+
+
+def _employees_on_leave(today=None, employees=None):
+	today = frappe.utils.getdate(today or nowdate())
+	employees = employees if employees is not None else _active_employee_names(today)
+	if not employees:
+		return set()
+	return set(frappe.get_all(
+		"Leave Application",
+		filters={
+			"employee": ["in", list(employees)], "docstatus": 1, "status": "Approved",
+			"from_date": ["<=", today], "to_date": [">=", today],
+		},
+		pluck="employee",
+		distinct=True,
+		limit_page_length=0,
+	))
+
+
+def _pending_real_employee_leaves():
+	if not _exists("Leave Application"):
+		return 0
+	return frappe.db.sql(
+		"""select count(*) from `tabLeave Application` la
+		join `tabEmployee` e on e.name = la.employee
+		where la.docstatus = 0 and coalesce(e.custom_is_payroll_identity, 0) = 0"""
+	)[0][0] or 0
+
+
 def _metrics():
 	today = nowdate()
 	year_start = f"{date.today().year}-01-01"
+	active = _active_employee_names(today)
+	present = _present_employee_names(today, active)
+	on_leave = _employees_on_leave(today, active) - present
+	scheduled = _scheduled_employee_names(today, active)
 	return {
 		"companies": _count("Company", {"is_group": 0}),
-		"employees": _count("Employee"),
-		"active_employees": _count("Employee", {"status": "Active"}),
-		"pending_leaves": _count("Leave Application", {"docstatus": 0}),
-		"attendance_today": _count("Attendance", {"attendance_date": today, "docstatus": 1}),
-		"absent_today": _count("Attendance", {"attendance_date": today, "status": "Absent", "docstatus": 1}),
-		"payroll_ytd": _sum("Salary Slip", "net_pay", {"start_date": [">=", year_start], "docstatus": 1}),
+		"employees": _count("Employee", {"custom_is_payroll_identity": 0}),
+		"active_employees": len(active),
+		"pending_leaves": _pending_real_employee_leaves(),
+		"attendance_today": len(present),
+		"absent_today": len(scheduled - present - on_leave),
+		"on_leave_today": len(on_leave),
+		"payroll_ytd": _sum("Salary Slip", "net_pay", {"start_date": [">=", year_start], "end_date": ["<=", today], "docstatus": 1}),
 		"donors": _count("Donor"),
-		"donations": _count("Donation Entry", {"docstatus": 1}),
-		"donations_usd": _sum("Donation Entry", "total_usd", {"docstatus": 1, "posting_date": [">=", year_start]}),
-		"donations_lbp": _sum("Donation Entry", "total_lbp", {"docstatus": 1, "posting_date": [">=", year_start]}),
+		"donations": _count("Donation Entry", {"docstatus": 1, "posting_date": ["between", [year_start, today]]}),
+		"donations_usd": _sum("Donation Entry", "total_usd", {"docstatus": 1, "posting_date": ["between", [year_start, today]]}),
+		"donations_lbp": _sum("Donation Entry", "total_lbp", {"docstatus": 1, "posting_date": ["between", [year_start, today]]}),
 		"beneficiaries": _count("Beneficiary", {"status": "Active"}),
 		"orphans": _count("Beneficiary", {"status": "Active", "father_status": "Dead"}),
 		"families": _count("Family"),
-		"relief_orders": _count("Relief Order"),
-		"relief_statements": _count("Relief Statement"),
-		"activities": _count("Beneficiary Activity"),
+		"relief_orders": _count("Relief Order", {"docstatus": ["<", 2]}),
+		"relief_statements": _count("Relief Statement", {"docstatus": ["<", 2]}),
+		"activities": _count("Beneficiary Activity", {"docstatus": ["<", 2]}),
 	}
 
 
@@ -75,20 +167,43 @@ def _monthly_series(doctype, date_field, value_field=None, months=6, filters=Non
 @frappe.whitelist()
 def get_dashboard_data():
 	_require_access()
+	metrics = _metrics()
 	attendance = [
-		{"label": status, "value": _count("Attendance", {"attendance_date": nowdate(), "status": status, "docstatus": 1})}
-		for status in ("Present", "Absent", "On Leave", "Half Day", "Work From Home")
+		{"label": "Clocked In", "value": metrics["attendance_today"]},
+		{"label": "Approved Leave", "value": metrics["on_leave_today"]},
+		{"label": "No Clock-in", "value": metrics["absent_today"]},
 	]
 	companies = frappe.get_all("Company", filters={"is_group": 0}, fields=["name", "default_currency"], order_by="name") if _exists("Company") else []
 	return {
-		"metrics": _metrics(),
+		"metrics": metrics,
 		"attendance": attendance,
 		"leave_trend": _monthly_series("Leave Application", "from_date", filters={"docstatus": ["<", 2]}),
 		"donation_usd_trend": _monthly_series("Donation Entry", "posting_date", "total_usd", filters={"docstatus": 1}),
 		"donation_lbp_trend": _monthly_series("Donation Entry", "posting_date", "total_lbp", filters={"docstatus": 1}),
 		"companies": companies,
 		"company_finance": _company_finance(),
+		"routes": _metric_routes(),
 		"reports": _reports(),
+	}
+
+
+def _metric_routes():
+	today = nowdate()
+	year_start = f"{date.today().year}-01-01"
+	return {
+		"active_employees": {"route": ["List", "Employee"], "filters": {"status": "Active", "custom_is_payroll_identity": 0}},
+		"pending_leaves": {"route": ["List", "Leave Application"], "filters": {"docstatus": 0}},
+		"attendance_today": {"route": ["query-report", "Daily Attendance Overview"], "filters": {"period_type": "Day", "date": today, "attendance_status": "Present"}},
+		"absent_today": {"route": ["query-report", "Daily Attendance Overview"], "filters": {"period_type": "Day", "date": today, "attendance_status": "Absent"}},
+		"payroll_ytd": {"route": ["List", "Salary Slip"], "filters": {"docstatus": 1, "start_date": [">=", year_start], "end_date": ["<=", today]}},
+		"donors": {"route": ["List", "Donor"], "filters": {}},
+		"beneficiaries": {"route": ["List", "Beneficiary"], "filters": {"status": "Active"}},
+		"orphans": {"route": ["List", "Beneficiary"], "filters": {"status": "Active", "father_status": "Dead"}},
+		"families": {"route": ["List", "Family"], "filters": {}},
+		"relief_orders": {"route": ["List", "Relief Order"], "filters": {"docstatus": ["<", 2]}},
+		"relief_statements": {"route": ["List", "Relief Statement"], "filters": {"docstatus": ["<", 2]}},
+		"activities": {"route": ["List", "Beneficiary Activity"], "filters": {"docstatus": ["<", 2]}},
+		"donations": {"route": ["List", "Donation Entry"], "filters": {"docstatus": 1, "posting_date": ["between", [year_start, today]]}},
 	}
 
 
@@ -113,13 +228,13 @@ def _company_finance():
 				then gle.debit - gle.credit else 0 end), 0) as cash_bank
 		from `tabCompany` c
 		left join `tabGL Entry` gle
-			on gle.company = c.name and gle.is_cancelled = 0
+			on gle.company = c.name and gle.is_cancelled = 0 and gle.posting_date <= %(today)s
 		left join `tabAccount` a on a.name = gle.account
 		where coalesce(c.is_group, 0) = 0
 		group by c.name, c.default_currency
 		order by c.name
 		""",
-		{"year_start": year_start},
+		{"year_start": year_start, "today": nowdate()},
 		as_dict=True,
 	)
 

@@ -15,7 +15,7 @@ READ_ONLY_DOCTYPES = (
 	"Sales Order", "Purchase Order", "Customer", "Supplier", "Item", "Project",
 	"Employee", "Department", "Branch", "Designation", "Employment Type",
 	"Holiday List", "Shift Type", "Leave Type", "Leave Allocation", "Leave Application",
-	"Attendance", "Salary Slip", "Payroll Entry", "Payroll Review", "Salary Structure",
+	"Attendance", "Employee Checkin", "Salary Slip", "Payroll Entry", "Payroll Review", "Salary Structure",
 	"Salary Component", "Additional Salary",
 	"Employee Salary Profile", "Employee Consolidated Payslip", "Employee Advance",
 	"Donor", "Donor Type", "Donation", "Donation Entry", "Multi Donation", "Collector Handover",
@@ -25,7 +25,7 @@ READ_ONLY_DOCTYPES = (
 )
 
 REPORT_MODULES = {
-	"Accounts", "HR", "Payroll", "Accounting Custom", "Non Profit", "Relief Management",
+	"Accounts", "HR", "HR Custom", "Payroll", "Accounting Custom", "Non Profit", "Relief Management",
 }
 
 NUMBER_CARDS = (
