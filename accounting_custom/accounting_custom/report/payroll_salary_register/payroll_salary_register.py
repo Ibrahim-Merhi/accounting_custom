@@ -256,6 +256,8 @@ def _static_columns(optional_fields):
 
 
 def _is_arabic():
+	if getattr(frappe.flags, "payroll_register_force_arabic", False):
+		return True
 	return (getattr(frappe.local, "lang", None) or frappe.defaults.get_user_default("language") or "en").startswith("ar")
 
 
@@ -280,17 +282,22 @@ def _category_label(category):
 
 @frappe.whitelist()
 def get_all_registers(payroll_run):
-	registers = []
-	for category in (*PAYROLL_CATEGORIES, "غير مصنف", *STATIC_REGISTERS):
-		columns, data, message, _chart, _summary_values = execute({
-			"payroll_run": payroll_run,
-			"payroll_category": category,
-		})
-		registers.append({
-			"category": category,
-			"category_label": category if _is_arabic() else _category_label(category),
-			"columns": columns,
-			"data": data,
-			"title_html": message,
-		})
-	return {"direction": _direction(), "registers": registers}
+	previous = getattr(frappe.flags, "payroll_register_force_arabic", False)
+	frappe.flags.payroll_register_force_arabic = True
+	try:
+		registers = []
+		for category in (*PAYROLL_CATEGORIES, "غير مصنف", *STATIC_REGISTERS):
+			columns, data, message, _chart, _summary_values = execute({
+				"payroll_run": payroll_run,
+				"payroll_category": category,
+			})
+			registers.append({
+				"category": category,
+				"category_label": category,
+				"columns": columns,
+				"data": data,
+				"title_html": message,
+			})
+		return {"direction": "rtl", "registers": registers}
+	finally:
+		frappe.flags.payroll_register_force_arabic = previous

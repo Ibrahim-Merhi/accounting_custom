@@ -8,12 +8,21 @@ from accounting_custom.accounting_custom.report.payroll_salary_register.payroll_
 	_columns,
 	_manual_deduction_totals,
 	_summary,
+	_is_arabic,
 	_static_columns,
 	_static_register,
 )
 
 
 class TestPayrollSalaryRegister(FrappeTestCase):
+	def test_print_language_can_be_forced_to_arabic(self):
+		previous = getattr(frappe.flags, "payroll_register_force_arabic", False)
+		try:
+			frappe.flags.payroll_register_force_arabic = True
+			self.assertTrue(_is_arabic())
+		finally:
+			frappe.flags.payroll_register_force_arabic = previous
+
 	def test_cost_center_columns_are_stable_and_unique(self):
 		first = _cost_center_field("100 - General - ITHD")
 		second = _cost_center_field("200 - Education - ITHD")

@@ -4,14 +4,6 @@ const PAYROLL_CATEGORIES = [
 	"مسجد الفرقان", "مسجد أبي بكر الصديق", "مسجد السيدة عائشة",
 ];
 
-const CATEGORY_LABELS_EN = {
-	"دعاة": "Preachers", "خدمات": "Services", "منتديات": "Forums", "نماء": "Namaa",
-	"اداريين": "Administrators", "دور القران -اداريين": "Quran Centers - Administrators",
-	"دور-الشيوخ المدرسين": "Quran Centers - Teachers", "غير مصنف": "Uncategorized",
-	"مسجد الفرقان": "Al Furqan Mosque", "مسجد أبي بكر الصديق": "Abu Bakr Al-Siddiq Mosque",
-	"مسجد السيدة عائشة": "Aisha Mosque",
-};
-
 frappe.query_reports["Payroll Salary Register"] = {
 	filters: [
 		{fieldname: "payroll_run", label: __("Multi Company Payroll Run"), fieldtype: "Link", options: "Multi Company Payroll Run", reqd: 1},
@@ -34,7 +26,7 @@ function is_arabic() {
 }
 
 function category_label(category) {
-	return is_arabic() ? category : (CATEGORY_LABELS_EN[category] || category);
+	return category;
 }
 
 function add_category_tabs(report) {
@@ -59,7 +51,7 @@ function add_category_tabs(report) {
 function add_print_actions(report) {
 	if (report.__payroll_print_actions) return;
 	report.__payroll_print_actions = true;
-	report.page.add_inner_button(is_arabic() ? "طباعة التبويب الحالي" : "Print Current Tab", () => report.print_report({orientation: "Landscape"}));
+	report.page.add_inner_button(is_arabic() ? "طباعة التبويب الحالي" : "Print Current Tab", () => print_current_tab(report));
 	report.page.add_inner_button(is_arabic() ? "معاينة وطباعة كل التبويبات" : "Preview / Print All Tabs", () => preview_all_tabs(report)).addClass("btn-primary");
 }
 
@@ -69,11 +61,7 @@ async function preview_all_tabs(report) {
 		frappe.msgprint(is_arabic() ? "اختر تشغيل الرواتب أولاً." : "Select a Multi Company Payroll Run first.");
 		return;
 	}
-	const response = await frappe.call({
-		method: "accounting_custom.accounting_custom.report.payroll_salary_register.payroll_salary_register.get_all_registers",
-		args: {payroll_run}, freeze: true,
-		freeze_message: is_arabic() ? "جارٍ تجهيز كل كشوف الرواتب..." : "Preparing all payroll registers...",
-	});
+	const response = await fetch_arabic_registers(payroll_run);
 	const content = build_all_registers_html(response.message);
 	const dialog = new frappe.ui.Dialog({
 		title: is_arabic() ? "معاينة كل كشوف الرواتب" : "Preview All Payroll Registers",
@@ -86,13 +74,35 @@ async function preview_all_tabs(report) {
 	dialog.show();
 }
 
+async function print_current_tab(report) {
+	const payroll_run = report.get_filter_value("payroll_run");
+	if (!payroll_run) {
+		frappe.msgprint(is_arabic() ? "اختر تشغيل الرواتب أولاً." : "Select a Multi Company Payroll Run first.");
+		return;
+	}
+	const response = await fetch_arabic_registers(payroll_run);
+	const category = report.get_filter_value("payroll_category");
+	const registers = category
+		? response.message.registers.filter((register) => register.category === category)
+		: response.message.registers;
+	print_all_registers(build_all_registers_html({...response.message, registers}));
+}
+
+function fetch_arabic_registers(payroll_run) {
+	return frappe.call({
+		method: "accounting_custom.accounting_custom.report.payroll_salary_register.payroll_salary_register.get_all_registers",
+		args: {payroll_run}, freeze: true,
+		freeze_message: is_arabic() ? "جارٍ تجهيز كشوف الرواتب..." : "Preparing Arabic payroll registers...",
+	});
+}
+
 function build_all_registers_html(payload) {
 	const direction = payload.direction || (is_arabic() ? "rtl" : "ltr");
 	const sections = payload.registers.map((register) => {
 		const headers = register.columns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("");
-		const body = register.data.length ? register.data.map((row) => `<tr>${register.columns.map((column) => `<td class="${numeric_column(column) ? "number" : ""}">${format_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${register.columns.length}" class="empty">${is_arabic() ? "لا يوجد موظفون في هذه الفئة" : "No employees in this category"}</td></tr>`;
+		const body = register.data.length ? register.data.map((row) => `<tr>${register.columns.map((column) => `<td class="${numeric_column(column) ? "number" : ""}">${format_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${register.columns.length}" class="empty">لا يوجد موظفون في هذه الفئة</td></tr>`;
 		const totals = register.data.length ? build_total_row(register) : "";
-		return `<section class="payroll-print-section" dir="${direction}"><div class="payroll-print-category">${frappe.utils.escape_html(register.category_label)}</div>${register.title_html}<table><thead><tr>${headers}</tr></thead><tbody>${body}${totals}</tbody></table><div class="payroll-signatures"><strong>${is_arabic() ? "المدير التنفيذي" : "Executive Director"}</strong><strong>${is_arabic() ? "الإدارة المالية" : "Finance Department"}</strong><strong>${is_arabic() ? "رئيس الجمعية" : "Association President"}</strong></div></section>`;
+		return `<section class="payroll-print-section" dir="${direction}"><div class="payroll-print-category">${frappe.utils.escape_html(register.category_label)}</div>${register.title_html}<table><thead><tr>${headers}</tr></thead><tbody>${body}${totals}</tbody></table><div class="payroll-signatures"><strong>المدير التنفيذي</strong><strong>الإدارة المالية</strong><strong>رئيس الجمعية</strong></div></section>`;
 	}).join("");
 	return `<div class="payroll-all-preview" dir="${direction}">${sections}</div>`;
 }
@@ -116,7 +126,7 @@ function build_total_row(register) {
 		}
 		if (!label_written) {
 			label_written = true;
-			return `<td class="total-label">${is_arabic() ? "المجموع" : "Total"}</td>`;
+			return `<td class="total-label">المجموع</td>`;
 		}
 		return "<td></td>";
 	}).join("");
@@ -129,7 +139,7 @@ function print_all_registers(content) {
 		frappe.msgprint(is_arabic() ? "اسمح بالنوافذ المنبثقة لطباعة التقرير." : "Allow pop-ups to print the report.");
 		return;
 	}
-	print_window.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${is_arabic() ? "كشف الرواتب" : "Payroll Salary Register"}</title><style>${print_styles()}</style></head><body>${content}</body></html>`);
+	print_window.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>كشف الرواتب</title><style>${print_styles()}</style></head><body>${content}</body></html>`);
 	print_window.document.close();
 	print_window.focus();
 	setTimeout(() => print_window.print(), 300);
