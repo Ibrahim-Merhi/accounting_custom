@@ -43,7 +43,8 @@ def _active_employee_names(today=None):
 	)
 	return {
 		row.name for row in rows
-		if not row.relieving_date or frappe.utils.getdate(row.relieving_date) >= today
+		if not row.name.startswith("_T-")
+		and (not row.relieving_date or frappe.utils.getdate(row.relieving_date) >= today)
 	}
 
 
@@ -190,20 +191,25 @@ def get_dashboard_data():
 def _metric_routes():
 	today = nowdate()
 	year_start = f"{date.today().year}-01-01"
+	report_route = ["query-report", "Group CEO Executive Report"]
+
+	def report(category, **filters):
+		return {"route": report_route, "filters": {"category": category, **filters}}
+
 	return {
-		"active_employees": {"route": ["List", "Employee"], "filters": {"status": "Active", "custom_is_payroll_identity": 0}},
-		"pending_leaves": {"route": ["List", "Leave Application"], "filters": {"docstatus": 0}},
-		"attendance_today": {"route": ["query-report", "Daily Attendance Overview"], "filters": {"period_type": "Day", "date": today, "attendance_status": "Present"}},
-		"absent_today": {"route": ["query-report", "Daily Attendance Overview"], "filters": {"period_type": "Day", "date": today, "attendance_status": "Absent"}},
-		"payroll_ytd": {"route": ["List", "Salary Slip"], "filters": {"docstatus": 1, "start_date": [">=", year_start], "end_date": ["<=", today]}},
-		"donors": {"route": ["List", "Donor"], "filters": {}},
-		"beneficiaries": {"route": ["List", "Beneficiary"], "filters": {"status": "Active"}},
-		"orphans": {"route": ["List", "Beneficiary"], "filters": {"status": "Active", "father_status": "Dead"}},
-		"families": {"route": ["List", "Family"], "filters": {}},
-		"relief_orders": {"route": ["List", "Relief Order"], "filters": {"docstatus": ["<", 2]}},
-		"relief_statements": {"route": ["List", "Relief Statement"], "filters": {"docstatus": ["<", 2]}},
-		"activities": {"route": ["List", "Beneficiary Activity"], "filters": {"docstatus": ["<", 2]}},
-		"donations": {"route": ["List", "Donation Entry"], "filters": {"docstatus": 1, "posting_date": ["between", [year_start, today]]}},
+		"active_employees": report("Active Employees", date=today),
+		"pending_leaves": report("Pending Leaves"),
+		"attendance_today": report("Clocked In Today", date=today),
+		"absent_today": report("No Clock-in Today", date=today),
+		"payroll_ytd": report("Payroll YTD", from_date=year_start, to_date=today),
+		"donors": report("Donors"),
+		"beneficiaries": report("Beneficiaries"),
+		"orphans": report("Orphans"),
+		"families": report("Families"),
+		"relief_orders": report("Relief Orders"),
+		"relief_statements": report("Relief Statements"),
+		"activities": report("Beneficiary Activities"),
+		"donations": report("Donations YTD", from_date=year_start, to_date=today),
 	}
 
 
@@ -241,10 +247,11 @@ def _company_finance():
 
 def _reports():
 	groups = {
-		"HR & Payroll": ["Employee", "Leave Application", "Attendance", "Salary Slip", "Payroll Entry", "Employee Salary History"],
+		"Executive Overview": ["Group CEO Executive Report", "Daily Attendance Overview"],
+		"HR & Payroll": ["Weekly Employee Hours", "Hourly Leave Balance"],
 		"Accounting": ["General Ledger", "Trial Balance", "Balance Sheet", "Profit and Loss Statement", "Daily Treasury Report", "All Daily Movement", "Monthly Cash Bank Balance", "Balance Sheet by Cost Center"],
-		"Donations": ["Donation Entry", "Donor", "Donor Donation History", "Collector Collections", "Project Donation Summary"],
-		"Relief": ["Beneficiary", "Family", "Relief Order", "Relief Statement", "Beneficiary Activity", "Beneficiary-wise Sponsors", "Sponsor-wise Beneficiary", "Orphan Balance", "Donation Report"],
+		"Donations": ["Donor Donation History", "Collector Collections", "Project Donation Summary"],
+		"Relief": ["Beneficiary-wise Sponsors", "Sponsor-wise Beneficiary", "Orphan Balance", "Donation Report"],
 	}
 	result = []
 	for group, names in groups.items():
@@ -252,7 +259,6 @@ def _reports():
 		for name in names:
 			if frappe.db.exists("Report", name):
 				items.append({"label": name, "route": f"/app/query-report/{quote(name)}"})
-			elif frappe.db.exists("DocType", name):
-				items.append({"label": name, "route": f"/app/{frappe.scrub(name).replace('_', '-')}"})
-		result.append({"group": group, "items": items})
+		if items:
+			result.append({"group": group, "items": items})
 	return result

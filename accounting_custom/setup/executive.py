@@ -126,19 +126,20 @@ def _ensure_workspace():
 
 def _report_links():
 	sections = {
-		"HR and Payroll": ("Employee", "Leave Application", "Attendance", "Salary Slip", "Payroll Entry", "Employee Salary History"),
+		"Executive Overview": ("Group CEO Executive Report", "Daily Attendance Overview"),
+		"HR and Payroll": ("Weekly Employee Hours", "Hourly Leave Balance"),
 		"Accounting": ("General Ledger", "Trial Balance", "Balance Sheet", "Profit and Loss Statement", "Daily Treasury Report", "Monthly Cash Bank Balance", "Balance Sheet by Cost Center"),
-		"Donations": ("Donation Entry", "Donor", "Donor Donation History", "Collector Collections", "Project Donation Summary"),
-		"Relief Management": ("Beneficiary", "Family", "Relief Order", "Relief Statement", "Beneficiary-wise Sponsors", "Sponsor-wise Beneficiary", "Orphan Balance", "Donation Report"),
+		"Donations": ("Donor Donation History", "Collector Collections", "Project Donation Summary"),
+		"Relief Management": ("Beneficiary-wise Sponsors", "Sponsor-wise Beneficiary", "Orphan Balance", "Donation Report"),
 	}
 	result = []
 	for section, targets in sections.items():
+		reports = [target for target in targets if frappe.db.exists("Report", target)]
+		if not reports:
+			continue
 		result.append({"type": "Card Break", "label": section})
-		for target in targets:
-			link_type = "Report" if frappe.db.exists("Report", target) else "DocType"
-			if link_type == "DocType" and not frappe.db.exists("DocType", target):
-				continue
-			result.append({"type": "Link", "label": target, "link_type": link_type, "link_to": target, "is_query_report": 1 if link_type == "Report" else 0})
+		for target in reports:
+			result.append({"type": "Link", "label": target, "link_type": "Report", "link_to": target, "is_query_report": 1})
 	return result
 
 
