@@ -18,6 +18,7 @@ PAYROLL_CATEGORIES = (
 STATIC_REGISTERS = {
 	"مسجد الفرقان": {
 		"title": "كشف رواتب الموظفين (مسجد الفرقان - عرمون)",
+		"title_en": "Employee Salary Register (Al Furqan Mosque - Aramoun)",
 		"columns": ("position", "basic_lbp", "basic_usd", "additional_usd", "transportation", "family_allowance"),
 		"rows": (
 			{"employee_name": "الشيخ علاء العماري", "position": "إمام", "basic_usd": 200, "transportation": 60, "family_allowance": 100, "total": 360, "notes": "يتم تأمين الرواتب والإعانة من تبرعات المسجد"},
@@ -26,6 +27,7 @@ STATIC_REGISTERS = {
 	},
 	"مسجد أبي بكر الصديق": {
 		"title": "كشف رواتب الموظفين (مسجد ومركز الخليفة الصديق أبي بكر رضي الله عنه)",
+		"title_en": "Employee Salary Register (Caliph Abu Bakr Al-Siddiq Mosque and Center)",
 		"columns": ("basic_usd", "family_allowance"),
 		"rows": (
 			{"employee_name": "محمد الصالح", "basic_usd": 800, "family_allowance": 100, "total": 900, "notes": "يتم تأمين الرواتب والإعانة من تبرعات المسجد"},
@@ -37,6 +39,7 @@ STATIC_REGISTERS = {
 	},
 	"مسجد السيدة عائشة": {
 		"title": "كشف رواتب الموظفين (مسجد عائشة أم المؤمنين)",
+		"title_en": "Employee Salary Register (Aisha Mother of Believers Mosque)",
 		"columns": ("basic_usd", "family_allowance", "deduction"),
 		"rows": (
 			{"employee_name": "فارس جمال الدين", "basic_usd": 300, "family_allowance": 100, "total": 400, "notes": "يتم تأمين الرواتب والإعانة من تبرعات المسجد"},
@@ -116,7 +119,11 @@ def execute(filters=None):
 	title = f"رواتب شهر {month} {run.payroll_year}"
 	if category:
 		title = f"{title} — {category}"
-	message = f'<div dir="rtl" style="font-size:18px;font-weight:700;text-align:center">{frappe.utils.escape_html(title)}</div>'
+	if not _is_arabic():
+		title = f"{run.payroll_month} {run.payroll_year} Payroll"
+		if category:
+			title = f"{title} — {_category_label(category)}"
+	message = f'<div dir="{_direction()}" style="font-size:18px;font-weight:700;text-align:center">{frappe.utils.escape_html(title)}</div>'
 	return columns, data, message, None, _summary(data)
 
 
@@ -147,7 +154,10 @@ def _cost_center_labels(cost_centers):
 		fields=["name", "custom_cost_center_name_arabic", "cost_center_name"],
 	)
 	return {
-		row.name: row.custom_cost_center_name_arabic or row.cost_center_name or row.name
+		row.name: (
+			row.custom_cost_center_name_arabic or row.cost_center_name or row.name
+			if _is_arabic() else row.cost_center_name or row.name
+		)
 		for row in rows
 	}
 
@@ -158,22 +168,22 @@ def _cost_center_field(cost_center):
 
 def _columns(cost_centers, labels):
 	columns = [
-		{"fieldname": "company", "label": "المؤسسة", "fieldtype": "Link", "options": "Company", "width": 150},
+		{"fieldname": "company", "label": _label("المؤسسة", "Company"), "fieldtype": "Link", "options": "Company", "width": 150},
 		{"fieldname": "row_number", "label": "#", "fieldtype": "Data", "width": 45},
-		{"fieldname": "employee_name", "label": "اسم الموظف", "fieldtype": "Data", "width": 180},
+		{"fieldname": "employee_name", "label": _label("اسم الموظف", "Employee Name"), "fieldtype": "Data", "width": 180},
 	]
 	columns.extend(
 		{"fieldname": _cost_center_field(cost_center), "label": labels.get(cost_center, cost_center), "fieldtype": "Currency", "width": 115}
 		for cost_center in cost_centers
 	)
 	columns.extend([
-		{"fieldname": "basic_total", "label": "المجموع", "fieldtype": "Currency", "width": 105},
-		{"fieldname": "transportation", "label": "المواصلات", "fieldtype": "Currency", "width": 105},
-		{"fieldname": "family_allowance", "label": "إعانة اجتماعية", "fieldtype": "Currency", "width": 115},
-		{"fieldname": "deduction", "label": "حسم", "fieldtype": "Currency", "width": 90},
-		{"fieldname": "advance", "label": "سلفة", "fieldtype": "Currency", "width": 90},
-		{"fieldname": "net_salary", "label": "المستحق مع الإعانة", "fieldtype": "Currency", "width": 125},
-		{"fieldname": "notes", "label": "ملاحظات", "fieldtype": "Data", "width": 180},
+		{"fieldname": "basic_total", "label": _label("المجموع", "Basic Total"), "fieldtype": "Currency", "width": 105},
+		{"fieldname": "transportation", "label": _label("المواصلات", "Transportation"), "fieldtype": "Currency", "width": 105},
+		{"fieldname": "family_allowance", "label": _label("إعانة اجتماعية", "Social Allowance"), "fieldtype": "Currency", "width": 115},
+		{"fieldname": "deduction", "label": _label("حسم", "Deductions"), "fieldtype": "Currency", "width": 90},
+		{"fieldname": "advance", "label": _label("سلفة", "Advance"), "fieldtype": "Currency", "width": 90},
+		{"fieldname": "net_salary", "label": _label("المستحق مع الإعانة", "Net Pay"), "fieldtype": "Currency", "width": 125},
+		{"fieldname": "notes", "label": _label("ملاحظات", "Notes"), "fieldtype": "Data", "width": 180},
 	])
 	return columns
 
@@ -212,8 +222,11 @@ def _static_register(run, register_name):
 		}
 		rows.append(row)
 	month = ARABIC_MONTHS.get(run.payroll_month, run.payroll_month)
-	title = f'{register["title"]}<br>لشهر {month} {run.payroll_year}'
-	message = f'<div dir="rtl" style="font-size:20px;font-weight:700;text-align:center;line-height:1.8">{title}</div>'
+	if _is_arabic():
+		title = f'{register["title"]}<br>لشهر {month} {run.payroll_year}'
+	else:
+		title = f'{register["title_en"]}<br>For {run.payroll_month} {run.payroll_year}'
+	message = f'<div dir="{_direction()}" style="font-size:20px;font-weight:700;text-align:center;line-height:1.8">{title}</div>'
 	return _static_columns(register["columns"]), rows, message, None, [
 		{"value": len(rows), "indicator": "Blue", "label": _("Employees"), "datatype": "Int"},
 		{"value": sum(flt(row["total"]) for row in rows), "indicator": "Green", "label": _("Total"), "datatype": "Float"},
@@ -222,21 +235,62 @@ def _static_register(run, register_name):
 
 def _static_columns(optional_fields):
 	definitions = {
-		"position": {"fieldname": "position", "label": "الوظيفة", "fieldtype": "Data", "width": 100},
-		"basic_lbp": {"fieldname": "basic_lbp", "label": "الراتب الأساسي ل.ل.", "fieldtype": "Float", "precision": 0, "width": 120},
-		"basic_usd": {"fieldname": "basic_usd", "label": "الراتب الأساسي $", "fieldtype": "Float", "precision": 0, "width": 120},
-		"additional_usd": {"fieldname": "additional_usd", "label": "بدلات إضافية $", "fieldtype": "Float", "precision": 0, "width": 115},
-		"transportation": {"fieldname": "transportation", "label": "المواصلات", "fieldtype": "Float", "precision": 0, "width": 100},
-		"family_allowance": {"fieldname": "family_allowance", "label": "الإعانة الاجتماعية", "fieldtype": "Float", "precision": 0, "width": 120},
-		"deduction": {"fieldname": "deduction", "label": "حسم $", "fieldtype": "Float", "precision": 0, "width": 95},
+		"position": {"fieldname": "position", "label": _label("الوظيفة", "Position"), "fieldtype": "Data", "width": 100},
+		"basic_lbp": {"fieldname": "basic_lbp", "label": _label("الراتب الأساسي ل.ل.", "Basic Salary LBP"), "fieldtype": "Float", "precision": 0, "width": 120},
+		"basic_usd": {"fieldname": "basic_usd", "label": _label("الراتب الأساسي $", "Basic Salary USD"), "fieldtype": "Float", "precision": 0, "width": 120},
+		"additional_usd": {"fieldname": "additional_usd", "label": _label("بدلات إضافية $", "Additional Allowance USD"), "fieldtype": "Float", "precision": 0, "width": 115},
+		"transportation": {"fieldname": "transportation", "label": _label("المواصلات", "Transportation"), "fieldtype": "Float", "precision": 0, "width": 100},
+		"family_allowance": {"fieldname": "family_allowance", "label": _label("الإعانة الاجتماعية", "Social Allowance"), "fieldtype": "Float", "precision": 0, "width": 120},
+		"deduction": {"fieldname": "deduction", "label": _label("حسم $", "Deduction USD"), "fieldtype": "Float", "precision": 0, "width": 95},
 	}
 	columns = [
-		{"fieldname": "row_number", "label": "رقم مسلسل", "fieldtype": "Data", "width": 85},
-		{"fieldname": "employee_name", "label": "الاسم", "fieldtype": "Data", "width": 180},
+		{"fieldname": "row_number", "label": _label("رقم مسلسل", "No."), "fieldtype": "Data", "width": 85},
+		{"fieldname": "employee_name", "label": _label("الاسم", "Name"), "fieldtype": "Data", "width": 180},
 	]
 	columns.extend(definitions[fieldname] for fieldname in optional_fields)
 	columns.extend([
-		{"fieldname": "total", "label": "الإجمالي $", "fieldtype": "Float", "precision": 0, "width": 105},
-		{"fieldname": "notes", "label": "ملاحظات", "fieldtype": "Data", "width": 260},
+		{"fieldname": "total", "label": _label("الإجمالي $", "Total USD"), "fieldtype": "Float", "precision": 0, "width": 105},
+		{"fieldname": "notes", "label": _label("ملاحظات", "Notes"), "fieldtype": "Data", "width": 260},
 	])
 	return columns
+
+
+def _is_arabic():
+	return (getattr(frappe.local, "lang", None) or frappe.defaults.get_user_default("language") or "en").startswith("ar")
+
+
+def _direction():
+	return "rtl" if _is_arabic() else "ltr"
+
+
+def _label(arabic, english):
+	return arabic if _is_arabic() else english
+
+
+def _category_label(category):
+	labels = {
+		"دعاة": "Preachers", "خدمات": "Services", "منتديات": "Forums", "نماء": "Namaa",
+		"اداريين": "Administrators", "دور القران -اداريين": "Quran Centers - Administrators",
+		"دور-الشيوخ المدرسين": "Quran Centers - Teachers", "غير مصنف": "Uncategorized",
+		"مسجد الفرقان": "Al Furqan Mosque", "مسجد أبي بكر الصديق": "Abu Bakr Al-Siddiq Mosque",
+		"مسجد السيدة عائشة": "Aisha Mosque",
+	}
+	return labels.get(category, category)
+
+
+@frappe.whitelist()
+def get_all_registers(payroll_run):
+	registers = []
+	for category in (*PAYROLL_CATEGORIES, "غير مصنف", *STATIC_REGISTERS):
+		columns, data, message, _chart, _summary_values = execute({
+			"payroll_run": payroll_run,
+			"payroll_category": category,
+		})
+		registers.append({
+			"category": category,
+			"category_label": category if _is_arabic() else _category_label(category),
+			"columns": columns,
+			"data": data,
+			"title_html": message,
+		})
+	return {"direction": _direction(), "registers": registers}

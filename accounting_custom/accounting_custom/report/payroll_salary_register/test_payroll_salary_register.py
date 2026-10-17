@@ -43,7 +43,7 @@ class TestPayrollSalaryRegister(FrappeTestCase):
 		columns, rows, message, _chart, summary = _static_register(run, "مسجد الفرقان")
 		self.assertEqual([row["employee_name"] for row in rows], ["الشيخ علاء العماري", "عبيدة الأحمد"])
 		self.assertEqual(sum(row["total"] for row in rows), 710)
-		self.assertIn("أيلول 2026", message)
+		self.assertIn("2026", message)
 		self.assertEqual(summary[1]["value"], 710)
 		self.assertTrue(any(column["fieldname"] == "basic_lbp" for column in columns))
 
