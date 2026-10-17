@@ -32,6 +32,7 @@ class TestPayrollSalaryRegister(FrappeTestCase):
 		self.assertNotEqual(first, second)
 		columns = _columns(["100 - General - ITHD"], {"100 - General - ITHD": "عام"})
 		self.assertTrue(any(column["fieldname"] == first and column["label"] == "عام" for column in columns))
+		self.assertFalse(any(column["fieldname"] == "company" for column in columns))
 
 	def test_administrator_and_forum_reports_include_group_column(self):
 		admin_columns = _columns([], {}, "اداريين")
@@ -68,7 +69,7 @@ class TestPayrollSalaryRegister(FrappeTestCase):
 		self.assertEqual(sum(row["total"] for row in rows), 710)
 		self.assertIn("2026", message)
 		self.assertEqual(summary[1]["value"], 710)
-		self.assertTrue(any(column["fieldname"] == "basic_lbp" for column in columns))
+		self.assertFalse(any(column["fieldname"] in ("basic_lbp", "additional_usd") for column in columns))
 
 	def test_static_columns_follow_each_mosque_layout(self):
 		columns = _static_columns(("basic_usd", "family_allowance", "deduction"))

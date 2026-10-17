@@ -112,28 +112,36 @@ CUSTOM_FIELDS = {
 			"fieldtype": "Section Break", "insert_after": "salary_information",
 		},
 		{
-			"fieldname": "custom_payroll_category", "label": "فئة كشف الرواتب",
+			"fieldname": "custom_payroll_category", "label": "Payroll Category",
 			"fieldtype": "Select", "insert_after": "custom_secure_salary_section",
 			"options": "\nدعاة\nخدمات\nمنتديات\nنماء\nاداريين\nدور القران -اداريين\nدور-الشيوخ المدرسين",
 			"in_standard_filter": 1,
 		},
 		{
-			"fieldname": "custom_admin_department", "label": "الادارة",
-			"fieldtype": "Select", "insert_after": "custom_payroll_category",
+			"fieldname": "custom_payroll_category_column", "label": "",
+			"fieldtype": "Column Break", "insert_after": "custom_payroll_category",
+		},
+		{
+			"fieldname": "custom_admin_department", "label": "Administration",
+			"fieldtype": "Select", "insert_after": "custom_payroll_category_column",
 			"options": "\nتنفيذية\nمالية\nإعلام\nعلاقات\nمعاملات ضمان\nإعلان\nمعلوماتية",
 			"depends_on": "eval:doc.custom_payroll_category == 'اداريين'",
 			"mandatory_depends_on": "eval:doc.custom_payroll_category == 'اداريين'",
 		},
 		{
-			"fieldname": "custom_forum_institution", "label": "المؤسسة",
+			"fieldname": "custom_forum_institution", "label": "Institution",
 			"fieldtype": "Select", "insert_after": "custom_admin_department",
 			"options": "\nعالم الفرقان\nالمنتدى الشبابي\nمنتدى التعريف",
 			"depends_on": "eval:doc.custom_payroll_category == 'منتديات'",
 			"mandatory_depends_on": "eval:doc.custom_payroll_category == 'منتديات'",
 		},
 		{
+			"fieldname": "custom_salary_profile_content_section", "label": "",
+			"fieldtype": "Section Break", "insert_after": "custom_forum_institution",
+		},
+		{
 			"fieldname": "custom_secure_salary_profile", "label": "Salary Profile",
-			"fieldtype": "HTML", "insert_after": "custom_forum_institution",
+			"fieldtype": "HTML", "insert_after": "custom_salary_profile_content_section",
 		},
 		{
 			# Keep legacy payroll columns out of the full-width salary workspace.

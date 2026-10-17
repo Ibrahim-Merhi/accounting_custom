@@ -19,7 +19,7 @@ STATIC_REGISTERS = {
 	"مسجد الفرقان": {
 		"title": "كشف رواتب الموظفين (مسجد الفرقان - عرمون)",
 		"title_en": "Employee Salary Register (Al Furqan Mosque - Aramoun)",
-		"columns": ("position", "basic_lbp", "basic_usd", "additional_usd", "transportation", "family_allowance"),
+		"columns": ("position", "basic_usd", "transportation", "family_allowance"),
 		"rows": (
 			{"employee_name": "الشيخ علاء العماري", "position": "إمام", "basic_usd": 200, "transportation": 60, "family_allowance": 100, "total": 360, "notes": "يتم تأمين الرواتب والإعانة من تبرعات المسجد"},
 			{"employee_name": "عبيدة الأحمد", "position": "خادم", "basic_usd": 300, "family_allowance": 50, "total": 350, "notes": "يتم تأمين الرواتب والإعانة من تبرعات المسجد"},
@@ -192,7 +192,6 @@ def _cost_center_field(cost_center):
 
 def _columns(cost_centers, labels, category=None):
 	columns = [
-		{"fieldname": "company", "label": _label("المؤسسة", "Company"), "fieldtype": "Link", "options": "Company", "width": 150},
 		{"fieldname": "row_number", "label": "#", "fieldtype": "Data", "width": 45},
 		{"fieldname": "employee_name", "label": _label("اسم الموظف", "Employee Name"), "fieldtype": "Data", "width": 180},
 	]
