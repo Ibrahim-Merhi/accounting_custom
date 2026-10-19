@@ -34,6 +34,27 @@ def execute(filters=None):
 	return columns, rows, message, chart, summary
 
 
+@frappe.whitelist()
+def get_print_data(filters=None, report_page="liquidity"):
+	"""Return a fresh Arabic print payload; preview edits remain browser-only."""
+	filters = frappe._dict(frappe.parse_json(filters) if isinstance(filters, str) else (filters or {}))
+	filters.report_page = report_page if report_page in ("liquidity", "movement") else "liquidity"
+	filters.groups_only = 0
+	columns, rows, _message_html, _chart, summary = execute(filters)
+	if filters.report_page == "liquidity":
+		columns = [column for column in columns if column["fieldname"] != "unclassified"]
+	return {
+		"report_page": filters.report_page,
+		"title": (
+			"تقرير أرصدة المراكز والسيولة المتوفرة (بالدولار الأميركي)"
+			if filters.report_page == "liquidity"
+			else "حركة السيولة خلال الفترة حسب المركز (تدفقات نقدية – الطريقة المباشرة)"
+		),
+		"from_date": str(filters.from_date), "to_date": str(filters.to_date),
+		"companies": _companies(filters), "columns": columns, "rows": rows, "summary": summary,
+	}
+
+
 def _validate(filters):
 	if not filters.from_date or not filters.to_date:
 		frappe.throw(_("From Date and To Date are required."))
