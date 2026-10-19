@@ -82,6 +82,23 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		self.assertTrue(all(row["print_section"] for row in rows))
 		self.assertTrue(all(row["indent"] == 0 and row["parent_cost_center"] is None for row in rows))
 
+	def test_itihad_print_total_contains_only_direct_centers(self):
+		rows = [
+			{"cost_center_id": "Itihad - ITHD", "cost_center": "الاتحاد", "indent": 0, "is_group": 1},
+			{"cost_center_id": "100 - General - ITHD", "cost_center": "عام", "indent": 1, "is_group": 0},
+			{"cost_center_id": "DAR - ITHD", "cost_center": "دار القرآن", "indent": 1, "is_group": 1},
+			{"cost_center_id": "DAR001 - ITHD", "cost_center": "دار بيروت", "indent": 2, "is_group": 0},
+			{"cost_center_id": "HAN000 - HANAYA - ITHD", "cost_center": "HANAYA", "indent": 1, "is_group": 0},
+			{"cost_center_id": "500 - Verdun - ITHD", "cost_center": "عقارات", "indent": 1, "is_group": 0},
+		]
+		_apply_print_sections(rows)
+		self.assertEqual(
+			[row["cost_center"] for row in rows],
+			["الاتحاد", "عام", "عقارات", "دار القرآن", "دار بيروت", "حنايا"],
+		)
+		self.assertEqual([row["indent"] for row in rows], [0, 1, 1, 0, 1, 0])
+		self.assertTrue(rows[3]["print_section"])
+
 	@staticmethod
 	def entry(classification, date, debit=0, credit=0):
 		return SimpleNamespace(

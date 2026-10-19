@@ -87,30 +87,62 @@ def get_print_data(filters=None, report_page="liquidity"):
 
 
 def _apply_print_sections(rows):
-	"""Promote designated leaf centers to visual sections without changing the ERP tree."""
-	sections = []
-	regular_rows = []
+	"""Build print sections without changing the ERP cost-center hierarchy.
+
+	The Itihad root contains both direct centers and program groups. In print, its
+	subtotal must include only the direct centers; every immediate program group
+	and each designated standalone leaf becomes an independent top-level section.
+	"""
 	for row in rows:
 		label = PRINT_SECTION_COST_CENTERS.get(row.get("cost_center_id"))
-		if not label:
-			regular_rows.append(row)
-			continue
-		row["cost_center"] = label
-		row["print_section"] = 1
-		row["indent"] = 0
-		row["parent_cost_center"] = None
-		sections.append(row)
-	if not sections:
+		if label:
+			row["cost_center"] = label
+			row["print_section"] = 1
+
+	root_index = next(
+		(index for index, row in enumerate(rows) if row.get("cost_center_id") == "Itihad - ITHD"),
+		None,
+	)
+	if root_index is None:
+		for row in rows:
+			if row.get("print_section"):
+				row["indent"] = 0
+				row["parent_cost_center"] = None
 		return
-	insert_at = len(regular_rows)
-	for index, row in enumerate(regular_rows):
-		if row.get("cost_center_id") != "Itihad - ITHD":
+
+	end_index = root_index + 1
+	while end_index < len(rows) and int(rows[end_index].get("indent") or 0) > 0:
+		end_index += 1
+	source = rows[root_index + 1:end_index]
+	direct_centers = [
+		row for row in source
+		if int(row.get("indent") or 0) == 1 and not row.get("is_group") and not row.get("print_section")
+	]
+	sections = []
+	index = 0
+	while index < len(source):
+		row = source[index]
+		if int(row.get("indent") or 0) != 1 or (not row.get("is_group") and not row.get("print_section")):
+			index += 1
 			continue
-		insert_at = index + 1
-		while insert_at < len(regular_rows) and int(regular_rows[insert_at].get("indent") or 0) > 0:
-			insert_at += 1
-		break
-	rows[:] = regular_rows[:insert_at] + sections + regular_rows[insert_at:]
+		if row.get("print_section"):
+			row["indent"] = 0
+			row["parent_cost_center"] = None
+			sections.append(row)
+			index += 1
+			continue
+		block_end = index + 1
+		while block_end < len(source) and int(source[block_end].get("indent") or 0) > 1:
+			block_end += 1
+		block = source[index:block_end]
+		for block_row in block:
+			block_row["indent"] = max(int(block_row.get("indent") or 0) - 1, 0)
+		block[0]["parent_cost_center"] = None
+		block[0]["print_section"] = 1
+		sections.extend(block)
+		index = block_end
+
+	rows[root_index:end_index] = [rows[root_index], *direct_centers, *sections]
 
 
 def _validate(filters):
