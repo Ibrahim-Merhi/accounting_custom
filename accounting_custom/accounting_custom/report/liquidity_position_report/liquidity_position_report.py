@@ -28,6 +28,11 @@ BALANCE_CLASSES = {
 	"Payable", "Long-term Advances and Loans", "Fixed Asset",
 	"Accumulated Depreciation", "Frozen",
 }
+PRINT_SECTION_COST_CENTERS = {
+	"HAN000 - HANAYA - ITHD": "حنايا",
+	"HTY000 - Hayat School - ITHD": "مدرسة الحياة",
+	"UDR001 - Undivided Revenue - ITHD": "إيرادات غير موزعة",
+}
 
 
 def execute(filters=None):
@@ -61,6 +66,7 @@ def get_print_data(filters=None, report_page="liquidity"):
 		row["parent_cost_center"] = (
 			row.get("parent_cost_center_arabic") or row.get("parent_cost_center")
 		)
+	_apply_print_sections(rows)
 	if filters.report_page == "liquidity":
 		columns = [column for column in columns if column["fieldname"] != "unclassified"]
 	for column in columns:
@@ -78,6 +84,16 @@ def get_print_data(filters=None, report_page="liquidity"):
 		"from_date": str(filters.from_date), "to_date": str(filters.to_date),
 		"companies": _companies(filters), "columns": columns, "rows": rows, "summary": summary,
 	}
+
+
+def _apply_print_sections(rows):
+	"""Promote designated leaf centers to visual sections without changing the ERP tree."""
+	for row in rows:
+		label = PRINT_SECTION_COST_CENTERS.get(row.get("cost_center_id"))
+		if not label:
+			continue
+		row["cost_center"] = label
+		row["print_section"] = 1
 
 
 def _validate(filters):

@@ -167,7 +167,8 @@ function selected_print_rows(payload, state) {
 	let sequence = 0;
 	return rows.filter((row) => state.rows.has(row.__index)).map((row) => {
 		const result = {...row, __print_direct: directValues[row.__index]};
-		result.__number = row.is_group ? "" : ++sequence;
+		const isSection = Boolean(row.is_group || row.print_section);
+		result.__number = isSection ? "" : ++sequence;
 		if (!row.is_group) return result;
 		const indent = Number(row.indent || 0);
 		const included = [row];
@@ -194,7 +195,7 @@ function build_liquidity_print_html(payload, state, preview = false) {
 		(sum, row) => sum + Number((row.__print_direct || {})[fieldname] || 0), 0
 	);
 	const headers = `<th class="sequence">#</th>${columns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("")}`;
-	const body = rows.map((row) => `<tr class="${row.is_group ? "group-row" : ""}"><td class="sequence">${row.__number}</td>${columns.map((column) => `<td class="${is_print_numeric(column) ? "number" : ""}">${print_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("");
+	const body = rows.map((row) => `<tr class="${row.is_group || row.print_section ? "group-row" : ""}"><td class="sequence">${row.__number}</td>${columns.map((column) => `<td class="${is_print_numeric(column) ? "number" : ""}">${print_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("");
 	const totals = `<tr class="grand-total"><td></td>${columns.map((column, index) => {
 			if (is_print_numeric(column)) return `<td class="number">${print_number(total(column.fieldname))}</td>`;
 			return `<td>${index === 0 ? "المجموع" : ""}</td>`;

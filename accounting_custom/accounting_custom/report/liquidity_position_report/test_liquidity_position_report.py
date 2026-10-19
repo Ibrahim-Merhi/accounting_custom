@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from accounting_custom.setup.custom_fields import liquidity_classification_for_account
 from accounting_custom.accounting_custom.report.liquidity_position_report.liquidity_position_report import (
+	_apply_print_sections,
 	_build_rows,
 	_calculate_metrics,
 )
@@ -67,6 +68,16 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		)
 		self.assertEqual(rows[0]["available_liquidity"], -0.01)
 		self.assertIn("note", rows[0])
+
+	def test_designated_leaf_centers_become_print_sections(self):
+		rows = [
+			{"cost_center_id": "HAN000 - HANAYA - ITHD", "cost_center": "HANAYA"},
+			{"cost_center_id": "HTY000 - Hayat School - ITHD", "cost_center": "Hayat School"},
+			{"cost_center_id": "UDR001 - Undivided Revenue - ITHD", "cost_center": "Undivided Revenue"},
+		]
+		_apply_print_sections(rows)
+		self.assertEqual([row["cost_center"] for row in rows], ["حنايا", "مدرسة الحياة", "إيرادات غير موزعة"])
+		self.assertTrue(all(row["print_section"] for row in rows))
 
 	@staticmethod
 	def entry(classification, date, debit=0, credit=0):
