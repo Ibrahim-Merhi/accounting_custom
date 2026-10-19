@@ -102,14 +102,20 @@ async function open_liquidity_print_preview(report, report_page) {
 function build_liquidity_designer(wrapper, payload, state) {
 	const controls = `
 		<div class="liquidity-print-controls" dir="rtl">
-			<section><div class="control-title">الأعمدة <button data-action="all-columns">الكل</button></div>
-				<div class="column-options">${payload.columns.map((column) => `<label><input type="checkbox" data-column="${frappe.utils.escape_html(column.fieldname)}" checked ${column.fieldname === "cost_center" ? "disabled" : ""}> ${frappe.utils.escape_html(column.label)}</label>`).join("")}</div></section>
-			<section><div class="control-title">الصفوف <button data-action="all-rows">الكل</button></div>
-				<div class="row-options">${payload.rows.map((row, index) => `<label style="padding-right:${Math.min(Number(row.indent || 0), 5) * 12}px"><input type="checkbox" data-row="${index}" checked> ${frappe.utils.escape_html(row.cost_center)}</label>`).join("")}</div></section>
-			<p class="text-muted">التعديلات للطباعة فقط، ولن تغيّر السجلات في النظام.</p>
+			<div class="designer-heading"><span class="designer-icon">☷</span><div><strong>تخصيص الطباعة</strong><small>اختر الأعمدة والصفوف المطلوبة</small></div></div>
+			<section class="selector-card"><div class="control-title"><div><strong>الأعمدة</strong><span class="column-count">${payload.columns.length} محدد</span></div><div class="selector-actions"><button type="button" data-action="all-columns">تحديد الكل</button><button type="button" data-action="clear-columns">إلغاء</button></div></div>
+				<div class="column-options option-list">${payload.columns.map((column) => `<label class="selector-option"><input type="checkbox" data-column="${frappe.utils.escape_html(column.fieldname)}" checked ${column.fieldname === "cost_center" ? "disabled" : ""}><span class="check-ui">✓</span><span>${frappe.utils.escape_html(column.label)}</span></label>`).join("")}</div></section>
+			<section class="selector-card"><div class="control-title"><div><strong>الصفوف</strong><span class="row-count">${payload.rows.length} محدد</span></div><div class="selector-actions"><button type="button" data-action="all-rows">تحديد الكل</button><button type="button" data-action="clear-rows">إلغاء</button></div></div>
+				<div class="row-search"><span>⌕</span><input type="search" placeholder="البحث عن مركز كلفة..."></div>
+				<div class="row-options option-list">${payload.rows.map((row, index) => `<label class="selector-option" style="padding-right:${10 + Math.min(Number(row.indent || 0), 5) * 10}px"><input type="checkbox" data-row="${index}" checked><span class="check-ui">✓</span><span>${frappe.utils.escape_html(row.cost_center)}</span></label>`).join("")}</div></section>
+			<div class="preview-notice"><span>ℹ</span><p>هذه التعديلات للطباعة فقط، ولن تغيّر أي سجل في النظام.</p></div>
 		</div><div class="liquidity-print-canvas"></div>`;
 	wrapper.html(`<div class="liquidity-print-designer">${controls}</div>`);
-	const render = () => wrapper.find(".liquidity-print-canvas").html(build_liquidity_print_html(payload, state, true));
+	const update_counts = () => {
+		wrapper.find(".column-count").text(`${state.columns.size} محدد`);
+		wrapper.find(".row-count").text(`${state.rows.size} محدد`);
+	};
+	const render = () => { update_counts(); wrapper.find(".liquidity-print-canvas").html(build_liquidity_print_html(payload, state, true)); };
 	wrapper.on("change", "input[data-column]", function () {
 		this.checked ? state.columns.add(this.dataset.column) : state.columns.delete(this.dataset.column); render();
 	});
@@ -121,9 +127,22 @@ function build_liquidity_designer(wrapper, payload, state) {
 		payload.columns.forEach((column) => state.columns.add(column.fieldname));
 		wrapper.find("input[data-column]").prop("checked", true); render();
 	});
+	wrapper.on("click", "button[data-action='clear-columns']", () => {
+		state.columns = new Set(["cost_center"]);
+		wrapper.find("input[data-column]").prop("checked", false).filter("[data-column='cost_center']").prop("checked", true); render();
+	});
 	wrapper.on("click", "button[data-action='all-rows']", () => {
 		payload.rows.forEach((_row, index) => state.rows.add(index));
 		wrapper.find("input[data-row]").prop("checked", true); render();
+	});
+	wrapper.on("click", "button[data-action='clear-rows']", () => {
+		state.rows.clear(); wrapper.find("input[data-row]").prop("checked", false); render();
+	});
+	wrapper.on("input", ".row-search input", function () {
+		const term = String(this.value || "").trim().toLowerCase();
+		wrapper.find(".row-options .selector-option").each(function () {
+			$(this).toggle(!term || $(this).text().toLowerCase().includes(term));
+		});
 	});
 	add_liquidity_print_styles();
 	render();
@@ -155,24 +174,14 @@ function build_liquidity_print_html(payload, state, preview = false) {
 	const columns = payload.columns.filter((column) => state.columns.has(column.fieldname));
 	const rows = selected_print_rows(payload, state);
 	const terminalRows = rows.filter((row) => row.__number !== "");
-	const identity = columns.find((column) => column.fieldname === "cost_center");
-	const measures = columns.filter((column) => column.fieldname !== "cost_center");
-	const perPage = payload.report_page === "liquidity" ? 6 : 7;
-	const chunks = [];
-	for (let index = 0; index < measures.length; index += perPage) {
-		chunks.push([...(identity ? [identity] : []), ...measures.slice(index, index + perPage)]);
-	}
-	if (!chunks.length) chunks.push(identity ? [identity] : []);
-	return chunks.map((pageColumns, pageIndex) => {
-		const headers = `<th class="sequence">#</th>${pageColumns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("")}`;
-		const body = rows.map((row) => `<tr class="${row.is_group ? "group-row" : ""}"><td class="sequence">${row.__number}</td>${pageColumns.map((column) => `<td class="${is_print_numeric(column) ? "number" : ""}">${print_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("");
-		const totals = `<tr class="grand-total"><td></td>${pageColumns.map((column, index) => {
+	const headers = `<th class="sequence">#</th>${columns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("")}`;
+	const body = rows.map((row) => `<tr class="${row.is_group ? "group-row" : ""}"><td class="sequence">${row.__number}</td>${columns.map((column) => `<td class="${is_print_numeric(column) ? "number" : ""}">${print_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("");
+	const totals = `<tr class="grand-total"><td></td>${columns.map((column, index) => {
 			if (is_print_numeric(column)) return `<td class="number">${print_number(terminalRows.reduce((sum, row) => sum + Number(row[column.fieldname] || 0), 0))}</td>`;
 			return `<td>${index === 0 ? "المجموع" : ""}</td>`;
-		}).join("")}</tr>`;
-		const cards = payload.report_page === "liquidity" && pageIndex === 0 ? build_liquidity_print_cards(rows) : "";
-		return `<article class="liquidity-sheet ${preview ? "preview" : ""}" dir="rtl"><header><div class="brand-bar"><div class="brand-mark">إ</div><div><h2>جمعية الإتحاد الإسلامي</h2><span>الإدارة المالية</span></div></div><div class="report-heading"><h1>${frappe.utils.escape_html(payload.title)}</h1><p><strong>الفترة:</strong> من ${frappe.datetime.str_to_user(payload.from_date)} إلى ${frappe.datetime.str_to_user(payload.to_date)} <span class="page-number">— القسم ${pageIndex + 1} من ${chunks.length}</span></p></div></header>${cards}<table><thead><tr>${headers}</tr></thead><tbody>${body}${totals}</tbody></table><footer>تم إنشاء هذا التقرير من النظام المحاسبي</footer></article>`;
-	}).join("");
+	}).join("")}</tr>`;
+	const cards = payload.report_page === "liquidity" ? build_liquidity_print_cards(rows) : "";
+	return `<article class="liquidity-sheet ${preview ? "preview" : ""}" dir="rtl"><header><div class="brand-bar"><div class="brand-mark">إ</div><div><h2>جمعية الإتحاد الإسلامي</h2><span>الإدارة المالية</span></div></div><div class="report-heading"><h1>${frappe.utils.escape_html(payload.title)}</h1><p><strong>الفترة:</strong> من ${frappe.datetime.str_to_user(payload.from_date)} إلى ${frappe.datetime.str_to_user(payload.to_date)}</p></div></header>${cards}<table><thead><tr>${headers}</tr></thead><tbody>${body}${totals}</tbody></table><footer>تم إنشاء هذا التقرير من النظام المحاسبي</footer></article>`;
 }
 
 function build_liquidity_print_cards(rows) {
@@ -211,5 +220,26 @@ function liquidity_print_css() {
 
 function add_liquidity_print_styles() {
 	if (document.getElementById("liquidity-print-designer-style")) return;
-	$(`<style id="liquidity-print-designer-style">.liquidity-print-designer{display:grid;grid-template-columns:300px minmax(0,1fr);gap:12px;height:76vh}.liquidity-print-controls{overflow:auto;border:1px solid var(--border-color);border-radius:10px;padding:14px;background:var(--card-bg)}.liquidity-print-controls section+section{margin-top:16px}.control-title{font-weight:700;display:flex;justify-content:space-between;margin-bottom:8px;color:#173b66}.control-title button{border:0;background:#e8f1f8;color:#173b66;border-radius:12px;padding:2px 10px;font-size:11px}.column-options,.row-options{display:flex;flex-direction:column;gap:6px}.column-options label,.row-options label{font-size:12px;margin:0}.liquidity-print-canvas{overflow:auto;background:#d9e0e7;padding:18px}.liquidity-sheet.preview{background:#fff;min-width:1050px;margin:0 auto 18px;padding:20px;color:#172033;font-family:Tahoma,Arial,sans-serif;box-shadow:0 3px 16px rgba(0,0,0,.14)}.liquidity-sheet.preview .brand-bar{display:flex;align-items:center;gap:9px;border-bottom:2px solid #173b66;padding-bottom:7px;color:#173b66}.liquidity-sheet.preview .brand-mark{width:36px;height:36px;border:2px solid #173b66;border-radius:50%;display:grid;place-items:center;font-size:20px;font-weight:800}.liquidity-sheet.preview .brand-bar h2{font-size:15px;margin:0}.liquidity-sheet.preview .brand-bar span{font-size:10px}.liquidity-sheet.preview .report-heading{text-align:center;padding:8px 0}.liquidity-sheet.preview h1{font-size:21px;margin:0;color:#102f52}.liquidity-sheet.preview .report-heading p{margin:4px}.liquidity-sheet.preview .liquidity-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0}.liquidity-sheet.preview .liquidity-cards div{border:1px solid #b9c7d6;border-top:3px solid #2b6f9f;border-radius:4px;padding:6px;text-align:center;background:#f7fafc}.liquidity-sheet.preview .liquidity-cards span{display:block;font-size:10px;color:#506176}.liquidity-sheet.preview .liquidity-cards strong{display:block;color:#173b66;font-size:14px}.liquidity-sheet.preview table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}.liquidity-sheet.preview th,.liquidity-sheet.preview td{border:1px solid #748397;padding:5px 4px;text-align:center}.liquidity-sheet.preview th{background:#173b66;color:#fff;font-weight:700}.liquidity-sheet.preview .sequence{width:30px}.liquidity-sheet.preview .group-row{background:#dbe7f1;color:#102f52;font-weight:800}.liquidity-sheet.preview .grand-total{background:#b9cee0;color:#102f52;font-weight:800}.liquidity-sheet.preview .number{direction:ltr;white-space:nowrap}.liquidity-sheet.preview footer{text-align:left;color:#66788a;font-size:9px;margin-top:6px}@media(max-width:900px){.liquidity-print-designer{grid-template-columns:1fr;height:auto}.liquidity-print-controls{max-height:35vh}.liquidity-print-canvas{max-height:55vh}}</style>`).appendTo(document.head);
+	$(`<style id="liquidity-print-designer-style">
+		.liquidity-print-designer{display:grid;grid-template-columns:320px minmax(0,1fr);gap:14px;height:76vh;min-width:0;max-width:100%;overflow:hidden}
+		.liquidity-print-controls{overflow:auto;border:1px solid #d8e1ea;border-radius:14px;padding:14px;background:var(--card-bg);box-shadow:0 2px 8px rgba(20,45,70,.06)}
+		.designer-heading{display:flex;align-items:center;gap:10px;padding:2px 2px 14px;border-bottom:1px solid #e6ebf0;margin-bottom:14px}
+		.designer-heading .designer-icon{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#173b66;color:#fff;font-size:20px}
+		.designer-heading strong{display:block;color:#173b66;font-size:14px}.designer-heading small{display:block;color:var(--text-muted);margin-top:2px}
+		.selector-card{border:1px solid #e1e7ed;border-radius:12px;background:var(--control-bg);padding:11px}.selector-card+.selector-card{margin-top:12px}
+		.control-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:9px;color:#173b66}.control-title strong{display:block;font-size:13px}.control-title span{display:block;font-size:10px;color:var(--text-muted);font-weight:400;margin-top:2px}
+		.selector-actions{display:flex;gap:4px}.selector-actions button{border:1px solid #c9d8e5;background:#fff;color:#173b66;border-radius:14px;padding:3px 8px;font-size:10px;white-space:nowrap}.selector-actions button:hover{background:#173b66;color:#fff}
+		.option-list{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto;padding:2px;scrollbar-width:thin}
+		.selector-option{position:relative;display:flex;align-items:center;gap:8px;min-height:31px;margin:0!important;padding:6px 8px;border-radius:8px;font-size:11px;cursor:pointer;transition:.15s}.selector-option:hover{background:#e9f1f7;color:#173b66}
+		.selector-option input{position:absolute;opacity:0;pointer-events:none}.selector-option .check-ui{flex:0 0 19px;width:19px;height:19px;border:1.5px solid #aebbc7;border-radius:6px;display:grid;place-items:center;color:transparent;background:#fff;font-size:12px;font-weight:800}
+		.selector-option input:checked+.check-ui{background:#1f6f9f;border-color:#1f6f9f;color:#fff}.selector-option input:disabled+.check-ui{background:#7d8b98;border-color:#7d8b98;color:#fff}
+		.row-search{display:flex;align-items:center;gap:6px;border:1px solid #d5dfe8;background:#fff;border-radius:8px;padding:0 9px;margin-bottom:8px}.row-search input{border:0;outline:0;background:transparent;width:100%;height:32px;font-size:11px;text-align:right}.row-search span{color:#75879a}
+		.preview-notice{display:flex;gap:7px;margin-top:12px;padding:9px;border-radius:9px;background:#eef6fb;color:#456174;font-size:10px}.preview-notice p{margin:0;line-height:1.6}
+		.liquidity-print-canvas{min-width:0;max-width:100%;overflow-x:auto!important;overflow-y:auto;background:#d9e0e7;padding:18px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+		.liquidity-sheet.preview{background:#fff;min-width:1500px;margin:0 auto;padding:20px;color:#172033;font-family:Tahoma,Arial,sans-serif;box-shadow:0 3px 16px rgba(0,0,0,.14)}
+		.liquidity-sheet.preview .brand-bar{display:flex;align-items:center;gap:9px;border-bottom:2px solid #173b66;padding-bottom:7px;color:#173b66}.liquidity-sheet.preview .brand-mark{width:36px;height:36px;border:2px solid #173b66;border-radius:50%;display:grid;place-items:center;font-size:20px;font-weight:800}.liquidity-sheet.preview .brand-bar h2{font-size:15px;margin:0}.liquidity-sheet.preview .brand-bar span{font-size:10px}
+		.liquidity-sheet.preview .report-heading{text-align:center;padding:8px 0}.liquidity-sheet.preview h1{font-size:21px;margin:0;color:#102f52}.liquidity-sheet.preview .report-heading p{margin:4px}.liquidity-sheet.preview .liquidity-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0}.liquidity-sheet.preview .liquidity-cards div{border:1px solid #b9c7d6;border-top:3px solid #2b6f9f;border-radius:4px;padding:6px;text-align:center;background:#f7fafc}.liquidity-sheet.preview .liquidity-cards span{display:block;font-size:10px;color:#506176}.liquidity-sheet.preview .liquidity-cards strong{display:block;color:#173b66;font-size:14px}
+		.liquidity-sheet.preview table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10px}.liquidity-sheet.preview th,.liquidity-sheet.preview td{border:1px solid #748397;padding:5px 4px;text-align:center}.liquidity-sheet.preview th{background:#173b66;color:#fff;font-weight:700}.liquidity-sheet.preview .sequence{width:30px}.liquidity-sheet.preview .group-row{background:#dbe7f1;color:#102f52;font-weight:800}.liquidity-sheet.preview .grand-total{background:#b9cee0;color:#102f52;font-weight:800}.liquidity-sheet.preview .number{direction:ltr;white-space:nowrap}.liquidity-sheet.preview footer{text-align:left;color:#66788a;font-size:9px;margin-top:6px}
+		@media(max-width:900px){.liquidity-print-designer{grid-template-columns:minmax(0,1fr);height:auto;overflow:visible}.liquidity-print-controls{max-height:46vh}.liquidity-print-canvas{width:100%;max-height:58vh;padding:10px}.liquidity-sheet.preview{min-width:1500px}.option-list{max-height:180px}}
+	</style>`).appendTo(document.head);
 }
