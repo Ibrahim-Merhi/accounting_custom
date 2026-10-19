@@ -152,6 +152,11 @@ function selected_print_rows(payload, state) {
 	const rows = payload.rows.map((row, index) => ({...row, __index: index}));
 	const numericColumns = payload.columns.filter(is_print_numeric);
 	const directValues = rows.map((row, index) => {
+		if (row._print_direct) {
+			return Object.fromEntries(numericColumns.map((column) => [
+				column.fieldname, Number(row._print_direct[column.fieldname] || 0),
+			]));
+		}
 		const values = Object.fromEntries(numericColumns.map((column) => [column.fieldname, Number(row[column.fieldname] || 0)]));
 		const indent = Number(row.indent || 0);
 		for (let childIndex = index + 1; childIndex < rows.length; childIndex++) {

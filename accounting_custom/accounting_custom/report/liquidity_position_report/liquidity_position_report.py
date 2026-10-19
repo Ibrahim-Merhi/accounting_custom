@@ -88,12 +88,29 @@ def get_print_data(filters=None, report_page="liquidity"):
 
 def _apply_print_sections(rows):
 	"""Promote designated leaf centers to visual sections without changing the ERP tree."""
+	sections = []
+	regular_rows = []
 	for row in rows:
 		label = PRINT_SECTION_COST_CENTERS.get(row.get("cost_center_id"))
 		if not label:
+			regular_rows.append(row)
 			continue
 		row["cost_center"] = label
 		row["print_section"] = 1
+		row["indent"] = 0
+		row["parent_cost_center"] = None
+		sections.append(row)
+	if not sections:
+		return
+	insert_at = len(regular_rows)
+	for index, row in enumerate(regular_rows):
+		if row.get("cost_center_id") != "Itihad - ITHD":
+			continue
+		insert_at = index + 1
+		while insert_at < len(regular_rows) and int(regular_rows[insert_at].get("indent") or 0) > 0:
+			insert_at += 1
+		break
+	rows[:] = regular_rows[:insert_at] + sections + regular_rows[insert_at:]
 
 
 def _validate(filters):
@@ -274,7 +291,8 @@ def _build_rows(centers, direct_metrics, page, groups_only=False):
 	def append_branch(name, indent=0):
 		center = by_name[name]
 		if not groups_only or center.is_group:
-			rows.append(_row(center, _complete(aggregated.get(name, {})), page, indent))
+			direct = _complete(defaultdict(float, direct_metrics.get(name, {})))
+			rows.append(_row(center, _complete(aggregated.get(name, {})), page, indent, direct))
 		for child in children.get(name, []): append_branch(child, indent + 1)
 
 	for center in centers:
@@ -283,7 +301,7 @@ def _build_rows(centers, direct_metrics, page, groups_only=False):
 	return rows
 
 
-def _row(center, metric, page, indent):
+def _row(center, metric, page, indent, direct_metric=None):
 	row = {
 		"cost_center": center.cost_center_name or center.name,
 		"cost_center_arabic": getattr(center, "custom_cost_center_name_arabic", None) or center.cost_center_name or center.name,
@@ -307,8 +325,12 @@ def _row(center, metric, page, indent):
 			"available_liquidity", "gold_end", "receivable_end", "payable_end", "long_term_end",
 			"net_fixed_assets", "non_cash", "frozen_end", "check", "unclassified")
 	for key in keys: row[key] = flt(metric[key], 2)
+	if direct_metric is not None:
+		row["_print_direct"] = {key: flt(direct_metric[key], 2) for key in keys}
 	# Used by the dashboard cards even when it is not a visible detail column.
 	row["opening_liquidity"] = flt(metric["opening_liquidity"], 2)
+	if direct_metric is not None:
+		row["_print_direct"]["opening_liquidity"] = flt(direct_metric["opening_liquidity"], 2)
 	if page == "summary":
 		row["liquidity_change"] = flt(metric["available_liquidity"] - metric["opening_liquidity"], 2)
 		row["net_obligations"] = flt(

@@ -39,6 +39,8 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		self.assertEqual(project["available_liquidity"], 1150)
 		self.assertEqual(project["check"], 0)
 		self.assertEqual(rows[0]["available_liquidity"], 1150)
+		self.assertEqual(rows[0]["_print_direct"]["available_liquidity"], 0)
+		self.assertEqual(project["_print_direct"]["available_liquidity"], 1150)
 
 	def test_movement_reconciles(self):
 		centers = [SimpleNamespace(name="Project", cost_center_name="Project", parent_cost_center="", is_group=0)]
@@ -78,6 +80,7 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		_apply_print_sections(rows)
 		self.assertEqual([row["cost_center"] for row in rows], ["حنايا", "مدرسة الحياة", "إيرادات غير موزعة"])
 		self.assertTrue(all(row["print_section"] for row in rows))
+		self.assertTrue(all(row["indent"] == 0 and row["parent_cost_center"] is None for row in rows))
 
 	@staticmethod
 	def entry(classification, date, debit=0, credit=0):
