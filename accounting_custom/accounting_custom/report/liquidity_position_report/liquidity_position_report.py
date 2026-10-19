@@ -20,9 +20,12 @@ def execute(filters=None):
 	_validate(filters)
 	companies = _companies(filters)
 	fiscal_start = min(getdate(get_fiscal_year(filters.from_date, company=company)[1]) for company in companies)
-	entries = _get_entries(companies, fiscal_start, getdate(filters.to_date))
+	entries = _get_entries(companies, getdate(filters.to_date))
+	_apply_inherited_classifications(entries, companies)
 	centers = _get_cost_centers(companies)
-	metrics = _calculate_metrics(entries, getdate(filters.from_date), getdate(filters.to_date))
+	metrics = _calculate_metrics(
+		entries, getdate(filters.from_date), getdate(filters.to_date), fiscal_start
+	)
 	rows = _build_rows(centers, metrics, filters.report_page or "liquidity", bool(filters.groups_only))
 	columns = _columns(filters.report_page or "liquidity")
 	message = _message(companies, entries)
@@ -54,7 +57,9 @@ def _companies(filters):
 	return companies
 
 
-def _get_entries(companies, fiscal_start, to_date):
+def _get_entries(companies, to_date):
+	# Balance-sheet classifications require the complete ledger history. Limiting
+	# this query to the fiscal year made a newly classified old balance invisible.
 	return frappe.db.sql(
 		f"""
 		select gle.cost_center, gle.account, gle.posting_date, gle.debit, gle.credit,
@@ -63,10 +68,10 @@ def _get_entries(companies, fiscal_start, to_date):
 		inner join `tabAccount` a on a.name = gle.account
 		where gle.is_cancelled = 0
 			and gle.company in %(companies)s
-			and gle.posting_date between %(fiscal_start)s and %(to_date)s
+			and gle.posting_date <= %(to_date)s
 			and ifnull(gle.cost_center, '') != ''
 		""",
-		{"companies": tuple(companies), "fiscal_start": fiscal_start, "to_date": to_date},
+		{"companies": tuple(companies), "to_date": to_date},
 		as_dict=True,
 	)
 
@@ -80,9 +85,40 @@ def _get_cost_centers(companies):
 	)
 
 
-def _calculate_metrics(entries, from_date, to_date):
+def _apply_inherited_classifications(entries, companies):
+	"""Use a parent Account classification when a leaf Account is not classified."""
+	accounts = frappe.get_all(
+		"Account",
+		filters={"company": ["in", companies]},
+		fields=["name", "parent_account", CLASS_FIELD],
+	)
+	by_name = {account.name: account for account in accounts}
+	resolved = {}
+
+	def resolve(name, seen=None):
+		if name in resolved: return resolved[name]
+		account = by_name.get(name)
+		if not account: return None
+		classification = account.get(CLASS_FIELD)
+		if classification:
+			resolved[name] = classification
+			return classification
+		seen = seen or set()
+		if name in seen: return None
+		seen.add(name)
+		classification = resolve(account.parent_account, seen) if account.parent_account else None
+		resolved[name] = classification
+		return classification
+
+	for entry in entries:
+		if not entry.classification:
+			entry.classification = resolve(entry.account)
+
+
+def _calculate_metrics(entries, from_date, to_date, fiscal_start=None):
 	from_date = getdate(from_date)
 	to_date = getdate(to_date)
+	fiscal_start = getdate(fiscal_start or from_date)
 	result = defaultdict(lambda: defaultdict(float))
 	for entry in entries:
 		classification = entry.classification or "Unclassified"
@@ -92,7 +128,10 @@ def _calculate_metrics(entries, from_date, to_date):
 		center = entry.cost_center
 		if classification == "Opening Balance" and date < from_date:
 			result[center]["opening_balance"] += credit - debit
-		elif classification in ("Cash Revenue", "Cash Expense", "Fixed Asset Transfer") and date < from_date:
+		elif (
+			classification in ("Cash Revenue", "Cash Expense", "Fixed Asset Transfer")
+			and fiscal_start <= date < from_date
+		):
 			sign = credit - debit if classification == "Cash Revenue" else debit - credit
 			result[center]["opening_balance"] += sign if classification == "Cash Revenue" else -sign
 		if from_date <= date <= to_date:
@@ -191,13 +230,23 @@ def _row(center, metric, page, indent):
 			"advance_change", "receivable_change", "payable_change", "ending_liquidity",
 			"balance_liquidity", "difference")
 	elif page == "summary":
-		keys = ("balance_after_advances", "available_liquidity", "gold_end", "long_term_end", "frozen_end")
+		keys = (
+			"opening_liquidity", "balance_after_advances", "available_liquidity",
+			"liquidity_change", "gold_end", "net_obligations", "asset_purchase", "frozen_end",
+		)
 	else:
 		keys = ("opening_balance", "revenue", "expense", "asset_purchase", "balance",
 			"operating_advance_end", "balance_after_advances", "internal_cash_end", "external_cash_end",
 			"available_liquidity", "gold_end", "receivable_end", "payable_end", "long_term_end",
 			"net_fixed_assets", "non_cash", "frozen_end", "check", "unclassified")
 	for key in keys: row[key] = flt(metric[key], 2)
+	# Used by the dashboard cards even when it is not a visible detail column.
+	row["opening_liquidity"] = flt(metric["opening_liquidity"], 2)
+	if page == "summary":
+		row["liquidity_change"] = flt(metric["available_liquidity"] - metric["opening_liquidity"], 2)
+		row["net_obligations"] = flt(
+			metric["receivable_end"] + metric["payable_end"] + metric["long_term_end"], 2
+		)
 	if page == "liquidity" and row["available_liquidity"] < -0.5:
 		row["note"] = _("Negative liquidity: spending from other cost centers")
 	return row
@@ -226,9 +275,11 @@ def _columns(page):
 			("balance_liquidity", "Liquidity per Trial Balance"), ("difference", "Difference"),
 		],
 		"summary": [
+			("opening_liquidity", "Opening Liquidity"),
 			("balance_after_advances", "Balance After Advances"), ("available_liquidity", "Available Liquidity"),
-			("gold_end", "Gold"), ("long_term_end", "Long-term Advances and Loans"),
-			("frozen_end", "Frozen"),
+			("liquidity_change", "Liquidity Change"), ("gold_end", "Gold"),
+			("net_obligations", "Receivables Payables and Loans (Net)"),
+			("asset_purchase", "Asset Purchases"), ("frozen_end", "Frozen"),
 		],
 	}
 	return base + [
@@ -258,8 +309,12 @@ def _summary(rows, page):
 			{"value": sum(row["balance_liquidity"] for row in groups), "label": _("Available Liquidity"), "datatype": "Currency", "indicator": "Green"},
 			{"value": sum(row["difference"] for row in groups), "label": _("Difference"), "datatype": "Currency", "indicator": "Red"},
 		]
+	root = lambda key: sum(row.get(key, 0) for row in groups)
 	return [
 		{"value": sum(row["available_liquidity"] for row in groups), "label": _("Available Liquidity"), "datatype": "Currency", "indicator": "Green"},
+		{"value": root("available_liquidity") - root("opening_liquidity"), "label": _("Liquidity Change"), "datatype": "Currency", "indicator": "Blue"},
 		{"value": sum(row["gold_end"] for row in groups), "label": _("Gold"), "datatype": "Currency", "indicator": "Blue"},
+		{"value": root("asset_purchase"), "label": _("Asset Purchases"), "datatype": "Currency", "indicator": "Orange"},
+		{"value": root("frozen_end"), "label": _("Frozen"), "datatype": "Currency", "indicator": "Grey"},
 		{"value": sum(1 for row in rows if not row["is_group"] and row.get("available_liquidity", 0) < -0.5), "label": _("Negative Liquidity Centers"), "datatype": "Int", "indicator": "Red"},
 	]

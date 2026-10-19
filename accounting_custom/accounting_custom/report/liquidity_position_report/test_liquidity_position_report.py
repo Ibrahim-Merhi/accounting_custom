@@ -14,7 +14,8 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		self.assertEqual(liquidity_classification_for_account("1380"), "Opening Balance")
 		self.assertEqual(liquidity_classification_for_account("5300-01"), "Internal Cash")
 		self.assertEqual(liquidity_classification_for_account("5301-02"), "External Cash")
-		self.assertEqual(liquidity_classification_for_account("4699"), "Operating Advance")
+		self.assertEqual(liquidity_classification_for_account("4689"), "Operating Advance")
+		self.assertEqual(liquidity_classification_for_account("4699"), "Long-term Advances and Loans")
 		self.assertEqual(liquidity_classification_for_account("", "Receivable"), "Receivable")
 
 	def test_liquidity_formulas_and_cost_center_tree(self):
@@ -49,6 +50,12 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		self.assertEqual(rows[0]["opening_liquidity"], 100)
 		self.assertEqual(rows[0]["ending_liquidity"], 125)
 		self.assertEqual(rows[0]["difference"], 0)
+
+	def test_old_balance_sheet_entries_remain_visible(self):
+		entries = [self.entry("Internal Cash", "2024-01-01", debit=750, credit=0)]
+		metrics = _calculate_metrics(entries, "2026-09-01", "2026-09-30", "2026-01-01")
+		self.assertEqual(metrics["Project"]["internal_cash_end"], 750)
+		self.assertEqual(metrics["Project"]["internal_cash_start"], 750)
 
 	@staticmethod
 	def entry(classification, date, debit=0, credit=0):

@@ -262,11 +262,14 @@ def backfill_liquidity_account_classifications():
 		return
 	for account in frappe.get_all(
 		"Account",
-		filters={"custom_liquidity_report_classification": ["is", "not set"]},
-		fields=["name", "account_number", "account_type"],
+		fields=["name", "account_number", "account_type", "custom_liquidity_report_classification"],
 	):
 		classification = liquidity_classification_for_account(account.account_number, account.account_type)
-		if classification:
+		number = str(account.account_number or "").replace(" ", "")
+		# 4689/4699 changed in specification v2.1. Correct the earlier automatic
+		# 469-prefix result; preserve every other manual classification.
+		must_correct = number.startswith(("4689", "4699"))
+		if classification and (not account.custom_liquidity_report_classification or must_correct):
 			frappe.db.set_value(
 				"Account", account.name, "custom_liquidity_report_classification",
 				classification, update_modified=False,
@@ -280,9 +283,9 @@ def liquidity_classification_for_account(account_number, account_type=None):
 		if number.startswith(prefix): return "Excluded"
 	for prefix, classification in (
 		("1385", "Fixed Asset Transfer"), ("1380", "Opening Balance"),
-		("469", "Operating Advance"), ("5300", "Internal Cash"),
+		("4689", "Operating Advance"), ("5300", "Internal Cash"),
 		("5301", "External Cash"), ("2530", "Gold"),
-		("465", "Long-term Advances and Loans"), ("1650", "Long-term Advances and Loans"),
+		("4699", "Long-term Advances and Loans"), ("1650", "Long-term Advances and Loans"),
 		("512", "Frozen"), ("28", "Accumulated Depreciation"), ("22", "Fixed Asset"),
 		("7", "Cash Revenue"), ("6", "Cash Expense"),
 	):
