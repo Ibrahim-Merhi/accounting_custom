@@ -57,6 +57,17 @@ class TestLiquidityPositionReport(unittest.TestCase):
 		self.assertEqual(metrics["Project"]["internal_cash_end"], 750)
 		self.assertEqual(metrics["Project"]["internal_cash_start"], 750)
 
+	def test_any_negative_liquidity_displays_the_note(self):
+		centers = [SimpleNamespace(name="Project", cost_center_name="Project", parent_cost_center="", is_group=0)]
+		entries = [self.entry("Internal Cash", "2026-09-01", debit=0, credit=0.01)]
+		rows = _build_rows(
+			centers,
+			_calculate_metrics(entries, "2026-09-01", "2026-09-30"),
+			"liquidity",
+		)
+		self.assertEqual(rows[0]["available_liquidity"], -0.01)
+		self.assertIn("note", rows[0])
+
 	@staticmethod
 	def entry(classification, date, debit=0, credit=0):
 		return SimpleNamespace(

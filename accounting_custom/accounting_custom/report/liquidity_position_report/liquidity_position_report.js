@@ -150,22 +150,39 @@ function build_liquidity_designer(wrapper, payload, state) {
 
 function selected_print_rows(payload, state) {
 	const rows = payload.rows.map((row, index) => ({...row, __index: index}));
-	const terminal = rows.map((row, index) => index === rows.length - 1 || Number(rows[index + 1].indent || 0) <= Number(row.indent || 0));
+	const numericColumns = payload.columns.filter(is_print_numeric);
+	const directValues = rows.map((row, index) => {
+		const values = Object.fromEntries(numericColumns.map((column) => [column.fieldname, Number(row[column.fieldname] || 0)]));
+		const indent = Number(row.indent || 0);
+		for (let childIndex = index + 1; childIndex < rows.length; childIndex++) {
+			const childIndent = Number(rows[childIndex].indent || 0);
+			if (childIndent <= indent) break;
+			if (childIndent !== indent + 1) continue;
+			numericColumns.forEach((column) => {
+				values[column.fieldname] -= Number(rows[childIndex][column.fieldname] || 0);
+			});
+		}
+		return values;
+	});
 	let sequence = 0;
 	return rows.filter((row) => state.rows.has(row.__index)).map((row) => {
-		const result = {...row};
-		if (terminal[row.__index]) {
-			result.__number = ++sequence;
-			return result;
+		const result = {...row, __print_direct: directValues[row.__index]};
+		result.__number = row.is_group ? "" : ++sequence;
+		if (!row.is_group) return result;
+		const indent = Number(row.indent || 0);
+		const included = [row];
+		for (let index = row.__index + 1; index < rows.length; index++) {
+			if (Number(rows[index].indent || 0) <= indent) break;
+			if (state.rows.has(index)) included.push(rows[index]);
 		}
-		const descendants = rows.filter((candidate) =>
-			candidate.__index > row.__index && Number(candidate.indent || 0) > Number(row.indent || 0)
-			&& terminal[candidate.__index] && state.rows.has(candidate.__index)
-		);
-		payload.columns.filter(is_print_numeric).forEach((column) => {
-			result[column.fieldname] = descendants.reduce((sum, item) => sum + Number(item[column.fieldname] || 0), 0);
+		numericColumns.forEach((column) => {
+			result[column.fieldname] = included.reduce(
+				(sum, item) => sum + Number(directValues[item.__index][column.fieldname] || 0), 0
+			);
 		});
-		result.__number = "";
+		result.note = Number(result.available_liquidity || 0) < 0
+			? "سيولة سالبة: صرف من أموال مراكز أخرى"
+			: "";
 		return result;
 	});
 }
@@ -173,11 +190,13 @@ function selected_print_rows(payload, state) {
 function build_liquidity_print_html(payload, state, preview = false) {
 	const columns = payload.columns.filter((column) => state.columns.has(column.fieldname));
 	const rows = selected_print_rows(payload, state);
-	const terminalRows = rows.filter((row) => row.__number !== "");
+	const total = (fieldname) => rows.reduce(
+		(sum, row) => sum + Number((row.__print_direct || {})[fieldname] || 0), 0
+	);
 	const headers = `<th class="sequence">#</th>${columns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("")}`;
 	const body = rows.map((row) => `<tr class="${row.is_group ? "group-row" : ""}"><td class="sequence">${row.__number}</td>${columns.map((column) => `<td class="${is_print_numeric(column) ? "number" : ""}">${print_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("");
 	const totals = `<tr class="grand-total"><td></td>${columns.map((column, index) => {
-			if (is_print_numeric(column)) return `<td class="number">${print_number(terminalRows.reduce((sum, row) => sum + Number(row[column.fieldname] || 0), 0))}</td>`;
+			if (is_print_numeric(column)) return `<td class="number">${print_number(total(column.fieldname))}</td>`;
 			return `<td>${index === 0 ? "المجموع" : ""}</td>`;
 	}).join("")}</tr>`;
 	const cards = payload.report_page === "liquidity" ? build_liquidity_print_cards(rows) : "";
@@ -185,9 +204,8 @@ function build_liquidity_print_html(payload, state, preview = false) {
 }
 
 function build_liquidity_print_cards(rows) {
-	const detailRows = rows.filter((row) => row.__number !== "");
-	const total = (field) => detailRows.reduce((sum, row) => sum + Number(row[field] || 0), 0);
-	const cards = [["السيولة المتوفرة", total("available_liquidity")], ["التغير في السيولة", total("available_liquidity") - total("opening_liquidity")], ["استثمار في الذهب", total("gold_end")], ["مشتريات أصول", total("asset_purchase")], ["ودائع مجمّدة", total("frozen_end")], ["مراكز بسيولة سالبة", rows.filter((row) => row.__number !== "" && Number(row.available_liquidity || 0) < -.5).length]];
+	const total = (field) => rows.reduce((sum, row) => sum + Number((row.__print_direct || {})[field] || 0), 0);
+	const cards = [["السيولة المتوفرة", total("available_liquidity")], ["التغير في السيولة", total("available_liquidity") - total("opening_liquidity")], ["استثمار في الذهب", total("gold_end")], ["مشتريات أصول", total("asset_purchase")], ["ودائع مجمّدة", total("frozen_end")], ["مراكز بسيولة سالبة", rows.filter((row) => !row.is_group && Number(row.available_liquidity || 0) < 0).length]];
 	return `<div class="liquidity-cards">${cards.map(([label, value]) => `<div><span>${label}</span><strong>${print_number(value)}</strong></div>`).join("")}</div>`;
 }
 

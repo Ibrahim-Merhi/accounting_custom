@@ -298,7 +298,7 @@ def _row(center, metric, page, indent):
 		row["net_obligations"] = flt(
 			metric["receivable_end"] + metric["payable_end"] + metric["long_term_end"], 2
 		)
-	if page == "liquidity" and row["available_liquidity"] < -0.5:
+	if page == "liquidity" and row["available_liquidity"] < 0:
 		row["note"] = _("Negative liquidity: spending from other cost centers")
 	return row
 
@@ -367,5 +367,5 @@ def _summary(rows, page):
 		{"value": sum(row["gold_end"] for row in groups), "label": _("Gold"), "datatype": "Currency", "indicator": "Blue"},
 		{"value": root("asset_purchase"), "label": _("Asset Purchases"), "datatype": "Currency", "indicator": "Orange"},
 		{"value": root("frozen_end"), "label": _("Frozen"), "datatype": "Currency", "indicator": "Grey"},
-		{"value": sum(1 for row in rows if not row["is_group"] and row.get("available_liquidity", 0) < -0.5), "label": _("Negative Liquidity Centers"), "datatype": "Int", "indicator": "Red"},
+		{"value": sum(1 for row in rows if not row["is_group"] and row.get("available_liquidity", 0) < 0), "label": _("Negative Liquidity Centers"), "datatype": "Int", "indicator": "Red"},
 	]
