@@ -7,6 +7,21 @@ from erpnext.accounts.utils import get_fiscal_year
 
 
 CLASS_FIELD = "custom_liquidity_report_classification"
+ARABIC_PRINT_LABELS = {
+	"cost_center": "مركز الكلفة", "opening_balance": "رصيد بداية الفترة",
+	"revenue": "الإيرادات", "expense": "المصروفات", "asset_purchase": "مشتريات أصول",
+	"balance": "الرصيد", "operating_advance_end": "سلف تشغيلية",
+	"balance_after_advances": "الرصيد بعد السلف", "internal_cash_end": "نقد داخلي",
+	"external_cash_end": "نقد خارجي", "available_liquidity": "السيولة المتوفرة",
+	"gold_end": "ذهب", "receivable_end": "ذمم مدينة", "payable_end": "ذمم دائنة ومستحقات",
+	"long_term_end": "سلف طويلة الأجل وقروض", "net_fixed_assets": "أصول ثابتة صافية (للعلم)",
+	"non_cash": "بنود غير نقدية (للعلم)", "frozen_end": "مجمّد (للعلم)",
+	"check": "تحقق", "note": "ملاحظة", "opening_liquidity": "السيولة أول الفترة",
+	"gold_change": "تغيّر الذهب", "advance_change": "تغيّر السلف التشغيلية",
+	"receivable_change": "تغيّر الذمم المدينة والسلف طويلة الأجل",
+	"payable_change": "تغيّر الذمم الدائنة والقروض", "ending_liquidity": "السيولة آخر الفترة",
+	"balance_liquidity": "السيولة حسب الميزان", "difference": "الفرق",
+}
 FLOW_CLASSES = {"Cash Revenue", "Cash Expense", "Fixed Asset Transfer", "Non-cash"}
 BALANCE_CLASSES = {
 	"Operating Advance", "Internal Cash", "External Cash", "Gold", "Receivable",
@@ -48,6 +63,11 @@ def get_print_data(filters=None, report_page="liquidity"):
 		)
 	if filters.report_page == "liquidity":
 		columns = [column for column in columns if column["fieldname"] != "unclassified"]
+	for column in columns:
+		column["label"] = ARABIC_PRINT_LABELS.get(column["fieldname"], column["label"])
+	for row in rows:
+		if row.get("note"):
+			row["note"] = "سيولة سالبة: صرف من أموال مراكز أخرى"
 	return {
 		"report_page": filters.report_page,
 		"title": (
