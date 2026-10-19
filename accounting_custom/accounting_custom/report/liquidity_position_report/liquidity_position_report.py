@@ -41,6 +41,11 @@ def get_print_data(filters=None, report_page="liquidity"):
 	filters.report_page = report_page if report_page in ("liquidity", "movement") else "liquidity"
 	filters.groups_only = 0
 	columns, rows, _message_html, _chart, summary = execute(filters)
+	for row in rows:
+		row["cost_center"] = row.get("cost_center_arabic") or row.get("cost_center")
+		row["parent_cost_center"] = (
+			row.get("parent_cost_center_arabic") or row.get("parent_cost_center")
+		)
 	if filters.report_page == "liquidity":
 		columns = [column for column in columns if column["fieldname"] != "unclassified"]
 	return {
@@ -101,7 +106,10 @@ def _get_cost_centers(companies):
 	return frappe.get_all(
 		"Cost Center",
 		filters={"company": ["in", companies], "disabled": 0},
-		fields=["name", "cost_center_name", "parent_cost_center", "is_group", "lft", "rgt"],
+		fields=[
+			"name", "cost_center_name", "parent_cost_center", "is_group", "lft", "rgt",
+			"custom_cost_center_name_arabic", "custom_parent_cost_center_arabic",
+		],
 		order_by="lft asc, name asc",
 	)
 
@@ -242,8 +250,10 @@ def _build_rows(centers, direct_metrics, page, groups_only=False):
 def _row(center, metric, page, indent):
 	row = {
 		"cost_center": center.cost_center_name or center.name,
+		"cost_center_arabic": getattr(center, "custom_cost_center_name_arabic", None) or center.cost_center_name or center.name,
 		"cost_center_id": center.name,
 		"parent_cost_center": center.parent_cost_center,
+		"parent_cost_center_arabic": getattr(center, "custom_parent_cost_center_arabic", None) or center.parent_cost_center,
 		"indent": indent, "is_group": int(center.is_group),
 	}
 	if page == "movement":
