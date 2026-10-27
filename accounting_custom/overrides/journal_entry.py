@@ -15,6 +15,9 @@ class CustomJournalEntry(BaseJournalEntry):
 		# Avoid ERPNext's nested background queue for journals with over 100 rows,
 		# which otherwise leaves the rebuilt document locked before plans refresh.
 		if getattr(frappe.flags, "accounting_custom_sync_journal_submit", False):
+			# A rolled-back rebuild can leave a lock for the next naming-series
+			# value even though no Journal Entry was committed under that name.
+			self.unlock()
 			return self._submit()
 		return super().submit()
 

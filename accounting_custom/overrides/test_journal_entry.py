@@ -11,7 +11,9 @@ class TestCustomJournalEntry(FrappeTestCase):
 		journal = CustomJournalEntry({"doctype": "Journal Entry"})
 		frappe.flags.accounting_custom_sync_journal_submit = True
 		try:
-			with patch.object(journal, "_submit", return_value="submitted") as synchronous_submit, patch.object(
+			with patch.object(journal, "unlock") as unlock, patch.object(
+				journal, "_submit", return_value="submitted"
+			) as synchronous_submit, patch.object(
 				BaseJournalEntry, "submit"
 			) as normal_submit:
 				result = journal.submit()
@@ -19,6 +21,7 @@ class TestCustomJournalEntry(FrappeTestCase):
 			frappe.flags.accounting_custom_sync_journal_submit = False
 
 		self.assertEqual(result, "submitted")
+		unlock.assert_called_once_with()
 		synchronous_submit.assert_called_once_with()
 		normal_submit.assert_not_called()
 
