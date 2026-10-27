@@ -141,9 +141,13 @@ class MultiCompanyPayrollRun(Document):
 					frappe.delete_doc("Journal Entry", journal_name, ignore_permissions=True)
 
 			entry = frappe.get_doc("Payroll Entry", entry_name)
-			entry.make_accrual_jv_entry([
-				frappe.get_doc("Salary Slip", slip.name) for slip in slips
-			])
+			frappe.flags.accounting_custom_sync_journal_submit = True
+			try:
+				entry.make_accrual_jv_entry([
+					frappe.get_doc("Salary Slip", slip.name) for slip in slips
+				])
+			finally:
+				frappe.flags.accounting_custom_sync_journal_submit = False
 			rebuilt_entries.append(entry_name)
 
 		self._configure_payment_plans()

@@ -10,6 +10,14 @@ except ImportError:
 class CustomJournalEntry(BaseJournalEntry):
 	"""Preserve standard validation with Employee Advance receivable compatibility."""
 
+	def submit(self):
+		# Payroll accounting rebuild already runs as one controlled operation.
+		# Avoid ERPNext's nested background queue for journals with over 100 rows,
+		# which otherwise leaves the rebuilt document locked before plans refresh.
+		if getattr(frappe.flags, "accounting_custom_sync_journal_submit", False):
+			return self._submit()
+		return super().submit()
+
 	def validate_party(self):
 		for row in self.get("accounts"):
 			account_type = frappe.get_cached_value("Account", row.account, "account_type")

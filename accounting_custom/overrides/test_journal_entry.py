@@ -3,10 +3,25 @@ from unittest.mock import patch
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from accounting_custom.overrides.journal_entry import CustomJournalEntry
+from accounting_custom.overrides.journal_entry import BaseJournalEntry, CustomJournalEntry
 
 
 class TestCustomJournalEntry(FrappeTestCase):
+	def test_payroll_rebuild_submits_large_journal_synchronously(self):
+		journal = CustomJournalEntry({"doctype": "Journal Entry"})
+		frappe.flags.accounting_custom_sync_journal_submit = True
+		try:
+			with patch.object(journal, "_submit", return_value="submitted") as synchronous_submit, patch.object(
+				BaseJournalEntry, "submit"
+			) as normal_submit:
+				result = journal.submit()
+		finally:
+			frappe.flags.accounting_custom_sync_journal_submit = False
+
+		self.assertEqual(result, "submitted")
+		synchronous_submit.assert_called_once_with()
+		normal_submit.assert_not_called()
+
 	def _entry(self, **overrides):
 		row = {
 			"doctype": "Journal Entry Account",
