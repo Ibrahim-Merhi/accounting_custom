@@ -348,8 +348,11 @@ class MultiCompanyPayrollRun(Document):
 				for employee, target in plans.items():
 					rows = by_employee.get(employee, [])
 					available = sum(flt(row.amount) for row in rows)
-					if target > available + 0.01:
-						frappe.throw(_("Pay This Run for employee {0} exceeds the outstanding payable.").format(employee))
+					# A payment plan may be rebuilt after part of the payroll has already
+					# been paid. In that case ``target`` is the original release amount,
+					# while ``available`` is only the remaining payable. Never recreate
+					# an allocation for an amount that has already been settled.
+					target = min(flt(target), available)
 					remaining = target
 					for index, payable in enumerate(rows):
 						amount = remaining if index == len(rows) - 1 else min(flt(payable.amount), flt(target) * flt(payable.amount) / available) if available else 0

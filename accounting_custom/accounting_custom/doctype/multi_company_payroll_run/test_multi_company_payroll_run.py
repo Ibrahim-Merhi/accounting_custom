@@ -215,6 +215,38 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
         })
         self.assertEqual(run._company_entry_names("Company", run.companies[0]), ["PE-NEW", "PE-OLD"])
 
+    def test_rebuilding_payment_plan_caps_target_to_remaining_outstanding(self):
+        run = frappe.get_doc({
+            "doctype": "Multi Company Payroll Run",
+            "name": "MCPR-REPAIR",
+            "companies": [{"company": "Company", "payroll_entry": "PE-1"}],
+            "employees": [{
+                "employee": "MASTER-1", "company": "Company", "payroll_employee": "PAY-1",
+                "source_payroll_entry": "PE-1", "pay_this_run": 500,
+            }],
+        })
+        entry = MagicMock()
+        entry.name = "PE-1"
+        entry.get_outstanding_payable_rows.return_value = [
+            frappe._dict(employee="PAY-1", cost_center="General CC", amount=300),
+        ]
+        entry.get.return_value = []
+
+        with patch(
+            "accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.db.get_value",
+            return_value="Cash Account",
+        ), patch(
+            "accounting_custom.accounting_custom.doctype.multi_company_payroll_run.multi_company_payroll_run.frappe.get_doc",
+            return_value=entry,
+        ):
+            run._configure_payment_plans()
+
+        entry.append.assert_called_once_with("custom_bank_payment_allocations", {
+            "employee": "PAY-1", "payment_account": "Cash Account",
+            "cost_center": "General CC", "amount": 300,
+        })
+        entry.save.assert_called_once_with(ignore_permissions=True)
+
     def test_outstanding_payable_subtracts_prior_bank_payments(self):
         entry = CustomPayrollEntry({"doctype": "Payroll Entry", "name": "PE-1", "payroll_payable_account": "Payable"})
         payable = [frappe._dict({"employee": "EMP-1", "cost_center": "CC-1", "amount": 500})]
