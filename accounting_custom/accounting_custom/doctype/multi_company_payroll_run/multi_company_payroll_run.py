@@ -138,6 +138,9 @@ class MultiCompanyPayrollRun(Document):
 					frappe.db.set_value("Salary Slip", slip.name, "journal_entry", None, update_modified=False)
 			for journal_name in journal_names:
 				if frappe.db.exists("Journal Entry", journal_name):
+					# Draft deletion can reuse the same naming-series value. Remove any
+					# abandoned queue lock first so the replacement can submit immediately.
+					frappe.get_doc("Journal Entry", journal_name).unlock()
 					frappe.delete_doc("Journal Entry", journal_name, ignore_permissions=True)
 
 			entry = frappe.get_doc("Payroll Entry", entry_name)
