@@ -241,6 +241,7 @@ def get_transactions(filters):
 					''
 				) description,
 				coalesce(
+					max(nullif(journal.custom_finance_remarks, '')),
 					max(nullif(donation.finance_notes, '')),
 					max(nullif(multi_donation.finance_notes, '')),
 					max(nullif(payment.finance_notes, '')),
@@ -284,6 +285,7 @@ def get_transactions(filters):
 					''
 				) description,
 				coalesce(
+					max(nullif(journal.custom_finance_remarks, '')),
 					max(nullif(donation.finance_notes, '')),
 					max(nullif(multi_donation.finance_notes, '')),
 					max(nullif(payment.finance_notes, '')),

@@ -71,6 +71,7 @@ class TestAllDailyMovement(TestCase):
 		self.assertEqual(query.count("max(nullif(line.user_remark, ''))"), 2)
 		self.assertIn("left join `tabJournal Entry` journal on journal.name = gle.voucher_no", query)
 		self.assertEqual(query.count("max(nullif(journal.user_remark, ''))"), 2)
+		self.assertEqual(query.count("max(nullif(journal.custom_finance_remarks, ''))"), 2)
 		self.assertIn("'ملاحظة :', ''", query)
 		self.assertIn("trim(replace(max(nullif(journal.user_remark, '')), 'Note:', ''))", query)
 		for source_doctype in (

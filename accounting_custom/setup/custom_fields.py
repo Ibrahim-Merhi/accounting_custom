@@ -204,6 +204,12 @@ CUSTOM_FIELDS = {
 	],
 	"Journal Entry": [
 		{
+			"fieldname": "custom_finance_remarks", "label": "Finance Remarks",
+			"fieldtype": "Small Text", "insert_after": "user_remark",
+			"allow_on_submit": 1,
+			"description": "Displayed as the debit/credit note in the Daily Movement report.",
+		},
+		{
 			"fieldname": "custom_multi_company_payroll_run", "label": "Multi Company Payroll Run",
 			"fieldtype": "Link", "options": "Multi Company Payroll Run",
 			"insert_after": "company", "read_only": 1, "hidden": 1, "no_copy": 1,
