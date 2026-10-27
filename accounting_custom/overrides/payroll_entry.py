@@ -181,7 +181,7 @@ class CustomPayrollEntry(PayrollEntry):
 			key = (deduction.employee, deduction.source_cost_center)
 			deductions[key] = deductions.get(key, 0) + flt(deduction.amount)
 		advance_deductions = {}
-		for deduction in getattr(self, "_advance_deduction_entries", []):
+		for deduction in self._get_advance_deduction_entries():
 			key = (deduction.get("employee"), deduction.get("cost_center"))
 			advance_deductions[key] = advance_deductions.get(key, 0) + flt(deduction.get("amount"))
 		slips = frappe.get_all("Salary Slip", filters={"payroll_entry": self.name, "docstatus": 1}, fields=["employee", "net_pay"], order_by="employee")
@@ -211,6 +211,46 @@ class CustomPayrollEntry(PayrollEntry):
 				if amount > 0.01:
 					rows.append(frappe._dict(employee=slip.employee, cost_center=cost_center, amount=round(flt(amount), int(precision))))
 		return rows
+
+	def _get_advance_deduction_entries(self):
+		"""Return current or persisted advance deductions for this Payroll Entry.
+
+		HRMS builds advance deductions in memory while creating the accrual Journal
+		Entry. Payment plans are configured after the Payroll Entry is reloaded, so
+		the selected advance cost center must be recovered from that Journal Entry.
+		"""
+		entries = getattr(self, "_advance_deduction_entries", None)
+		if entries:
+			return entries
+		if not self.name:
+			return []
+		return frappe.db.sql(
+			"""
+			select
+				advance.party as employee,
+				advance.account,
+				advance.cost_center,
+				advance.credit_in_account_currency as amount,
+				advance.reference_type,
+				advance.reference_name
+			from `tabJournal Entry Account` advance
+			inner join `tabJournal Entry` journal on journal.name = advance.parent
+			where journal.docstatus < 2
+				and journal.voucher_type = 'Journal Entry'
+				and advance.reference_type = 'Employee Advance'
+				and advance.party_type = 'Employee'
+				and advance.credit_in_account_currency > 0
+				and exists (
+					select 1
+					from `tabJournal Entry Account` payroll
+					where payroll.parent = advance.parent
+						and payroll.reference_type = 'Payroll Entry'
+						and payroll.reference_name = %s
+				)
+			""",
+			self.name,
+			as_dict=True,
+		)
 
 	def _deduct_advance_from_cost_center(self, amounts, employee, cost_center, deduction_amount):
 		deduction_amount = flt(deduction_amount)

@@ -328,6 +328,31 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
                 {"General CC": 50, "Zakat CC": 500}, "EMP-1", "General CC", 100
             )
 
+    def test_reloaded_payroll_recovers_advance_cost_center_from_accrual(self):
+        entry = CustomPayrollEntry({"doctype": "Payroll Entry", "name": "PE-1"})
+        persisted = [frappe._dict(
+            employee="EMP-1", account="Advance Account", cost_center="General CC",
+            amount=100, reference_type="Employee Advance", reference_name="ADV-1",
+        )]
+        with patch(
+            "accounting_custom.overrides.payroll_entry.frappe.db.sql", return_value=persisted
+        ) as query:
+            result = entry._get_advance_deduction_entries()
+
+        self.assertEqual(result, persisted)
+        self.assertEqual(query.call_args.args[1], "PE-1")
+
+    def test_current_advance_entries_are_used_without_database_reload(self):
+        entry = CustomPayrollEntry({"doctype": "Payroll Entry", "name": "PE-1"})
+        entry._advance_deduction_entries = [{
+            "employee": "EMP-1", "cost_center": "General CC", "amount": 100,
+        }]
+        with patch("accounting_custom.overrides.payroll_entry.frappe.db.sql") as query:
+            result = entry._get_advance_deduction_entries()
+
+        self.assertEqual(result, entry._advance_deduction_entries)
+        query.assert_not_called()
+
     def test_accrual_rounding_is_reconciled_on_final_payable_row(self):
         entry = CustomPayrollEntry({
             "doctype": "Payroll Entry", "payroll_payable_account": "421 - Salaries Payable",
