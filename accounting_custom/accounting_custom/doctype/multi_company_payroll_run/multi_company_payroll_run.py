@@ -139,9 +139,12 @@ class MultiCompanyPayrollRun(Document):
 			for journal_name in journal_names:
 				if frappe.db.exists("Journal Entry", journal_name):
 					# Draft deletion can reuse the same naming-series value. Remove any
-					# abandoned queue lock first so the replacement can submit immediately.
-					frappe.get_doc("Journal Entry", journal_name).unlock()
+					# abandoned queue lock before and after deletion so the replacement
+					# can submit immediately within this same request.
+					draft_journal = frappe.get_doc("Journal Entry", journal_name)
+					draft_journal.unlock()
 					frappe.delete_doc("Journal Entry", journal_name, ignore_permissions=True)
+					draft_journal.unlock()
 
 			entry = frappe.get_doc("Payroll Entry", entry_name)
 			frappe.flags.accounting_custom_sync_journal_submit = True
