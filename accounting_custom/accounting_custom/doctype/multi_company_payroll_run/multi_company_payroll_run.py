@@ -89,6 +89,8 @@ class MultiCompanyPayrollRun(Document):
 		if not entry_names:
 			frappe.throw(_("No Payroll Entries are linked to this payroll run."))
 
+		rebuilt_entries = []
+		skipped_entries = []
 		for entry_name in entry_names:
 			bank_entry = frappe.db.sql(
 				"""
@@ -120,11 +122,16 @@ class MultiCompanyPayrollRun(Document):
 				pluck="parent",
 				distinct=True,
 			))
-			for journal_name in journal_names:
-				if frappe.db.get_value("Journal Entry", journal_name, "docstatus") == 1:
-					frappe.throw(_(
-						"Journal Entry {0} is submitted. Cancel it before rebuilding Payroll Entry {1}."
-					).format(journal_name, entry_name))
+			submitted_journals = [
+				journal_name for journal_name in journal_names
+				if frappe.db.get_value("Journal Entry", journal_name, "docstatus") == 1
+			]
+			if submitted_journals:
+				skipped_entries.append({
+					"payroll_entry": entry_name,
+					"reason": _("Submitted Journal Entry {0}").format(", ".join(sorted(submitted_journals))),
+				})
+				continue
 
 			for slip in slips:
 				if slip.journal_entry:
@@ -137,13 +144,18 @@ class MultiCompanyPayrollRun(Document):
 			entry.make_accrual_jv_entry([
 				frappe.get_doc("Salary Slip", slip.name) for slip in slips
 			])
+			rebuilt_entries.append(entry_name)
 
 		self._configure_payment_plans()
 		self._refresh_generated_documents()
 		self.status = "Completed"
 		self.flags.ignore_validate_update_after_submit = True
 		self.save(ignore_permissions=True)
-		return {"status": self.status, "payroll_entries": entry_names}
+		return {
+			"status": self.status,
+			"rebuilt_entries": rebuilt_entries,
+			"skipped_entries": skipped_entries,
+		}
 
 	def on_cancel(self):
 		processed = set()

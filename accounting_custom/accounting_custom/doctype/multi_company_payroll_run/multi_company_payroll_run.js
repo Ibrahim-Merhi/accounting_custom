@@ -38,8 +38,17 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 						method: "rebuild_accounting_and_payments",
 						freeze: true,
 						freeze_message: __("Rebuilding payroll accounting and payment allocations..."),
-					}).then(() => {
-						frappe.show_alert({message: __("Payroll accounting and payments were rebuilt."), indicator: "green"});
+					}).then((response) => {
+						const result = response.message || {};
+						const rebuilt = (result.rebuilt_entries || []).join(", ") || __("None");
+						const skipped = (result.skipped_entries || []).map((row) =>
+							`${frappe.utils.escape_html(row.payroll_entry)}: ${frappe.utils.escape_html(row.reason)}`
+						).join("<br>");
+						frappe.msgprint({
+							title: __("Rebuild Completed"),
+							indicator: "green",
+							message: `<strong>${__("Rebuilt Payroll Entries")}:</strong> ${frappe.utils.escape_html(rebuilt)}${skipped ? `<br><br><strong>${__("Skipped Submitted Entries")}:</strong><br>${skipped}` : ""}`,
+						});
 						frm.reload_doc();
 					}),
 				);
