@@ -439,3 +439,16 @@ def complete_queued_payroll_run(payroll_run):
 		frappe.db.set_value("Multi Company Payroll Run", payroll_run, "status", "Failed", update_modified=False)
 		frappe.log_error(title=f"Large payroll processing failed: {payroll_run}")
 		raise
+
+
+def repair_existing_payroll_run(payroll_run):
+	"""Rebuild payment plans and status for an already-generated payroll run."""
+	run = frappe.get_doc("Multi Company Payroll Run", payroll_run)
+	if run.docstatus != 1:
+		frappe.throw(_("Payroll run {0} must be submitted before it can be repaired.").format(payroll_run))
+	run._configure_payment_plans()
+	run._refresh_generated_documents()
+	run.status = "Completed"
+	run.flags.ignore_validate_update_after_submit = True
+	run.save(ignore_permissions=True)
+	return run.status
