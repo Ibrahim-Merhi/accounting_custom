@@ -147,6 +147,7 @@ has_permission = {
 # Override standard doctype classes
 
 override_doctype_class = {
+	"Journal Entry": "accounting_custom.overrides.journal_entry.CustomJournalEntry",
 	"Payroll Entry": "accounting_custom.overrides.payroll_entry.CustomPayrollEntry",
 	"Salary Slip": "accounting_custom.overrides.salary_slip.CustomSalarySlip",
 }
