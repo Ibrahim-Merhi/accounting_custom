@@ -155,14 +155,11 @@ function build_all_registers_html(payload) {
 }
 
 function printable_register(register) {
-	const removed_width = register.columns.reduce((width, column) => {
-		return width + (numeric_column(column) && register.data.every((row) => Number(row[column.fieldname] || 0) === 0) ? Number(column.width || 0) : 0);
-	}, 0);
 	const columns = register.columns
 		.filter((column) => !numeric_column(column) || register.data.some((row) => Number(row[column.fieldname] || 0) !== 0))
 		.map((column) => ({...column}));
 	const notes = columns.find((column) => column.fieldname === "notes");
-	if (notes) notes.width = Number(notes.width || 0) + removed_width;
+	if (notes) notes.width = 140;
 	const total_width = columns.reduce((sum, column) => sum + Number(column.width || 100), 0) || 1;
 	columns.forEach((column) => { column.print_width = (Number(column.width || 100) / total_width * 100).toFixed(4); });
 	return {...register, columns};
