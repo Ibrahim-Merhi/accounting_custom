@@ -33,7 +33,9 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 			frm.add_custom_button(__("Rebuild Accounting & Payments"), () => {
 				frappe.confirm(
 					__("This will replace draft payroll Journal Entries and regenerate payment allocations. Continue?"),
-					() => frm.call({
+					() => {
+						frappe.show_alert({message: __("Payroll rebuild started..."), indicator: "blue"}, 5);
+						return frm.call({
 						doc: frm.doc,
 						method: "rebuild_accounting_and_payments",
 						freeze: true,
@@ -50,7 +52,14 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 							indicator: "green",
 							message: `<p>${__("Payroll accounting and payment allocations were rebuilt successfully.")}</p><strong>${__("Rebuilt Payroll Entries")}:</strong> ${frappe.utils.escape_html(rebuilt)}${skipped ? `<br><br><strong>${__("Skipped Submitted Entries")}:</strong><br>${skipped}` : ""}`,
 						});
-					}),
+					}).catch((error) => {
+						frappe.msgprint({
+							title: __("Rebuild Failed"),
+							indicator: "red",
+							message: frappe.utils.escape_html(error?.message || __("The server rejected the payroll rebuild. Check the Error Log for details.")),
+						});
+					});
+					},
 				);
 			}, __("Actions"));
 			if (frm.doc.status === "Processing") {
