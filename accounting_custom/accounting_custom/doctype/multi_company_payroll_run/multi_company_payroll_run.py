@@ -74,6 +74,77 @@ class MultiCompanyPayrollRun(Document):
 			)
 		)
 
+	@frappe.whitelist()
+	def rebuild_accounting_and_payments(self):
+		"""Recreate draft payroll accruals and refresh payment allocations."""
+		self.check_permission("write")
+		if self.docstatus != 1:
+			frappe.throw(_("Submit the payroll run before rebuilding its accounting entries."))
+
+		entry_names = sorted({
+			entry_name
+			for company_row in self.companies
+			for entry_name in self._company_entry_names(company_row.company, company_row)
+		})
+		if not entry_names:
+			frappe.throw(_("No Payroll Entries are linked to this payroll run."))
+
+		for entry_name in entry_names:
+			bank_entry = frappe.db.sql(
+				"""
+				select distinct journal.name
+				from `tabJournal Entry` journal
+				inner join `tabJournal Entry Account` account on account.parent = journal.name
+				where journal.docstatus < 2
+					and journal.voucher_type = 'Bank Entry'
+					and account.reference_type = 'Payroll Entry'
+					and account.reference_name = %s
+				limit 1
+				""",
+				entry_name,
+			)
+			if bank_entry:
+				frappe.throw(_(
+					"Cancel or delete Bank Entry {0} before rebuilding Payroll Entry {1}."
+				).format(bank_entry[0][0], entry_name))
+
+			slips = frappe.get_all(
+				"Salary Slip",
+				filters={"payroll_entry": entry_name, "docstatus": 1},
+				fields=["name", "journal_entry"],
+			)
+			journal_names = {slip.journal_entry for slip in slips if slip.journal_entry}
+			journal_names.update(frappe.get_all(
+				"Journal Entry Account",
+				filters={"reference_type": "Payroll Entry", "reference_name": entry_name, "docstatus": ["<", 2]},
+				pluck="parent",
+				distinct=True,
+			))
+			for journal_name in journal_names:
+				if frappe.db.get_value("Journal Entry", journal_name, "docstatus") == 1:
+					frappe.throw(_(
+						"Journal Entry {0} is submitted. Cancel it before rebuilding Payroll Entry {1}."
+					).format(journal_name, entry_name))
+
+			for slip in slips:
+				if slip.journal_entry:
+					frappe.db.set_value("Salary Slip", slip.name, "journal_entry", None, update_modified=False)
+			for journal_name in journal_names:
+				if frappe.db.exists("Journal Entry", journal_name):
+					frappe.delete_doc("Journal Entry", journal_name, ignore_permissions=True)
+
+			entry = frappe.get_doc("Payroll Entry", entry_name)
+			entry.make_accrual_jv_entry([
+				frappe.get_doc("Salary Slip", slip.name) for slip in slips
+			])
+
+		self._configure_payment_plans()
+		self._refresh_generated_documents()
+		self.status = "Completed"
+		self.flags.ignore_validate_update_after_submit = True
+		self.save(ignore_permissions=True)
+		return {"status": self.status, "payroll_entries": entry_names}
+
 	def on_cancel(self):
 		processed = set()
 		for row in reversed(self.companies):

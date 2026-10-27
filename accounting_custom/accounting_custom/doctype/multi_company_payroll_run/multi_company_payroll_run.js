@@ -30,6 +30,20 @@ frappe.ui.form.on("Multi Company Payroll Run", {
 			frm.add_custom_button(__("Get Employees"), () => frm.call({doc:frm.doc,method:"get_employees",freeze:true,freeze_message:__("Loading employees and salary allocations...")}).then(()=>frm.reload_doc()));
 		}
 		if (frm.doc.docstatus===1) {
+			frm.add_custom_button(__("Rebuild Accounting & Payments"), () => {
+				frappe.confirm(
+					__("This will replace draft payroll Journal Entries and regenerate payment allocations. Continue?"),
+					() => frm.call({
+						doc: frm.doc,
+						method: "rebuild_accounting_and_payments",
+						freeze: true,
+						freeze_message: __("Rebuilding payroll accounting and payment allocations..."),
+					}).then(() => {
+						frappe.show_alert({message: __("Payroll accounting and payments were rebuilt."), indicator: "green"});
+						frm.reload_doc();
+					}),
+				);
+			}, __("Actions"));
 			if (frm.doc.status === "Processing") {
 				frm.dashboard.set_headline_alert(__("Large payroll is processing in the background. Refresh to see its progress."), "blue");
 				frm.add_custom_button(__("Refresh Status"), () => frm.reload_doc()).addClass("btn-primary");
