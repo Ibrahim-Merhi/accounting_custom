@@ -363,7 +363,7 @@ class CustomPayrollEntry(PayrollEntry):
 				self.payroll_payable_account, entry.get("cost_center"), entry.get("amount"), currencies,
 				company_currency, payable_amount, accounting_dimensions, precision,
 				entry_type="debit", accounts=accounts, party=entry.get("employee"),
-				reference_type="Employee Advance", reference_name=entry.get("reference_name"),
+				reference_type="Payroll Entry", reference_name=self.name,
 			)
 		return payable_amount
 

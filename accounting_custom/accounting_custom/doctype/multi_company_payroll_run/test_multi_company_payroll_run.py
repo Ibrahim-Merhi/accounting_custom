@@ -268,15 +268,24 @@ class TestMultiCompanyPayrollRun(FrappeTestCase):
 
         def add(account, cost_center, amount, _currencies, _company_currency, payable_amount,
                 _dimensions, _precision, entry_type="credit", **kwargs):
-            rows.append((account, cost_center, amount, entry_type, kwargs.get("party")))
+            rows.append((
+                account, cost_center, amount, entry_type, kwargs.get("party"),
+                kwargs.get("reference_type"), kwargs.get("reference_name"),
+            ))
             return payable_amount + amount if entry_type == "debit" else payable_amount - amount
 
         with patch.object(entry, "get_accounting_entries_and_payable_amount", side_effect=add):
             payable = entry.set_accounting_entries_for_advance_deductions([], [], "USD", [], 2, 500)
 
         self.assertEqual(payable, 500)
-        self.assertEqual(rows[0], ("429 - Employee Advances", "CC-1", 40, "credit", "EMP-1"))
-        self.assertEqual(rows[1], ("421 - Salaries Payable", "CC-1", 40, "debit", "EMP-1"))
+        self.assertEqual(rows[0], (
+            "429 - Employee Advances", "CC-1", 40, "credit", "EMP-1",
+            "Employee Advance", "ADV-1",
+        ))
+        self.assertEqual(rows[1], (
+            "421 - Salaries Payable", "CC-1", 40, "debit", "EMP-1",
+            "Payroll Entry", None,
+        ))
 
     def test_advance_recovery_restores_gross_payable_credit(self):
         entry = CustomPayrollEntry({"doctype": "Payroll Entry", "payroll_payable_account": "421 - Salaries Payable"})
