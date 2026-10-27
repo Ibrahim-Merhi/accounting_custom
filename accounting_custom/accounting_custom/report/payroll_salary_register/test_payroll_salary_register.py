@@ -7,6 +7,7 @@ from accounting_custom.accounting_custom.report.payroll_salary_register.payroll_
 	_cost_center_field,
 	_columns,
 	_blank_zero,
+	_build_employee_register_rows,
 	_employee_subcategory,
 	_deduction_notes,
 	_manual_deduction_totals,
@@ -66,6 +67,32 @@ class TestPayrollSalaryRegister(FrappeTestCase):
 		self.assertEqual(_deduction_notes(run), {
 			("EMP-1", "Company A"): ["غياب: 25", "Other Deduction: 10"],
 		})
+
+	def test_same_employee_in_multiple_companies_is_merged(self):
+		employees = [
+			frappe._dict(employee="MASTER-1", employee_name="Employee", company="A", deductions=25, pay_this_run=300),
+			frappe._dict(employee="MASTER-1", employee_name="Employee", company="B", deductions=10, pay_this_run=200),
+		]
+		allocations = [
+			frappe._dict(employee="MASTER-1", company="A", component="Basic Salary", cost_center="CC-A", amount=300),
+			frappe._dict(employee="MASTER-1", company="B", component="Basic Salary", cost_center="CC-B", amount=200),
+			frappe._dict(employee="MASTER-1", company="A", component="Transportation", cost_center="CC-A", amount=50),
+		]
+		rows = _build_employee_register_rows(
+			employees, allocations, ["CC-A", "CC-B"],
+			{"MASTER-1": {"arabic_name": "الموظف", "category": "دعاة"}},
+			{("MASTER-1", "A"): 5, ("MASTER-1", "B"): 10},
+			{("MASTER-1", "A"): ["حسم: 5"], ("MASTER-1", "B"): ["حسم: 10"]},
+			"دعاة",
+		)
+		self.assertEqual(len(rows), 1)
+		self.assertEqual(rows[0]["basic_total"], 500)
+		self.assertEqual(rows[0]["transportation"], 50)
+		self.assertEqual(rows[0]["deduction"], 15)
+		self.assertEqual(rows[0]["advance"], 20)
+		self.assertEqual(rows[0]["net_salary"], 500)
+		self.assertEqual(rows[0][_cost_center_field("CC-A")], 300)
+		self.assertEqual(rows[0][_cost_center_field("CC-B")], 200)
 
 	def test_report_summary_accepts_dictionary_rows(self):
 		summary = _summary([{"net_salary": 100}, {"net_salary": 250}])

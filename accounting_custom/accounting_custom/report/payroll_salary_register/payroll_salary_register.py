@@ -91,40 +91,9 @@ def execute(filters=None):
 	columns = _columns(cost_centers, labels, category)
 	manual = _manual_deduction_totals(run)
 	deduction_notes = _deduction_notes(run)
-	data = []
-
-	for index, employee in enumerate(employees, 1):
-		key = (employee.employee, employee.company)
-		rows = [row for row in allocations if (row.employee, row.company) == key]
-		basic = [row for row in rows if row.component == "Basic Salary"]
-		transportation = sum(flt(row.amount) for row in rows if row.component == "Transportation")
-		family = sum(flt(row.amount) for row in rows if row.component == "Family Allowance")
-		manual_deduction = manual.get(key, 0)
-		advance = max(flt(employee.deductions) - manual_deduction, 0)
-		notes = list(deduction_notes.get(key, ()))
-		if advance:
-			notes.append(f"سلفة: {_format_note_amount(advance)}")
-		profile = employee_profiles.get(employee.employee) or {}
-		result = {
-			"company": employee.company,
-			"row_number": str(index),
-			"employee": employee.employee,
-			"employee_name": profile.get("arabic_name") or employee.employee_name,
-			"payroll_category": profile.get("category") or "غير مصنف",
-			"sub_category": _employee_subcategory(profile, category),
-			"basic_total": _blank_zero(sum(flt(row.amount) for row in basic)),
-			"transportation": _blank_zero(transportation),
-			"family_allowance": _blank_zero(family),
-			"deduction": _blank_zero(manual_deduction),
-			"advance": _blank_zero(advance),
-			"net_salary": _blank_zero(flt(employee.pay_this_run)),
-			"notes": " | ".join(notes),
-		}
-		for cost_center in cost_centers:
-			result[_cost_center_field(cost_center)] = _blank_zero(sum(
-				flt(row.amount) for row in basic if row.cost_center == cost_center
-			))
-		data.append(result)
+	data = _build_employee_register_rows(
+		employees, allocations, cost_centers, employee_profiles, manual, deduction_notes, category
+	)
 
 	month = ARABIC_MONTHS.get(run.payroll_month, run.payroll_month)
 	title = f"رواتب شهر {month} {run.payroll_year}"
@@ -136,6 +105,55 @@ def execute(filters=None):
 			title = f"{title} — {_category_label(category)}"
 	message = f'<div dir="{_direction()}" style="font-size:18px;font-weight:700;text-align:center">{frappe.utils.escape_html(title)}</div>'
 	return columns, data, message, None, _summary(data)
+
+
+def _build_employee_register_rows(
+	employees, allocations, cost_centers, employee_profiles, manual_deductions, deduction_notes, category
+):
+	"""Merge the same master employee's company payroll rows into one register row."""
+	groups = {}
+	for employee in employees:
+		groups.setdefault(employee.employee, []).append(employee)
+
+	data = []
+	for index, (employee_name, company_rows) in enumerate(groups.items(), 1):
+		company_keys = {(row.employee, row.company) for row in company_rows}
+		rows = [row for row in allocations if (row.employee, row.company) in company_keys]
+		basic = [row for row in rows if row.component == "Basic Salary"]
+		manual_deduction = sum(manual_deductions.get(key, 0) for key in company_keys)
+		advance = sum(
+			max(flt(employee.deductions) - manual_deductions.get((employee.employee, employee.company), 0), 0)
+			for employee in company_rows
+		)
+		notes = []
+		for key in company_keys:
+			for note in deduction_notes.get(key, ()):
+				if note not in notes:
+					notes.append(note)
+		if advance:
+			notes.append(f"سلفة: {_format_note_amount(advance)}")
+		profile = employee_profiles.get(employee_name) or {}
+		result = {
+			"company": ", ".join(dict.fromkeys(row.company for row in company_rows)),
+			"row_number": str(index),
+			"employee": employee_name,
+			"employee_name": profile.get("arabic_name") or company_rows[0].employee_name,
+			"payroll_category": profile.get("category") or "غير مصنف",
+			"sub_category": _employee_subcategory(profile, category),
+			"basic_total": _blank_zero(sum(flt(row.amount) for row in basic)),
+			"transportation": _blank_zero(sum(flt(row.amount) for row in rows if row.component == "Transportation")),
+			"family_allowance": _blank_zero(sum(flt(row.amount) for row in rows if row.component == "Family Allowance")),
+			"deduction": _blank_zero(manual_deduction),
+			"advance": _blank_zero(advance),
+			"net_salary": _blank_zero(sum(flt(employee.pay_this_run) for employee in company_rows)),
+			"notes": " | ".join(notes),
+		}
+		for cost_center in cost_centers:
+			result[_cost_center_field(cost_center)] = _blank_zero(sum(
+				flt(row.amount) for row in basic if row.cost_center == cost_center
+			))
+		data.append(result)
+	return data
 
 
 def _get_employee_profiles(run):
