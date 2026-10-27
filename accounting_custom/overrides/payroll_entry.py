@@ -182,10 +182,8 @@ class CustomPayrollEntry(PayrollEntry):
 			deductions[key] = deductions.get(key, 0) + flt(deduction.amount)
 		advance_deductions = {}
 		for deduction in getattr(self, "_advance_deduction_entries", []):
-			employee = deduction.get("employee")
-			advance_deductions[employee] = advance_deductions.get(employee, 0) + flt(
-				deduction.get("amount")
-			)
+			key = (deduction.get("employee"), deduction.get("cost_center"))
+			advance_deductions[key] = advance_deductions.get(key, 0) + flt(deduction.get("amount"))
 		slips = frappe.get_all("Salary Slip", filters={"payroll_entry": self.name, "docstatus": 1}, fields=["employee", "net_pay"], order_by="employee")
 		for slip in slips:
 			amounts = {}
@@ -195,9 +193,9 @@ class CustomPayrollEntry(PayrollEntry):
 			for (employee, cost_center), amount in deductions.items():
 				if employee == slip.employee:
 					amounts[cost_center] = amounts.get(cost_center, 0) - amount
-			self._deduct_from_basic_allocations(
-				amounts, slip.employee, advance_deductions.get(slip.employee, 0)
-			)
+			for (employee, cost_center), amount in advance_deductions.items():
+				if employee == slip.employee:
+					self._deduct_advance_from_cost_center(amounts, employee, cost_center, amount)
 			unallocated_deduction = max(sum(amounts.values()) - flt(slip.net_pay), 0)
 			positive_total = sum(max(amount, 0) for amount in amounts.values())
 			if unallocated_deduction and positive_total:
@@ -214,24 +212,16 @@ class CustomPayrollEntry(PayrollEntry):
 					rows.append(frappe._dict(employee=slip.employee, cost_center=cost_center, amount=round(flt(amount), int(precision))))
 		return rows
 
-	def _deduct_from_basic_allocations(self, amounts, employee, deduction_amount):
+	def _deduct_advance_from_cost_center(self, amounts, employee, cost_center, deduction_amount):
 		deduction_amount = flt(deduction_amount)
 		if deduction_amount <= 0:
 			return
-		basic_allocations = self._profile_allocations(employee, "Basic Salary")
-		basic_total = sum(flt(row.amount) for row in basic_allocations)
-		if basic_total + 0.01 < deduction_amount:
+		allocated_amount = flt(amounts.get(cost_center))
+		if allocated_amount + 0.01 < deduction_amount:
 			frappe.throw(_(
-				"Salary advance deduction {0} exceeds Basic Salary {1} for employee {2}."
-			).format(deduction_amount, basic_total, employee))
-		remaining = deduction_amount
-		for index, allocation in enumerate(basic_allocations):
-			share = (
-				remaining if index == len(basic_allocations) - 1
-				else deduction_amount * flt(allocation.amount) / basic_total
-			)
-			amounts[allocation.cost_center] = amounts.get(allocation.cost_center, 0) - share
-			remaining -= share
+				"Salary advance deduction {0} exceeds salary {1} allocated to its selected cost center {2} for employee {3}."
+			).format(deduction_amount, allocated_amount, cost_center, employee))
+		amounts[cost_center] = allocated_amount - deduction_amount
 
 	def make_journal_entry(self, accounts, *args, **kwargs):
 		if not self._is_managed_payroll():
