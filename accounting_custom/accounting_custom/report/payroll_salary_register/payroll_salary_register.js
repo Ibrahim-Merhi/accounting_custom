@@ -159,10 +159,18 @@ function printable_register(register) {
 		.filter((column) => !numeric_column(column) || register.data.some((row) => Number(row[column.fieldname] || 0) !== 0))
 		.map((column) => ({...column}));
 	const notes = columns.find((column) => column.fieldname === "notes");
-	if (notes) notes.width = 140;
+	if (notes) notes.width = notes_column_width(register.data);
 	const total_width = columns.reduce((sum, column) => sum + Number(column.width || 100), 0) || 1;
 	columns.forEach((column) => { column.print_width = (Number(column.width || 100) / total_width * 100).toFixed(4); });
 	return {...register, columns};
+}
+
+function notes_column_width(rows) {
+	const longest_note = rows.reduce((length, row) => Math.max(length, String(row.notes || "").trim().length), 0);
+	if (!longest_note) return 110;
+	if (longest_note <= 20) return 160;
+	if (longest_note <= 45) return 220;
+	return 280;
 }
 
 function render_reorderable_preview(wrapper, payload) {
