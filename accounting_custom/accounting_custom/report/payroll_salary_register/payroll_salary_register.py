@@ -90,6 +90,7 @@ def execute(filters=None):
 	labels = _cost_center_labels(cost_centers)
 	columns = _columns(cost_centers, labels, category)
 	manual = _manual_deduction_totals(run)
+	deduction_notes = _deduction_notes(run)
 	data = []
 
 	for index, employee in enumerate(employees, 1):
@@ -100,6 +101,9 @@ def execute(filters=None):
 		family = sum(flt(row.amount) for row in rows if row.component == "Family Allowance")
 		manual_deduction = manual.get(key, 0)
 		advance = max(flt(employee.deductions) - manual_deduction, 0)
+		notes = list(deduction_notes.get(key, ()))
+		if advance:
+			notes.append(f"سلفة: {_format_note_amount(advance)}")
 		profile = employee_profiles.get(employee.employee) or {}
 		result = {
 			"company": employee.company,
@@ -114,7 +118,7 @@ def execute(filters=None):
 			"deduction": _blank_zero(manual_deduction),
 			"advance": _blank_zero(advance),
 			"net_salary": _blank_zero(flt(employee.pay_this_run)),
-			"notes": "",
+			"notes": " | ".join(notes),
 		}
 		for cost_center in cost_centers:
 			result[_cost_center_field(cost_center)] = _blank_zero(sum(
@@ -224,6 +228,23 @@ def _manual_deduction_totals(run):
 		key = (row.employee, row.company)
 		totals[key] = totals.get(key, 0) + flt(row.amount)
 	return totals
+
+
+def _deduction_notes(run):
+	"""Return the human-readable reason for each manual deduction in the register."""
+	notes = {}
+	for row in run.manual_deductions:
+		key = (row.employee, row.company)
+		label = (row.get("note") or row.get("salary_component") or row.get("source_component") or "حسم").strip()
+		text = f"{label}: {_format_note_amount(row.amount)}"
+		if text not in notes.setdefault(key, []):
+			notes[key].append(text)
+	return notes
+
+
+def _format_note_amount(value):
+	value = flt(value)
+	return f"{value:,.2f}".rstrip("0").rstrip(".")
 
 
 def _summary(data):

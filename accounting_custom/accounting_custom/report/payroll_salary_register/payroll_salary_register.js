@@ -63,16 +63,15 @@ async function preview_all_tabs(report) {
 		return;
 	}
 	const response = await fetch_arabic_registers(payroll_run);
-	const content = build_all_registers_html(response.message);
 	const dialog = new frappe.ui.Dialog({
 		title: is_arabic() ? "معاينة كل كشوف الرواتب" : "Preview All Payroll Registers",
 		size: "extra-large", fields: [{fieldname: "preview", fieldtype: "HTML"}],
 		primary_action_label: is_arabic() ? "طباعة الكل" : "Print All",
-		primary_action: () => print_all_registers(content),
+		primary_action: () => print_all_registers(build_all_registers_html(response.message)),
 	});
-	dialog.fields_dict.preview.$wrapper.html(content);
 	dialog.$wrapper.find(".modal-dialog").css("max-width", "96vw");
 	dialog.show();
+	render_reorderable_preview(dialog.fields_dict.preview.$wrapper, response.message);
 }
 
 async function print_current_tab(report) {
@@ -99,13 +98,72 @@ function fetch_arabic_registers(payroll_run) {
 
 function build_all_registers_html(payload) {
 	const direction = payload.direction || (is_arabic() ? "rtl" : "ltr");
-	const sections = payload.registers.map((register) => {
-		const headers = register.columns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("");
-		const body = register.data.length ? register.data.map((row) => `<tr>${register.columns.map((column) => `<td class="${numeric_column(column) ? "number" : ""}">${format_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${register.columns.length}" class="empty">لا يوجد موظفون في هذه الفئة</td></tr>`;
-		const totals = register.data.length ? build_total_row(register) : "";
-		return `<section class="payroll-print-section" dir="${direction}"><div class="payroll-print-category">${frappe.utils.escape_html(register.category_label)}</div>${register.title_html}<table><thead><tr>${headers}</tr></thead><tbody>${body}${totals}</tbody></table><div class="payroll-signatures"><strong>المدير التنفيذي</strong><strong>الإدارة المالية</strong><strong>رئيس الجمعية</strong></div></section>`;
+	const sections = payload.registers.map((register, register_index) => {
+		const printable = printable_register(register);
+		const headers = printable.columns.map((column) => `<th>${frappe.utils.escape_html(column.label)}</th>`).join("");
+		const widths = printable.columns.map((column) => `<col style="width:${column.print_width}%">`).join("");
+		const body = printable.data.length ? printable.data.map((row, row_index) => `<tr class="payroll-data-row" draggable="true" data-row-index="${row_index}">${printable.columns.map((column) => `<td class="${numeric_column(column) ? "number" : ""} ${column.fieldname === "row_number" ? "drag-handle" : ""}"${column.fieldname === "row_number" ? ' title="اسحب لتغيير الترتيب"' : ""}>${column.fieldname === "row_number" ? '<span class="drag-grip">⋮⋮</span>' : ""}${format_cell(row[column.fieldname], column)}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${printable.columns.length}" class="empty">لا يوجد موظفون في هذه الفئة</td></tr>`;
+		const totals = printable.data.length ? build_total_row(printable) : "";
+		return `<section class="payroll-print-section" data-register-index="${register_index}" dir="${direction}"><div class="payroll-print-category">${frappe.utils.escape_html(register.category_label)}</div>${register.title_html}<table><colgroup>${widths}</colgroup><thead><tr>${headers}</tr></thead><tbody>${body}${totals}</tbody></table><div class="payroll-signatures"><strong>المدير التنفيذي</strong><strong>الإدارة المالية</strong><strong>رئيس الجمعية</strong></div></section>`;
 	}).join("");
 	return `<div class="payroll-all-preview" dir="${direction}">${sections}</div>`;
+}
+
+function printable_register(register) {
+	const removed_width = register.columns.reduce((width, column) => {
+		return width + (numeric_column(column) && register.data.every((row) => Number(row[column.fieldname] || 0) === 0) ? Number(column.width || 0) : 0);
+	}, 0);
+	const columns = register.columns
+		.filter((column) => !numeric_column(column) || register.data.some((row) => Number(row[column.fieldname] || 0) !== 0))
+		.map((column) => ({...column}));
+	const notes = columns.find((column) => column.fieldname === "notes");
+	if (notes) notes.width = Number(notes.width || 0) + removed_width;
+	const total_width = columns.reduce((sum, column) => sum + Number(column.width || 100), 0) || 1;
+	columns.forEach((column) => { column.print_width = (Number(column.width || 100) / total_width * 100).toFixed(4); });
+	return {...register, columns};
+}
+
+function render_reorderable_preview(wrapper, payload) {
+	wrapper.html(build_all_registers_html(payload));
+	let dragged = null;
+	wrapper.find(".drag-handle").on("mousedown", function () {
+		$(this).closest(".payroll-data-row").addClass("drag-armed");
+	});
+	wrapper.find(".payroll-data-row").on("dragstart", function (event) {
+		if (!$(this).hasClass("drag-armed")) {
+			event.preventDefault();
+			return;
+		}
+		const section = $(this).closest(".payroll-print-section");
+		dragged = {register: Number(section.data("register-index")), row: Number($(this).data("row-index"))};
+		$(this).addClass("dragging");
+		event.originalEvent.dataTransfer.effectAllowed = "move";
+	});
+	wrapper.find(".payroll-data-row").on("dragover", function (event) {
+		if (!dragged) return;
+		const register = Number($(this).closest(".payroll-print-section").data("register-index"));
+		if (register !== dragged.register) return;
+		event.preventDefault();
+		wrapper.find(".payroll-data-row").removeClass("drag-target");
+		$(this).addClass("drag-target");
+	});
+	wrapper.find(".payroll-data-row").on("drop", function (event) {
+		event.preventDefault();
+		const register_index = Number($(this).closest(".payroll-print-section").data("register-index"));
+		const target_index = Number($(this).data("row-index"));
+		if (!dragged || dragged.register !== register_index || dragged.row === target_index) return;
+		const rows = payload.registers[register_index].data;
+		const [moved] = rows.splice(dragged.row, 1);
+		rows.splice(target_index, 0, moved);
+		rows.forEach((row, index) => { row.row_number = String(index + 1); });
+		dragged = null;
+		render_reorderable_preview(wrapper, payload);
+	});
+	wrapper.find(".payroll-data-row").on("dragend", function () {
+		dragged = null;
+		wrapper.find(".payroll-data-row").removeClass("drag-armed dragging drag-target");
+	});
+	$(document).off("mouseup.payroll-register").on("mouseup.payroll-register", () => wrapper.find(".payroll-data-row").removeClass("drag-armed"));
 }
 
 function numeric_column(column) {
@@ -148,10 +206,10 @@ function print_all_registers(content) {
 }
 
 function print_styles() {
-	return `@page { size: A4 landscape; margin: 8mm; } * { box-sizing: border-box; } body { margin: 0; color: #111; font-family: Arial, "Noto Naskh Arabic", sans-serif; } .payroll-print-section { page-break-after: always; padding: 4mm; min-height: 185mm; } .payroll-print-section:last-child { page-break-after: auto; } .payroll-print-category { display: inline-block; border: 1px solid #222; padding: 5px 16px; margin-bottom: 10px; font-size: 15px; font-weight: 700; border-radius: 12px; } .payroll-print-section > div[style] { margin: 3mm 0 6mm; } table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 13px; } th, td { border: 1px solid #222; padding: 8px 5px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; } th { background: #f1f3f5; font-size: 13px; font-weight: 700; } td.number { direction: ltr; font-variant-numeric: tabular-nums; } .total-row td { border-top: 2px solid #111; font-weight: 700; background: #f8f9fa; } .empty { padding: 24px; color: #777; } .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 14px; margin-top: 9mm; padding-top: 5mm; border-top: 1px solid #555; }`;
+	return `@page { size: A4 landscape; margin: 8mm; } * { box-sizing: border-box; } body { margin: 0; color: #111; font-family: Arial, "Noto Naskh Arabic", sans-serif; } .payroll-print-section { page-break-after: always; padding: 4mm; min-height: 185mm; } .payroll-print-section:last-child { page-break-after: auto; } .payroll-print-category { display: inline-block; border: 1px solid #222; padding: 5px 16px; margin-bottom: 10px; font-size: 15px; font-weight: 700; border-radius: 12px; } .payroll-print-section > div[style] { margin: 3mm 0 6mm; } table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; } th, td { border: 1px solid #222; padding: 8px 5px; text-align: center; vertical-align: middle; overflow-wrap: anywhere; } th { background: #f1f3f5; font-size: 13px; font-weight: 700; } td.number { direction: ltr; font-variant-numeric: tabular-nums; } .drag-grip { display: none; } .total-row td { border-top: 2px solid #111; font-weight: 700; background: #f8f9fa; } .empty { padding: 24px; color: #777; } .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 14px; margin-top: 9mm; padding-top: 5mm; border-top: 1px solid #555; }`;
 }
 
 function add_report_styles() {
 	if (document.getElementById("payroll-register-styles")) return;
-	$("<style id='payroll-register-styles'>").text(`.payroll-register-nav { margin: 12px 0 18px; padding: 16px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-sm); } .payroll-register-nav-title { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; } .payroll-register-nav-title small { display: block; color: var(--text-muted); margin-top: 2px; } .payroll-register-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; color: #fff; background: #22c55e; font-size: 20px; } .payroll-category-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 5px; scrollbar-width: thin; } .payroll-tab { flex: 0 0 auto; border: 1px solid var(--border-color); color: var(--text-color); background: var(--control-bg); border-radius: 999px; padding: 7px 13px; font-size: 12px; transition: .15s ease; } .payroll-tab:hover { border-color: #22c55e; color: #16803d; } .payroll-tab.active { color: #fff; background: #22c55e; border-color: #22c55e; box-shadow: 0 3px 9px rgba(34,197,94,.22); } .payroll-all-preview { max-height: 72vh; overflow: auto; padding: 12px; background: #eef1f4; } .payroll-all-preview .payroll-print-section { background: #fff; margin: 0 auto 18px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.08); } .payroll-all-preview table { width: 100%; border-collapse: collapse; font-size: 11px; } .payroll-all-preview th, .payroll-all-preview td { border: 1px solid #777; padding: 6px 4px; text-align: center; } .payroll-all-preview th { background: #f1f3f5; } .payroll-all-preview .number { direction: ltr; font-variant-numeric: tabular-nums; } .payroll-all-preview .total-row { font-weight: 700; background: #f8f9fa; } .payroll-all-preview .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; margin-top: 20px; padding-top: 14px; border-top: 1px solid #555; } @media print { .payroll-register-nav, .page-form, .page-head { display: none !important; } }`).appendTo(document.head);
+	$("<style id='payroll-register-styles'>").text(`.payroll-register-nav { margin: 12px 0 18px; padding: 16px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-sm); } .payroll-register-nav-title { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; } .payroll-register-nav-title small { display: block; color: var(--text-muted); margin-top: 2px; } .payroll-register-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; color: #fff; background: #22c55e; font-size: 20px; } .payroll-category-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 5px; scrollbar-width: thin; } .payroll-tab { flex: 0 0 auto; border: 1px solid var(--border-color); color: var(--text-color); background: var(--control-bg); border-radius: 999px; padding: 7px 13px; font-size: 12px; transition: .15s ease; } .payroll-tab:hover { border-color: #22c55e; color: #16803d; } .payroll-tab.active { color: #fff; background: #22c55e; border-color: #22c55e; box-shadow: 0 3px 9px rgba(34,197,94,.22); } .payroll-all-preview { max-height: 72vh; overflow: auto; padding: 12px; background: #eef1f4; } .payroll-all-preview .payroll-print-section { background: #fff; margin: 0 auto 18px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.08); } .payroll-all-preview table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; } .payroll-all-preview th, .payroll-all-preview td { border: 1px solid #777; padding: 6px 4px; text-align: center; overflow-wrap: anywhere; } .payroll-all-preview th { background: #f1f3f5; } .payroll-all-preview .number { direction: ltr; font-variant-numeric: tabular-nums; } .payroll-all-preview .drag-handle { cursor: grab; user-select: none; white-space: nowrap; } .payroll-all-preview .drag-handle:active { cursor: grabbing; } .payroll-all-preview .drag-grip { color: #8b95a1; margin-inline-end: 3px; font-weight: 700; } .payroll-all-preview .payroll-data-row.dragging { opacity: .35; } .payroll-all-preview .payroll-data-row.drag-target td { border-top: 3px solid #22c55e; } .payroll-all-preview .total-row { font-weight: 700; background: #f8f9fa; } .payroll-all-preview .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; margin-top: 20px; padding-top: 14px; border-top: 1px solid #555; } @media print { .payroll-register-nav, .page-form, .page-head { display: none !important; } }`).appendTo(document.head);
 }

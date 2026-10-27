@@ -8,6 +8,7 @@ from accounting_custom.accounting_custom.report.payroll_salary_register.payroll_
 	_columns,
 	_blank_zero,
 	_employee_subcategory,
+	_deduction_notes,
 	_manual_deduction_totals,
 	_summary,
 	_is_arabic,
@@ -55,6 +56,15 @@ class TestPayrollSalaryRegister(FrappeTestCase):
 		self.assertEqual(_manual_deduction_totals(run), {
 			("EMP-1", "Company A"): 25,
 			("EMP-1", "Company B"): 5,
+		})
+
+	def test_manual_deduction_reasons_are_added_to_notes(self):
+		run = frappe._dict(manual_deductions=[
+			frappe._dict(employee="EMP-1", company="Company A", amount=25, note="غياب", salary_component="Penalty"),
+			frappe._dict(employee="EMP-1", company="Company A", amount=10, note="", salary_component="Other Deduction"),
+		])
+		self.assertEqual(_deduction_notes(run), {
+			("EMP-1", "Company A"): ["غياب: 25", "Other Deduction: 10"],
 		})
 
 	def test_report_summary_accepts_dictionary_rows(self):
