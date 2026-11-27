@@ -58,11 +58,13 @@ CUSTOM_FIELDS = {
 		{
 			"fieldname": "custom_parent_cost_center_arabic", "label": "Arabic Parent Cost Center",
 			"fieldtype": "Data", "insert_after": "parent_cost_center", "read_only": 0,
+			"fetch_if_empty": 1,
 			"fetch_from": "parent_cost_center.custom_cost_center_name_arabic",
 		},
 		{
 			"fieldname": "custom_company_name_arabic", "label": "Arabic Company Name",
 			"fieldtype": "Data", "insert_after": "company", "read_only": 0,
+			"fetch_if_empty": 1,
 			"fetch_from": "company.custom_company_name_arabic",
 		},
 	],
