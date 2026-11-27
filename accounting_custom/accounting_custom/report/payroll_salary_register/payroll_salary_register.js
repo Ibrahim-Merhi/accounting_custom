@@ -191,7 +191,13 @@ function notes_column_width(rows) {
 }
 
 function render_reorderable_preview(wrapper, payload) {
+	const previous_preview = wrapper.find(".payroll-all-preview")[0];
+	const scroll_top = previous_preview?.scrollTop ?? 0;
+	const scroll_left = previous_preview?.scrollLeft ?? 0;
 	wrapper.html(build_all_registers_html(payload));
+	const preview = wrapper.find(".payroll-all-preview")[0];
+	preview.scrollTop = scroll_top;
+	preview.scrollLeft = scroll_left;
 	let dragged = null;
 	wrapper.find(".drag-handle").on("mousedown", function () {
 		$(this).closest(".payroll-data-row").addClass("drag-armed");
