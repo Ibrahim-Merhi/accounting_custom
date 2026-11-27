@@ -84,7 +84,7 @@ async function preview_all_tabs(report) {
 		primary_action_label: is_arabic() ? "طباعة الكل" : "Print All",
 		primary_action: () => print_all_registers(build_all_registers_html(response.message)),
 	});
-	dialog.$wrapper.find(".modal-dialog").css("max-width", "96vw");
+	dialog.$wrapper.addClass("payroll-preview-dialog");
 	dialog.show();
 	render_reorderable_preview(dialog.fields_dict.preview.$wrapper, response.message);
 }
@@ -197,13 +197,12 @@ function notes_column_width(rows) {
 }
 
 function render_reorderable_preview(wrapper, payload) {
-	const previous_preview = wrapper.find(".payroll-all-preview")[0];
-	const scroll_top = previous_preview?.scrollTop ?? 0;
-	const scroll_left = previous_preview?.scrollLeft ?? 0;
+	const scroll_area = wrapper.closest(".modal-body")[0];
+	const scroll_top = scroll_area.scrollTop;
+	const scroll_left = scroll_area.scrollLeft;
 	wrapper.html(build_all_registers_html(payload));
-	const preview = wrapper.find(".payroll-all-preview")[0];
-	preview.scrollTop = scroll_top;
-	preview.scrollLeft = scroll_left;
+	scroll_area.scrollTop = scroll_top;
+	scroll_area.scrollLeft = scroll_left;
 	let dragged = null;
 	wrapper.find(".drag-handle").on("mousedown", function () {
 		$(this).closest(".payroll-data-row").addClass("drag-armed");
@@ -323,5 +322,28 @@ function print_styles() {
 
 function add_report_styles() {
 	if (document.getElementById("payroll-register-styles")) return;
+	$("<style>").text(`
+		.payroll-preview-dialog.modal { overflow: hidden; }
+		.payroll-preview-dialog .modal-dialog {
+			max-width: 96vw;
+			margin: 12px auto;
+		}
+		.payroll-preview-dialog .modal-content {
+			display: flex;
+			flex-direction: column;
+			max-height: calc(100vh - 24px);
+			max-height: calc(100dvh - 24px);
+		}
+		.payroll-preview-dialog .modal-header,
+		.payroll-preview-dialog .modal-footer { flex-shrink: 0; }
+		.payroll-preview-dialog .modal-body {
+			min-height: 0;
+			overflow: auto;
+		}
+		.payroll-preview-dialog .modal-body .payroll-all-preview {
+			max-height: none;
+			overflow: visible;
+		}
+	`).appendTo(document.head);
 	$("<style id='payroll-register-styles'>").text(`.payroll-register-nav { margin: 12px 0 18px; padding: 16px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--shadow-sm); } .payroll-register-nav-title { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; } .payroll-register-nav-title small { display: block; color: var(--text-muted); margin-top: 2px; } .payroll-register-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; color: #fff; background: #22c55e; font-size: 20px; } .payroll-category-tabs { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 5px; scrollbar-width: thin; } .payroll-tab { flex: 0 0 auto; border: 1px solid var(--border-color); color: var(--text-color); background: var(--control-bg); border-radius: 999px; padding: 7px 13px; font-size: 12px; transition: .15s ease; } .payroll-tab:hover { border-color: #22c55e; color: #16803d; } .payroll-tab.active { color: #fff; background: #22c55e; border-color: #22c55e; box-shadow: 0 3px 9px rgba(34,197,94,.22); } .payroll-all-preview { max-height: 72vh; overflow: auto; padding: 12px; background: #eef1f4; } .payroll-all-preview .column-resize-help { position: sticky; top: 0; z-index: 8; display: flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; max-width: 90%; margin: 0 auto 12px; padding: 8px 14px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 999px; box-shadow: 0 2px 8px rgba(22,101,52,.1); font-size: 12px; font-weight: 600; } .payroll-all-preview .resize-help-icon { display: inline-grid; place-items: center; width: 24px; height: 24px; color: #fff; background: #22c55e; border-radius: 50%; font-size: 16px; } .payroll-all-preview .payroll-print-section { background: #fff; margin: 0 auto 18px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.08); } .payroll-all-preview table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 11px; } .payroll-all-preview th, .payroll-all-preview td { border: 1px solid #777; padding: 6px 4px; text-align: center; overflow-wrap: anywhere; } .payroll-all-preview th { position: relative; background: #f1f3f5; } .payroll-all-preview .column-resizer { position: absolute; inset-inline-end: -6px; top: 0; bottom: 0; width: 12px; z-index: 3; cursor: col-resize; touch-action: none; } .payroll-all-preview .column-resizer::before { content: ""; position: absolute; inset-inline-start: 5px; top: 5px; bottom: 5px; width: 2px; border-radius: 2px; background: transparent; transition: background .15s, box-shadow .15s; } .payroll-all-preview .column-resizer::after { content: "•••"; position: absolute; inset-inline-start: 0; top: 50%; width: 12px; color: transparent; font-size: 8px; letter-spacing: -1px; line-height: 12px; text-align: center; transform: translateY(-50%) rotate(90deg); transition: color .15s, background .15s; } .payroll-all-preview .column-resizer:hover::before, .payroll-all-preview .column-resizer.active::before { background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,.15); } .payroll-all-preview .column-resizer:hover::after, .payroll-all-preview .column-resizer.active::after { color: #fff; background: #16a34a; border-radius: 6px; } .payroll-all-preview .column-resize-active { user-select: none; cursor: col-resize; } .payroll-all-preview .number { direction: ltr; font-variant-numeric: tabular-nums; } .payroll-all-preview .drag-handle { position: relative; cursor: grab; user-select: none; white-space: nowrap; padding-inline-start: 14px; } .payroll-all-preview .drag-handle:active { cursor: grabbing; } .payroll-all-preview .drag-grip { position: absolute; inset-inline-start: 2px; top: 50%; transform: translateY(-50%); color: #8b95a1; font-weight: 700; font-size: 9px; } .payroll-all-preview .payroll-data-row.dragging { opacity: .35; } .payroll-all-preview .payroll-data-row.drag-target td { border-top: 3px solid #22c55e; } .payroll-all-preview .total-row { font-weight: 700; background: #f8f9fa; } .payroll-all-preview .total-label { white-space: nowrap; } .payroll-all-preview .payroll-signatures { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; margin-top: 20px; padding-top: 14px; border-top: 1px solid #555; } @media print { .payroll-register-nav, .page-form, .page-head { display: none !important; } }`).appendTo(document.head);
 }
