@@ -13,6 +13,18 @@ frappe.ui.form.on("Company", {
 	},
 });
 
+frappe.ui.form.on("Cost Center", {
+	refresh(frm) {
+		const is_root = Boolean(frm.doc.company && frm.doc.cost_center_name === frm.doc.company);
+		frm.toggle_reqd("parent_cost_center", !is_root);
+		frm.toggle_display(["parent_cost_center", "custom_parent_cost_center_arabic"], !is_root);
+		const field = "custom_company_name_arabic";
+		frm.set_df_property(field, "fetch_from", "");
+		frm.set_df_property(field, "read_only_depends_on", "");
+		frm.toggle_enable(field, true);
+	},
+});
+
 for (const [doctype, [sourceField, arabicField]] of Object.entries(arabicNameFields)) {
 	frappe.ui.form.on(doctype, {
 		[sourceField](frm) {
