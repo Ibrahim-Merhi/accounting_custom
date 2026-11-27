@@ -170,6 +170,7 @@ doc_events = {
 		"validate": "accounting_custom.accounting.cost_center.set_arabic_company_name",
 	},
 	"Cost Center": {
+		"before_validate": "accounting_custom.accounting.cost_center.prepare_cost_center_names",
 		"validate": "accounting_custom.accounting.cost_center.set_arabic_cost_center_name",
 	},
 	"Donation Entry": {

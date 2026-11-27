@@ -64,8 +64,8 @@ CUSTOM_FIELDS = {
 		{
 			"fieldname": "custom_company_name_arabic", "label": "Arabic Company Name",
 			"fieldtype": "Data", "insert_after": "company", "read_only": 0,
-			"fetch_if_empty": 1,
-			"fetch_from": "company.custom_company_name_arabic",
+			"fetch_if_empty": 0,
+			"fetch_from": "",
 		},
 	],
 	"Branch": [
