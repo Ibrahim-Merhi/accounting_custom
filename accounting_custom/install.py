@@ -64,11 +64,11 @@ def setup_accounting_customizations():
 
 
 def ensure_cost_center_name_fields():
-	# ERPNext validates the parent server-side and requires it only for non-root nodes.
+	# Allow standalone Cost Centers in addition to the company root.
 	_set_property("Cost Center", "parent_cost_center", "reqd", 0, "Check")
 	_set_property(
 		"Cost Center", "parent_cost_center", "mandatory_depends_on",
-		"eval:doc.cost_center_name != doc.company", "Data",
+		"", "Data",
 	)
 	# Property Setters take precedence over the Custom Field definition.
 	for property_name, value, property_type in (

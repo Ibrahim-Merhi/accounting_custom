@@ -50,7 +50,7 @@ def _set_arabic_name(doc, source_field, arabic_field, error_title):
 
 
 def prepare_cost_center_names(doc, method=None):
-	if doc.cost_center_name == doc.company and doc.name and doc.parent_cost_center == doc.name:
+	if doc.name and doc.parent_cost_center == doc.name:
 		doc.parent_cost_center = None
 		doc.custom_parent_cost_center_arabic = None
 	if doc.company and not doc.custom_company_name_arabic:
