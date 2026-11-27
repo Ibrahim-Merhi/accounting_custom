@@ -102,7 +102,8 @@ async function print_current_tab(report) {
 }
 
 function saved_layout_for_run(user_settings, payroll_run) {
-	return ((user_settings || {}).payroll_salary_register_layouts || {})[payroll_run] || {};
+	const layouts = user_settings?.payroll_salary_register_layouts || {};
+	return layouts[payroll_run] || layouts.default_layout || Object.values(layouts).at(-1) || {};
 }
 
 function row_layout_key(row) {
@@ -145,6 +146,7 @@ function save_register_layout(payroll_run, payload) {
 	});
 	return frappe.model.user_settings.save("Multi Company Payroll Run", "payroll_salary_register_layouts", {
 		[payroll_run]: layout,
+		default_layout: layout,
 	});
 }
 
@@ -261,7 +263,6 @@ function render_reorderable_preview(wrapper, payload) {
 			$(document).off("mousemove.payroll-column mouseup.payroll-column");
 			resizer.removeClass("active");
 			section.removeClass("column-resize-active");
-			render_reorderable_preview(wrapper, payload);
 		});
 	});
 	$(document).off("mouseup.payroll-register").on("mouseup.payroll-register", () => wrapper.find(".payroll-data-row").removeClass("drag-armed"));

@@ -331,10 +331,17 @@ class MultiCompanyPayrollRun(Document):
 			if not revs:
 				continue
 			rev = revs[0]
+			period_start = getdate(self.start_date)
+			relieving_date = frappe.db.get_value("Employee", rev.employee, "relieving_date")
+			if relieving_date and getdate(relieving_date) < period_start:
+				continue
 			for alloc in frappe.get_all("Employee Salary Revision Allocation", filters={"parent": rev.name, "parenttype": "Employee Salary Revision"}, fields=["component", "company", "account", "cost_center", "amount"], order_by="idx"):
 				payroll_employee = get_payroll_employee(rev.employee, alloc.company)
 				if not payroll_employee:
 					frappe.throw(_("No payroll employee exists for {0} in {1}.").format(rev.employee_name or rev.employee, alloc.company))
+				company_departure = frappe.get_cached_value("Employee", payroll_employee, "relieving_date")
+				if company_departure and getdate(company_departure) < period_start:
+					continue
 				slip = self._existing_salary_slip(payroll_employee)
 				entry = slip.payroll_entry if slip else ""
 				key = (rev.employee, alloc.company, payroll_employee, entry)

@@ -86,11 +86,13 @@ def sync_company_payroll_identities(doc, method=None):
 		identity = frappe.db.get_value("Employee", {"custom_master_employee": doc.name, "company": company}, "name")
 		if identity:
 			frappe.db.set_value("Employee", identity, {
-				"status": doc.status, "relieving_date": None, "employee_name": doc.employee_name,
+				"status": doc.status, "relieving_date": doc.relieving_date if doc.status == "Left" else None,
+				"employee_name": doc.employee_name,
 				"department": position.department,
 				"designation": position.designation, "employment_type": position.employment_type,
 				"branch": position.branch, "holiday_list": doc.holiday_list,
 			}, update_modified=False)
+			frappe.clear_document_cache("Employee", identity)
 			continue
 		identity_doc = frappe.get_doc({
 			"doctype": "Employee", "first_name": doc.employee_name, "middle_name": None,
