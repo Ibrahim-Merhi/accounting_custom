@@ -44,6 +44,7 @@ def setup_accounting_customizations():
 	ensure_employee_link_title()
 	synchronize_employee_naming_series()
 	ensure_custom_fields()
+	ensure_cost_center_name_fields()
 	ensure_employee_advance_layout()
 	backfill_payroll_months()
 	ensure_multi_company_payroll_link()
@@ -60,6 +61,23 @@ def setup_accounting_customizations():
 	ensure_accounting_workspace_sections()
 	remove_standalone_accounting_program_workspace()
 	ensure_group_ceo_experience()
+
+
+def ensure_cost_center_name_fields():
+	# ERPNext validates the parent server-side and requires it only for non-root nodes.
+	_set_property("Cost Center", "parent_cost_center", "reqd", 0, "Check")
+	_set_property(
+		"Cost Center", "parent_cost_center", "mandatory_depends_on",
+		"eval:doc.cost_center_name != doc.company", "Data",
+	)
+	# Property Setters take precedence over the Custom Field definition.
+	for property_name, value, property_type in (
+		("read_only", 0, "Check"),
+		("read_only_depends_on", "", "Data"),
+		("fetch_from", "", "Data"),
+	):
+		_set_property("Cost Center", "custom_company_name_arabic", property_name, value, property_type)
+	frappe.clear_cache(doctype="Cost Center")
 
 
 def ensure_employee_advance_layout():
