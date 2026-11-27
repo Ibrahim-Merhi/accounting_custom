@@ -50,10 +50,16 @@ function add_category_tabs(report) {
 }
 
 function add_print_actions(report) {
-	if (report.__payroll_print_actions) return;
-	report.__payroll_print_actions = true;
-	report.page.add_inner_button(is_arabic() ? "طباعة التبويب الحالي" : "Print Current Tab", () => print_current_tab(report));
-	report.page.add_inner_button(is_arabic() ? "معاينة وطباعة كل التبويبات" : "Preview / Print All Tabs", () => preview_all_tabs(report)).addClass("btn-primary");
+	const actions = [
+		[is_arabic() ? "طباعة التبويب الحالي" : "Print Current Tab", print_current_tab, "btn-default"],
+		[is_arabic() ? "معاينة وطباعة كل التبويبات" : "Preview / Print All Tabs", preview_all_tabs, "btn-primary"],
+	];
+	for (const [label, action, button_class] of actions) {
+		const existing = report.page.inner_toolbar.find(`button[data-label="${encodeURIComponent(label)}"]`);
+		if (!existing.length) {
+			report.page.add_inner_button(label, () => action(report)).addClass(button_class);
+		}
+	}
 }
 
 async function preview_all_tabs(report) {
