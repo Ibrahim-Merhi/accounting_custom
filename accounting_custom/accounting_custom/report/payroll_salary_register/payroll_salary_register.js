@@ -47,6 +47,12 @@ function add_category_tabs(report) {
 		});
 	});
 	tabs.find(".payroll-tab:first").addClass("active");
+	const sync_category_panel = () => {
+		const [page, report_name] = frappe.get_route();
+		wrapper.toggle(page === "query-report" && report_name === "Payroll Salary Register");
+	};
+	frappe.router.on("change", sync_category_panel);
+	sync_category_panel();
 }
 
 function add_print_actions(report) {
